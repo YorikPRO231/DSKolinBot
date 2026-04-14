@@ -1,7 +1,6 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 
-// Путь к твоей БД (проверь, совпадает ли с путем в боте)
 const db = new Database(path.join(__dirname, 'data.sqlite'));
 
 try {
