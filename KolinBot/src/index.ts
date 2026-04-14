@@ -28,7 +28,6 @@ async function loadCommands() {
         return commands;
     }
     
-    // Получаем все файлы команд рекурсивно
     const commandFiles = getAllFiles(commandsPath);
     console.log(`📁 Найдено файлов команд: ${commandFiles.length}`);
     
@@ -37,7 +36,6 @@ async function loadCommands() {
             const command = await import(filePath);
             
             if (command.data && command.execute) {
-                // Одиночная команда
                 const commandName = command.data.name;
                 if (client.commands.has(commandName)) {
                     console.log(`⚠️ Дубликат команды: ${commandName}`);
@@ -48,7 +46,6 @@ async function loadCommands() {
                 console.log(`✅ Загружена команда: ${commandName} (${path.relative(commandsPath, filePath)})`);
                 
             } else if (Array.isArray(command.data)) {
-                // Массив команд
                 for (const cmd of command.data) {
                     if (cmd.name && cmd.description && !client.commands.has(cmd.name)) {
                         client.commands.set(cmd.name, { ...command, data: cmd });
