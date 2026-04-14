@@ -29,12 +29,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                 inline: false
             },
             {
-                name: '⚙️ **Системная информация**',
-                value: 
-                    `**Администраторов:** \`${admins.length}\`\n`,
-                inline: true
-            },
-            {
                 name: '📡 **Связь**',
                 value: '• `/ping` — Пинг бота',
                 inline: true

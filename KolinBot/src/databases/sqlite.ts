@@ -27,12 +27,35 @@ db.exec(`
     punishment TEXT NOT NULL,
     items TEXT NOT NULL,
     log_file BLOB NOT NULL,
-    duration TEXT NOT NULL
+    duration TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
   CREATE TABLE IF NOT EXISTS admins (
     discord_id TEXT PRIMARY KEY,
     surname TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS security_alerts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    suspect TEXT NOT NULL,
+    suspected_action TEXT NOT NULL,
+    work_data TEXT NOT NULL,
+    admin_id TEXT NOT NULL,
+    count INTEGER DEFAULT 1,
+    status TEXT DEFAULT 'OPEN',
+    created_at DATETIME DEFAULT (datetime('now', 'localtime')),
+    updated_at DATETIME DEFAULT (datetime('now', 'localtime')),
+    UNIQUE(suspect, suspected_action)
+  );
+  
+
+  CREATE TABLE IF NOT EXISTS security_logs (
+    username TEXT PRIMARY KEY,
+    suspected_action TEXT NOT NULL,
+    checked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    admin_id TEXT NOT NULL,
+    check_results TEXT NOT NULL
   );
 
 `);
@@ -65,6 +88,19 @@ export interface Admins {
   discord_id: string,
   surname: string
 }
+
+export interface SecurityAlert {
+    id: number;
+    suspect: string;
+    suspected_action: string;
+    work_data: string;
+    admin_id: string;
+    status: string;
+    count: number;    
+    created_at: string;
+    updated_at?: string;   
+}
+
 
 export function addUser(userId: string, username: string): void {
   const stmt = db.prepare(`
@@ -182,5 +218,45 @@ export function getAdminSurname(discordId: string): string | null {
 export function setAdminSurname(discordId: string, surname: string) {
     db.prepare("INSERT OR REPLACE INTO admins (discord_id, surname) VALUES (?, ?)").run(discordId, surname);
 }
+
+/**
+ * Вставка
+ */
+export const exportSecurityAlertsMany = db.transaction((adminId: string, alerts: { suspect: string, action: string, data: string }[]) => {
+    const stmt = db.prepare(`
+        INSERT INTO security_alerts (suspect, suspected_action, work_data, admin_id, count)
+        VALUES (@suspect, @action, @data, @adminId, 1)
+        ON CONFLICT(suspect, suspected_action) DO UPDATE SET
+            count = count + 1,
+            work_data = @data,
+            updated_at = datetime('now', 'localtime'),
+            admin_id = @adminId
+    `);
+
+    for (const alert of alerts) {
+        stmt.run({
+            suspect: alert.suspect,
+            action: alert.action,
+            data: alert.data,
+            adminId: adminId
+        });
+    }
+});
+
+
+
+export function closeAlert(id: number, adminId: string) {
+    const stmt = db.prepare(`
+        UPDATE security_alerts 
+        SET status = 'CLOSED', admin_id = ? 
+        WHERE id = ?
+    `);
+    return stmt.run(adminId, id);
+}
+
+export function getSecurityAlerts(): SecurityAlert[] {
+    return db.prepare("SELECT * FROM security_alerts ORDER BY created_at DESC").all() as SecurityAlert[];
+}
+
 
 export default db;
