@@ -1,0 +1,35 @@
+# --- IDE и системные файлы ---
+.vs/
+.vscode/
+bin/
+obj/
+*.user
+*.suo
+*.log
+
+# --- C++ / Visual Studio ---
+*.exe
+*.pdb
+*.ilk
+*.lib
+*.out
+x64/
+Debug/
+Release/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# --- Node.js (BetterDiscord / Discord.js) ---
+node_modules/
+dist/
+.DS_Store
+
+# --- Конфиденциальные данные ---
+*.token
+*.config
+.env
