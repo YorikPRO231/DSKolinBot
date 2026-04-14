@@ -31,10 +31,10 @@ export async function execute(inter: ChatInputCommandInteraction) {
             const commentPart = line.split("с комментарием:")[1];
             if (!commentPart) continue;
 
-            // Отсекаем дату (последние 20 символов строки обычно дата)
+            // Дата
             const comment = commentPart.replace(/\d{2}\.\d{2}\.\d{4}, \d{2}:\d{2}:\d{2}/, "").trim();
             
-            // Извлекаем офицера для отчета (в начале строки до ID [номер])
+            // Тот, кто посадил
             const officerMatch = line.match(/^\d+\t(.*?)\s\[/);
             const officer = officerMatch ? officerMatch[1] : "Неизвестен";
 
@@ -65,33 +65,33 @@ export async function execute(inter: ChatInputCommandInteraction) {
 function isViolation(comment: string, allowedStatus: string[]): boolean {
     const clean = comment.toLowerCase().trim();
 
-    // 1. Сразу пропускаем разрешенные статусы (особо опасен и т.д.)
+    // 1. Разрешенные статусы
     if (allowedStatus.some(s => clean.includes(s))) return false;
 
-    // 2. Новые исключения: Решение ОГП, Ордер, Фракции
+    // 2. Исключения
     const customExemptions = ["решение огп", "ордер", "lspd", "fib", "lssd", "gov", "army", "saspa"];
     if (customExemptions.some(ex => clean.includes(ex))) return false;
 
-    // 3. Проверка чисел: Разрешено 1-2000, но 200 — это нарушение
+    // 3. Проверка чисел
     const numberMatch = clean.match(/\d+/);
     if (numberMatch) {
         const num = parseInt(numberMatch[0]);
-        if (num === 200) return true; // Исключение: 200 это нарушение
-        if (num >= 1 && num <= 2000) return false; // 1-2000 разрешено
+        if (num === 200) return true; // Исключение: 200
+        if (num >= 1 && num <= 2000) return false;
     }
 
-    // 4. Список "Мусора" (короткие символы)
+    // 4. Список "Мусора" 
     const junk = ["-", ".", ",", "—", "none", "нет", "отсутствует", "", "---", "--", "...", "/"];
     if (junk.includes(clean) || clean.replace(/[-. ]/g, "").length === 0) return false;
 
-    // 5. Проверка на описание ситуации (вместо статуса)
+    // 5. Проверка на описание ситуации
     const words = clean.split(/\s+/);
     const hasRussian = /[а-яё]/i.test(clean);
     
-    // Если много слов на русском и это не ОГП/Ордер (проверено выше), то это нарушение описания
+    // Слова на русском
     if (hasRussian && words.length > 2) return true; 
 
-    // 6. Белый список технических данных (Жетон, Отдел)
+    // 6. Белый список технических данных
     const isTechData = /^(pa|head|swat|cpd|noose|db|srt|fna|csd|cid|usss)$/i.test(clean) || 
                        /^([a-z0-9]{2,}[- /|]+)+[a-z0-9]{2,}$/i.test(clean) ||
                        /^(\d{2}-\d{2}-\d{2,})$/.test(clean);
@@ -101,10 +101,10 @@ function isViolation(comment: string, allowedStatus: string[]): boolean {
     // 7. Технические пометки напарников
     if (clean.includes("&") || clean.includes("|")) return false;
 
-    // 8. Если остался русский текст, который не попал в исключения — это нарушение
+    // 8. Русский текст 2
     if (hasRussian) return true;
 
-    // 9. Если остался любой текст, который не распознан как тех. данные — это нарушение
+    // 9. Другое
     if (clean.length > 0 && !isTechData) return true;
 
     return false;
