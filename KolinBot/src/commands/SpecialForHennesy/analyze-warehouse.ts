@@ -98,7 +98,6 @@ export async function execute(inter: ChatInputCommandInteraction) {
                 : `\`\`\`\n${fullReportText}\n\`\`\``);
 
         const files: AttachmentBuilder[] = [];
-        // Если текст длинный — создаем файл
         if (fullReportText.length > 500) {
             const buffer = Buffer.from(fullReportText, 'utf-8');
             files.push(new AttachmentBuilder(buffer, { name: `report_${statick}.txt` }));
@@ -157,7 +156,6 @@ if (submitted) {
     let durationText = pDuration || "—";
     let finalType: PunishmentType = PUNISHMENT_TYPES.BAN;
 
-    // Умный парсинг того, что ты ввел в модалку
     if (rawType.includes("iban")) {
         finalType = PUNISHMENT_TYPES.IBAN;
         commandText = `offiban ${statick} Слив склада ${fractioshort} // by ${adminSurname}`;
@@ -194,7 +192,6 @@ if (submitted) {
 
     const reportBuffer = Buffer.from(fullReportText, 'utf-8');
 
-    // Сохранение в БД
     await addLog(inter.user.id, statick, finalType, JSON.stringify(summary), reportBuffer, durationText);
 
     await inter.editReply({ 
@@ -204,7 +201,6 @@ if (submitted) {
         files: [] 
     });
 
-    // Выдаем команду
     await submitted.reply({ 
         content: `**Команда для выдачи:**\n\`\`\`\n${commandText}\n\`\`\``, 
         flags: [MessageFlags.Ephemeral] 
@@ -218,7 +214,7 @@ if (submitted) {
     }
 }
 
-// Функция анализа (та же самая, что считала баланс Положил/Забрал)
+// Функция анализа
 function analyzeWarehouseInventory(data: string) {
     const totals = { taken: new Map(), inHouse: new Map(), inTrunk: new Map() };
     const lines = data.split('\n').map(l => l.trim()).filter(l => l.length > 5);
