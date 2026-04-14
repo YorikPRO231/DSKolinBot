@@ -2,13 +2,21 @@ import {
     ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder, 
     Colors, ActionRowBuilder, ButtonBuilder, ButtonStyle 
 } from 'discord.js';
-import { getAdminSurname, getSecurityAlerts } from '../../../databases/sqlite';
+import { getAdminSurname, getSecurityAlerts, getSecurityAcsess } from '../../../databases/sqlite';
 
 export const data = new SlashCommandBuilder()
     .setName("лог-бот-чит")
     .setDescription("[Security] Список подозреваемых ");
 
 export async function execute(inter: ChatInputCommandInteraction) {
+    const securityLevel = getSecurityAcsess(inter.user.id);
+            if (securityLevel !== 'yes') {
+                return inter.reply({ 
+                    content: '❌ У вас нет доступа к этой команде!', 
+                    ephemeral: true 
+                });
+            }
+
     await inter.deferReply();
 
     const alerts = getSecurityAlerts();

@@ -1,12 +1,10 @@
 import { EmbedBuilder, ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
-import { readConfig } from '../utils/config';
 
 export const data = new SlashCommandBuilder()
     .setName("help")
     .setDescription("Список всех доступных команд бота");
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-    const config = readConfig();
     
     const embed = new EmbedBuilder()
         .setColor(0x2B2D31)
@@ -30,7 +28,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                 inline: false
             },
             {
-                name: '🛡️ **Security (Анти-Бот)**',
+                name: '🛡️ **Security**',
                 value: 
                     '• `/бот-чит` — Загрузка списка на проверку.\n' +
                     '• `/лог-бот-чит` — Список игроков, попавших в реестр подозреваемых.',

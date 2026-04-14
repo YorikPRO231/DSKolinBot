@@ -33,7 +33,8 @@ db.exec(`
 
   CREATE TABLE IF NOT EXISTS admins (
     discord_id TEXT PRIMARY KEY,
-    surname TEXT NOT NULL
+    surname TEXT NOT NULL,
+    security TEXT DEFAULT 'no'
   );
 
   CREATE TABLE IF NOT EXISTS security_alerts (
@@ -58,6 +59,17 @@ db.exec(`
     check_results TEXT NOT NULL
   );
 
+CREATE TABLE IF NOT EXISTS inspection_reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    passport TEXT NOT NULL,
+    discord_id TEXT,
+    result TEXT NOT NULL,
+    admin_id TEXT NOT NULL,
+    admin_name TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_inspection_passport ON inspection_reports(passport);
 `);
 
 export interface User {
@@ -86,7 +98,8 @@ export interface Warehouse {
 
 export interface Admins {
   discord_id: string,
-  surname: string
+  surname: string,
+  security?: string
 }
 
 export interface SecurityAlert {
@@ -99,6 +112,16 @@ export interface SecurityAlert {
     count: number;    
     created_at: string;
     updated_at?: string;   
+}
+
+export interface InspectionReport {
+    id: number;
+    passport: string;
+    discord_id?: string;
+    result: string;
+    admin_id: string;
+    admin_name?: string;
+    created_at: string;
 }
 
 
@@ -214,6 +237,20 @@ export function getAdminSurname(discordId: string): string | null {
     return row ? row.surname : null;
 }
 
+// 
+export function setAdminSecurity(discordId: string, security: string) {
+    const stmt = db.prepare(`
+        INSERT OR REPLACE INTO admins (discord_id, surname, security) 
+        VALUES (?, COALESCE((SELECT surname FROM admins WHERE discord_id = ?), ''), ?)
+    `);
+    stmt.run(discordId, discordId, security);
+}
+
+export function getSecurityAcsess(discordId: string): string | null {
+    const row = db.prepare("SELECT security FROM admins WHERE discord_id = ?").get(discordId) as { security: string } | undefined;
+    return row ? row.security : null;
+}
+
 // Сохранить админа
 export function setAdminSurname(discordId: string, surname: string) {
     db.prepare("INSERT OR REPLACE INTO admins (discord_id, surname) VALUES (?, ?)").run(discordId, surname);
@@ -256,6 +293,41 @@ export function closeAlert(id: number, adminId: string) {
 
 export function getSecurityAlerts(): SecurityAlert[] {
     return db.prepare("SELECT * FROM security_alerts ORDER BY created_at DESC").all() as SecurityAlert[];
+}
+
+// Сохранить отчет о проверке
+export function saveInspectionReport(
+    passport: string, 
+    result: string, 
+    adminId: string,
+    adminName?: string,
+    discordId?: string
+): number {
+    const stmt = db.prepare(`
+        INSERT INTO inspection_reports (passport, discord_id, result, admin_id, admin_name, created_at)
+        VALUES (?, ?, ?, ?, ?, datetime('now', 'localtime'))
+    `);
+    const info = stmt.run(passport, discordId || null, result, adminId, adminName || null);
+    return info.lastInsertRowid as number;
+}
+
+// Получить все отчеты по паспорту с пагинацией
+export function getInspectionReportsByPassportPaginated(
+    passport: string, 
+    limit: number, 
+    offset: number
+): { reports: InspectionReport[], total: number } {
+    const total = db.prepare('SELECT COUNT(*) as count FROM inspection_reports WHERE passport = ?')
+        .get(passport) as { count: number };
+    
+    const reports = db.prepare(`
+        SELECT * FROM inspection_reports 
+        WHERE passport = ? 
+        ORDER BY created_at DESC 
+        LIMIT ? OFFSET ?
+    `).all(passport, limit, offset) as InspectionReport[];
+    
+    return { reports, total: total.count };
 }
 
 
