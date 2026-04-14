@@ -13,9 +13,9 @@ import {
     TextInputStyle
 } from 'discord.js';
 import axios from 'axios';
-import { addLog, getAdminSurname } from '../../databases/sqlite';
-import { PUNISHMENT_TYPES, PunishmentType } from '../../utils/constants/punishments';
-import { FRACTION_TYPES, FRACTION_INFO, FractionType } from '../../utils/constants/fractions';
+import { addLog, getAdminSurname } from '../../../databases/sqlite';
+import { PUNISHMENT_TYPES, PunishmentType } from '../../../utils/constants/punishments';
+import { FRACTION_TYPES, FRACTION_INFO, FractionType } from '../../../utils/constants/fractions';
 
 
 export const data = new SlashCommandBuilder()

@@ -3,34 +3,49 @@ import { readConfig } from '../utils/config';
 
 export const data = new SlashCommandBuilder()
     .setName("help")
-    .setDescription("Помощь по системе логирования склада");
+    .setDescription("Список всех доступных команд бота");
 
 export async function execute(interaction: ChatInputCommandInteraction) {
     const config = readConfig();
-    const admins = config.admins || [];
     
     const embed = new EmbedBuilder()
         .setColor(0x2B2D31)
-        .setTitle('📦 Warehouse Management System | Help')
-        .setDescription('Актуальный список команд для администраторов по контролю склада:')
+        .setTitle('📦 Blackberry Management System | Help')
+        .setDescription('Полный список инструментов:')
         .setThumbnail(interaction.client.user?.displayAvatarURL() || null)
         .addFields(
             {
-                name: '🚀 **Основные инструменты**',
+                name: '🧱 **Контроль Склада**',
                 value: 
-                    '• `/проверить-склад` — Анализ логов игрока. Бот сам найдет статик, подсчитает вынос и предложит выдать наказание через модальное окно.\n' +
-                    '• `/получить-лог` — Выгрузка сформированного детального отчета (.txt) по конкретному статику из базы.',
+                    '• `/проверить-склад` — Анализ склада.\n' +
+                    '• `/получить-лог` — Выгрузка готового .txt отчета по статику.\n' +
+                    '• `/логи-игрока` — История нарушений конкретного игрока.',
                 inline: false
             },
             {
-                name: '📜 **История и поиск**',
+                name: '🕵️ **Анализ Государственных структур**',
                 value: 
-                    '• `/логи-игрока` — Быстрый просмотр последних 10 нарушений статика (краткая сводка количеств без файлов).',
+                    '• `/проверить-аресты` — Проверка корректности комментариев при арестах.\n' +
+                    '• `/проверить-штрафы` — Поиск нарушений в причинах выписки штрафов.',
                 inline: false
             },
             {
-                name: '📡 **Связь**',
-                value: '• `/ping` — Пинг бота',
+                name: '🛡️ **Security (Анти-Бот)**',
+                value: 
+                    '• `/бот-чит` — Загрузка списка на проверку.\n' +
+                    '• `/лог-бот-чит` — Список игроков, попавших в реестр подозреваемых.',
+                inline: false
+            },
+            {
+                name: '⚙️ **Администрирование**',
+                value: 
+                    '• `/удалить-лог-id` — Удаление ошибочной записи из базы данных по ID.\n' +
+                    '• `/admin-rename` — Смена системной фамилии администратора (Owner only).',
+                inline: false
+            },
+            {
+                name: '📡 **Статус**',
+                value: '• `/ping` — Проверка задержки бота.',
                 inline: true
             }
         )   
@@ -40,5 +55,5 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         })
         .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed], ephemeral: true });
 }

@@ -2,7 +2,7 @@ import {
     ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder, 
     Colors, ActionRowBuilder, ButtonBuilder, ButtonStyle 
 } from 'discord.js';
-import { getAdminSurname, getSecurityAlerts } from '../../databases/sqlite';
+import { getAdminSurname, getSecurityAlerts } from '../../../databases/sqlite';
 
 export const data = new SlashCommandBuilder()
     .setName("лог-бот-чит")

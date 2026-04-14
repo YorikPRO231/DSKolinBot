@@ -8,7 +8,7 @@ import {
     ButtonStyle, 
     AttachmentBuilder 
 } from 'discord.js';
-import { getLogsByStatic, getLogById } from '../../databases/sqlite';
+import { getLogsByStatic, getLogById } from '../../../databases/sqlite';
 
 export const data = new SlashCommandBuilder()
     .setName("логи-игрока")

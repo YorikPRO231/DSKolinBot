@@ -1,6 +1,6 @@
 import { ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder, AttachmentBuilder } from 'discord.js';
-import { getLog } from '../../databases/sqlite';
-import { PUNISHMENT_INFO, PunishmentType } from '../../utils/constants/punishments';
+import { getLog } from '../../../databases/sqlite';
+import { PUNISHMENT_INFO, PunishmentType } from '../../../utils/constants/punishments';
 
 export const data = new SlashCommandBuilder()
     .setName("получить-лог")

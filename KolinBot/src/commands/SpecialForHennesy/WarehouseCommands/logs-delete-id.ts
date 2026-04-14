@@ -1,5 +1,5 @@
 import { ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
-import { removeLogById } from '../../databases/sqlite'; 
+import { removeLogById } from '../../../databases/sqlite'; 
 
 export const data = new SlashCommandBuilder()
     .setName("удалить-лог-id")

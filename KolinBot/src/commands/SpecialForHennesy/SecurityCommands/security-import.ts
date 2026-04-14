@@ -1,5 +1,5 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
-import { exportSecurityAlertsMany } from '../../databases/sqlite';
+import { exportSecurityAlertsMany } from '../../../databases/sqlite';
 import axios from 'axios';
 
 export const data = new SlashCommandBuilder()
