@@ -1,5 +1,4 @@
 import { ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder, AttachmentBuilder } from 'discord.js';
-import { getSecurityAcsess } from '../../../databases/sqlite';
 
 export const data = new SlashCommandBuilder()
     .setName('проверить-повышения')

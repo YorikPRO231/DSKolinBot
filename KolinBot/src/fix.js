@@ -3,79 +3,30 @@ const path = require('path');
 
 const db = new Database(path.join(__dirname, 'data.sqlite'));
 
+// Включаем WAL режим для производительности
+db.pragma('journal_mode = WAL');
+db.pragma('synchronous = NORMAL');
+
 console.log('🔄 Начинаю миграцию базы данных...');
 
 try {
-    // Проверяем и добавляем колонку security в таблицу admins
-    try {
-        db.exec("ALTER TABLE admins ADD COLUMN security TEXT DEFAULT 'no'");
-        console.log("✅ Добавлена колонка security в таблицу admins");
-    } catch (err) {
-        if (err.message.includes("duplicate column name")) {
-            console.log("ℹ️ Колонка security уже существует");
-        } else {
-            console.log("⚠️ Ошибка при добавлении security:", err.message);
-        }
-    }
+    // ============================================
+    // СОЗДАНИЕ ТАБЛИЦ (IF NOT EXISTS)
+    // ============================================
 
-    // Проверяем и добавляем колонку created_at в warehouse_drain
-    try {
-        db.exec("ALTER TABLE warehouse_drain ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP");
-        console.log("✅ Добавлена колонка created_at в таблицу warehouse_drain");
-    } catch (err) {
-        if (err.message.includes("duplicate column name")) {
-            console.log("ℹ️ Колонка created_at уже существует");
-        } else {
-            console.log("⚠️ Ошибка при добавлении created_at:", err.message);
-        }
-    }
+    // 1. Таблица администраторов
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS admins (
+            discord_id TEXT PRIMARY KEY,
+            surname TEXT NOT NULL,
+            security TEXT DEFAULT 'no'
+        )
+    `);
+    console.log("✅ Таблица admins создана/проверена");
 
-    // Проверяем и добавляем колонку discord_id в inspection_reports
-    try {
-        db.exec("ALTER TABLE inspection_reports ADD COLUMN discord_id TEXT");
-        console.log("✅ Добавлена колонка discord_id в таблицу inspection_reports");
-    } catch (err) {
-        if (err.message.includes("duplicate column name")) {
-            console.log("ℹ️ Колонка discord_id уже существует");
-        } else if (err.message.includes("no such table")) {
-            console.log("ℹ️ Таблица inspection_reports еще не создана");
-        } else {
-            console.log("⚠️ Ошибка при добавлении discord_id:", err.message);
-        }
-    }
-
-    // Проверяем и добавляем колонку admin_name в inspection_reports
-    try {
-        db.exec("ALTER TABLE inspection_reports ADD COLUMN admin_name TEXT");
-        console.log("✅ Добавлена колонка admin_name в таблицу inspection_reports");
-    } catch (err) {
-        if (err.message.includes("duplicate column name")) {
-            console.log("ℹ️ Колонка admin_name уже существует");
-        } else if (err.message.includes("no such table")) {
-            console.log("ℹ️ Таблица inspection_reports еще не создана");
-        } else {
-            console.log("⚠️ Ошибка при добавлении admin_name:", err.message);
-        }
-    }
-
-    // Создаем недостающие таблицы
-    const tables = [
-        `CREATE TABLE IF NOT EXISTS users (
-            id TEXT PRIMARY KEY,
-            username TEXT NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`,
-        
-        `CREATE TABLE IF NOT EXISTS warnings (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT NOT NULL,
-            moderator_id TEXT NOT NULL,
-            reason TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
-        )`,
-        
-        `CREATE TABLE IF NOT EXISTS warehouse_drain (
+    // 2. Таблица склада
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS warehouse_drain (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             pasport TEXT NOT NULL,
             adm_id TEXT NOT NULL,
@@ -84,15 +35,13 @@ try {
             log_file BLOB NOT NULL,
             duration TEXT NOT NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`,
-        
-        `CREATE TABLE IF NOT EXISTS admins (
-            discord_id TEXT PRIMARY KEY,
-            surname TEXT NOT NULL,
-            security TEXT DEFAULT 'no'
-        )`,
-        
-        `CREATE TABLE IF NOT EXISTS security_alerts (
+        )
+    `);
+    console.log("✅ Таблица warehouse_drain создана/проверена");
+
+    // 3. Таблица алертов безопасности
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS security_alerts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             suspect TEXT NOT NULL,
             suspected_action TEXT NOT NULL,
@@ -103,17 +52,26 @@ try {
             created_at DATETIME DEFAULT (datetime('now', 'localtime')),
             updated_at DATETIME DEFAULT (datetime('now', 'localtime')),
             UNIQUE(suspect, suspected_action)
-        )`,
-        
-        `CREATE TABLE IF NOT EXISTS security_logs (
-            username TEXT PRIMARY KEY,
+        )
+    `);
+    console.log("✅ Таблица security_alerts создана/проверена");
+
+    // 4. Таблица логов безопасности
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS security_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
             suspected_action TEXT NOT NULL,
             checked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             admin_id TEXT NOT NULL,
             check_results TEXT NOT NULL
-        )`,
-        
-        `CREATE TABLE IF NOT EXISTS inspection_reports (
+        )
+    `);
+    console.log("✅ Таблица security_logs создана/проверена");
+
+    // 5. Таблица отчётов о проверке
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS inspection_reports (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             passport TEXT NOT NULL,
             discord_id TEXT,
@@ -121,55 +79,113 @@ try {
             admin_id TEXT NOT NULL,
             admin_name TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`
-    ];
+        )
+    `);
+    console.log("✅ Таблица inspection_reports создана/проверена");
 
-    // Выполняем создание таблиц
-    for (const tableSql of tables) {
+    // ============================================
+    // СОЗДАНИЕ ИНДЕКСОВ
+    // ============================================
+
+    // Индексы для warehouse_drain
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_warehouse_pasport ON warehouse_drain(pasport)`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_warehouse_created ON warehouse_drain(created_at DESC)`);
+    console.log("✅ Индексы для warehouse_drain созданы");
+
+    // Индексы для security_alerts
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_security_suspect ON security_alerts(suspect)`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_security_status ON security_alerts(status)`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_security_created ON security_alerts(created_at DESC)`);
+    console.log("✅ Индексы для security_alerts созданы");
+
+    // Индексы для security_logs
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_security_logs_username ON security_logs(username)`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_security_logs_checked ON security_logs(checked_at DESC)`);
+    console.log("✅ Индексы для security_logs созданы");
+
+    // Индексы для inspection_reports
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_inspection_passport ON inspection_reports(passport)`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_inspection_created ON inspection_reports(created_at DESC)`);
+    console.log("✅ Индексы для inspection_reports созданы");
+
+    // ============================================
+    // ОБНОВЛЕНИЕ СУЩЕСТВУЮЩИХ ДАННЫХ
+    // ============================================
+
+    // Обновляем записи admins, у которых нет security
+    const updateResult = db.prepare("UPDATE admins SET security = 'no' WHERE security IS NULL").run();
+    if (updateResult.changes > 0) {
+        console.log(`✅ Обновлено ${updateResult.changes} записей admins (добавлен security по умолчанию)`);
+    }
+
+    // ============================================
+    // УДАЛЕНИЕ УСТАРЕВШИХ ТАБЛИЦ (опционально)
+    // ============================================
+    
+    // Если таблицы users или warnings остались от старой версии, их можно удалить
+    const oldTables = ['users', 'warnings'];
+    for (const table of oldTables) {
         try {
-            db.exec(tableSql);
-            console.log("✅ Таблица создана/проверена");
+            const checkTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='${table}'`).get();
+            if (checkTable) {
+                db.exec(`DROP TABLE IF EXISTS ${table}`);
+                console.log(`🗑️ Удалена устаревшая таблица: ${table}`);
+            }
         } catch (err) {
-            console.log("⚠️ Ошибка при создании таблицы:", err.message);
+            console.log(`ℹ️ Таблица ${table} не найдена или уже удалена`);
         }
     }
 
-    // Создаем индексы
-    try {
-        db.exec("CREATE INDEX IF NOT EXISTS idx_inspection_passport ON inspection_reports(passport)");
-        console.log("✅ Создан индекс idx_inspection_passport");
-    } catch (err) {
-        console.log("⚠️ Ошибка при создании индекса:", err.message);
-    }
+    // ============================================
+    // ОПТИМИЗАЦИЯ
+    // ============================================
 
-    try {
-        db.exec("CREATE INDEX IF NOT EXISTS idx_warnings_user_id ON warnings(user_id)");
-        console.log("✅ Создан индекс idx_warnings_user_id");
-    } catch (err) {
-        console.log("⚠️ Ошибка при создании индекса:", err.message);
-    }
-
-    // Обновляем существующие записи admins, у которых нет security
-    try {
-        const result = db.prepare("UPDATE admins SET security = 'no' WHERE security IS NULL").run();
-        if (result.changes > 0) {
-            console.log(`✅ Обновлено ${result.changes} записей admins (добавлен security по умолчанию)`);
-        }
-    } catch (err) {
-        console.log("⚠️ Ошибка при обновлении admins:", err.message);
-    }
+    // Запускаем анализ для оптимизации запросов
+    db.exec("ANALYZE");
+    console.log("✅ Анализ базы данных выполнен");
 
     console.log('\n✅ Миграция базы данных завершена успешно!');
     
-    // Выводим информацию о текущей структуре
+    // ============================================
+    // ВЫВОД СТАТИСТИКИ
+    // ============================================
+    
     console.log('\n📊 Текущая структура базы данных:');
     
-    const tables_list = db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all();
-    console.log('Таблицы:', tables_list.map(t => t.name).join(', '));
+    const tablesList = db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all();
+    console.log('📋 Таблицы:', tablesList.map(t => t.name).join(', '));
+    
+    // Считаем записи в каждой таблице
+    console.log('\n📈 Количество записей:');
+    
+    const stats = [
+        { name: 'admins', query: 'SELECT COUNT(*) as count FROM admins' },
+        { name: 'warehouse_drain', query: 'SELECT COUNT(*) as count FROM warehouse_drain' },
+        { name: 'security_alerts', query: 'SELECT COUNT(*) as count FROM security_alerts' },
+        { name: 'security_logs', query: 'SELECT COUNT(*) as count FROM security_logs' },
+        { name: 'inspection_reports', query: 'SELECT COUNT(*) as count FROM inspection_reports' }
+    ];
+    
+    for (const stat of stats) {
+        try {
+            const result = db.prepare(stat.query).get();
+            console.log(`   • ${stat.name}: ${result.count} зап.`);
+        } catch (err) {
+            console.log(`   • ${stat.name}: ошибка подсчёта`);
+        }
+    }
+    
+    try {
+        const openAlerts = db.prepare("SELECT COUNT(*) as count FROM security_alerts WHERE status = 'OPEN'").get();
+        const closedAlerts = db.prepare("SELECT COUNT(*) as count FROM security_alerts WHERE status = 'CLOSED'").get();
+        console.log(`\n🚨 Алерты безопасности: ${openAlerts.count} открыто, ${closedAlerts.count} закрыто`);
+    } catch (err) {
+        // Игнорируем ошибку
+    }
     
 } catch (error) {
     console.error('❌ Критическая ошибка при миграции:', error.message);
 } finally {
     db.close();
-    console.log('🔒 Соединение с базой данных закрыто');
+    console.log('\n🔒 Соединение с базой данных закрыто');
 }

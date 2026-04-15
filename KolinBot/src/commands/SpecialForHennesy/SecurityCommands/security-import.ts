@@ -1,5 +1,5 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
-import { exportSecurityAlertsMany, getSecurityAcsess } from '../../../databases/sqlite';
+import { exportSecurityAlertsMany, getSecurityAccess } from '../../../databases/sqlite';
 import axios from 'axios';
 
 export const data = new SlashCommandBuilder()
@@ -22,7 +22,7 @@ const MAX_FILE_SIZE = 2 * 1024 * 1024;
 
 export async function execute(inter: ChatInputCommandInteraction) {
 
-    const securityLevel = getSecurityAcsess(inter.user.id);
+    const securityLevel = getSecurityAccess(inter.user.id);
         if (securityLevel !== 'yes') {
             return inter.reply({ 
                 content: '❌ У вас нет доступа к этой команде!', 

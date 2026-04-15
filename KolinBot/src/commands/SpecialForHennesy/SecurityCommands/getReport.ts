@@ -7,11 +7,11 @@ import {
     ButtonStyle,
     ComponentType
 } from 'discord.js';
-import { getInspectionReportsByPassportPaginated, getSecurityAcsess } from '../../../databases/sqlite';
+import { getInspectionReportsByPassportPaginated, getSecurityAccess } from '../../../databases/sqlite';
 
 export const data = new SlashCommandBuilder()
     .setName('получить-отчет')
-    .setDescription('Получить отчеты о проверках игрока по паспорту')
+    .setDescription('[Security] Получить отчеты о проверках игрока по паспорту')
     .addStringOption(option =>
         option.setName('паспорт')
             .setDescription('Паспорт (статик) игрока')
@@ -22,7 +22,7 @@ export const data = new SlashCommandBuilder()
             .setRequired(false));
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-    const securityLevel = getSecurityAcsess(interaction.user.id);
+    const securityLevel = getSecurityAccess(interaction.user.id);
     if (securityLevel !== 'yes') {
         return interaction.reply({ 
             content: 'У вас нет доступа к этой команде!', 

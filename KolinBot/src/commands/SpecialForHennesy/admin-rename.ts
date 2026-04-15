@@ -1,5 +1,5 @@
-import { ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
-import { setAdminSurname, getAdminSurname, setAdminSecurity, getSecurityAcsess } from '../../databases/sqlite';
+import { ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder } from 'discord.js';
+import { setAdminSurname, getAdminSurname, setAdminSecurity } from '../../databases/sqlite';
 
 export const data = new SlashCommandBuilder()
     .setName("настройка-администратора")

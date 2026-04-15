@@ -3,11 +3,11 @@ import {
     ChatInputCommandInteraction, 
     EmbedBuilder 
 } from 'discord.js';
-import { saveInspectionReport, getInspectionReportsByPassportPaginated, getSecurityAcsess, getAdminSurname } from '../../../databases/sqlite';
+import { saveInspectionReport, getInspectionReportsByPassportPaginated, getSecurityAccess, getAdminSurname } from '../../../databases/sqlite';
 
 export const data = new SlashCommandBuilder()
     .setName('отчет-проверки')
-    .setDescription('Создать отчет о проверке игрока')
+    .setDescription('[Security] Создать отчет о проверке игрока')
     .addStringOption(option =>
         option.setName('паспорт')
             .setDescription('Паспорт (статик) проверяемого игрока')
@@ -26,7 +26,7 @@ export const data = new SlashCommandBuilder()
             .setRequired(false));
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-    const securityLevel = getSecurityAcsess(interaction.user.id);
+    const securityLevel = getSecurityAccess(interaction.user.id);
     if (securityLevel !== 'yes') {
         return interaction.reply({ 
             content: 'У вас нет доступа к этой команде!', 
