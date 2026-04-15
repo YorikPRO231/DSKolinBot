@@ -190,13 +190,6 @@ function checkRankJumpViolation(
 }
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-    const securityLevel = getSecurityAcsess(interaction.user.id);
-    if (securityLevel !== 'yes') {
-        return interaction.reply({ 
-            content: 'У вас нет доступа к этой команде!', 
-            ephemeral: true 
-        });
-    }
 
     await interaction.deferReply({ ephemeral: true });
 
