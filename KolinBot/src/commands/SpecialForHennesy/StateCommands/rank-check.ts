@@ -384,7 +384,7 @@ function checkRankJumpViolation(
 
 export async function execute(interaction: ChatInputCommandInteraction) {
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply();
 
     const attachment = interaction.options.getAttachment('файл', true);
     

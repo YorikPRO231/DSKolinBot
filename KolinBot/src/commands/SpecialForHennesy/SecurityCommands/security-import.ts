@@ -57,7 +57,8 @@ export async function execute(inter: ChatInputCommandInteraction) {
         exportSecurityAlertsMany(inter.user.id, alerts.map(a => ({
             suspect: a.suspect,
             action: a.suspected_action,
-            data: a.work_data
+            data: a.work_data,
+            originalDate: a.originalDate
         })));
 
         const uniqueSuspects = new Set(alerts.map(a => a.suspect)).size;
@@ -86,6 +87,13 @@ function parseLogs(content: string) {
         // [0] Дата/Время, [1] Действие, [2] Игрок [ID], [3] Данные по работе, [4] Статус
         const [timestamp, actionRaw, playerRaw, workDataRaw] = segments;
 
+        let originalDate = null;
+        if (timestamp && timestamp.match(/\d{2}\.\d{2}\.\d{4},\s\d{2}:\d{2}:\d{2}/)) {
+            const [datePart, timePart] = timestamp.split(', ');
+            const [day, month, year] = datePart.split('.');
+            originalDate = `${year}-${month}-${day} ${timePart}`;
+        }
+
         const suspectedAction = ACTION_MAP[actionRaw] || actionRaw;
 
         const idMatch = playerRaw.match(/\[(\d+)\]/);
@@ -97,6 +105,7 @@ function parseLogs(content: string) {
             suspect: idMatch[1], 
             suspected_action: suspectedAction,
             work_data: workData || 'Нет данных',
+            originalDate: originalDate,
             timeStamp: timestamp
         });
     }

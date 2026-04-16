@@ -15,10 +15,11 @@ interface Member {
 
 // Паттерны для проверки
 const MAFIA_PATTERNS: Record<string, RegExp> = {
-    'Русская мафия': /(ov|ev|in|yov|yn)$/i,
-    'Итальянская мафия': /(ini|ino|elli|etti|atti|oni|icci|ano|acci|izzi|ezzi|ossi|ussi|izi|ello|ucci|ani|ardi|one|enze|ari|eri|ori|uri|assi|essi|issi|ossi|ussi|ato|esi|ieri|aldo|iano|asco|ardo|enzo)$/i,
+    'Русская мафия': /(ov|ev|in|eva|ova|skiy|skaya|ina)$/i,
+    'Итальянская мафия': /(ini|etti|ello|one|ucci|ardi|ano|ani|enzi|elli|ardo|asco|izzi|ato|esi|ieri|aldo|iano)$/i,
     'Армянская мафия': /(yan|yanc|ian)$/i,
-    'Мексиканская мафия': /(ez|as|os|es)$/i
+    'Мексиканская мафия': /(ez|as|os|es)$/i,
+    'Японская мафия': /(uki|suki|zaki|moto|shi|zuki)$/i
 };
 
 function parseFactionFromHeader(content: string): string | null {
@@ -200,7 +201,7 @@ function getViolationLevel(totalMembers: number, violationsCount: number): {
 }
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply();
 
     const attachment = interaction.options.getAttachment('файл', true);
     

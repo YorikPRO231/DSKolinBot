@@ -127,7 +127,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                 .setTimestamp();
             
             for (const report of newReports) {
-                let reportInfo = `Итог: ${report.result.substring(0, 100)}\nАдмин: ${report.admin_name || report.admin_id}`;
+                let reportInfo = `Итог: ${report.result.substring(0, 100)}\nАдмин: ${report.admin_name} (${report.admin_id})`;
                 if (report.discord_id) {
                     reportInfo += `\nDiscord ID: ${report.discord_id}`;
                 }

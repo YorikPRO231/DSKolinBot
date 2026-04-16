@@ -11,7 +11,7 @@ export const data = new SlashCommandBuilder()
     );
 
 export async function execute(inter: ChatInputCommandInteraction) {
-    await inter.deferReply({ ephemeral: true });
+    await inter.deferReply();
 
     const attachment = inter.options.getAttachment("файл")!;
     if (!attachment.name.endsWith('.txt')) {

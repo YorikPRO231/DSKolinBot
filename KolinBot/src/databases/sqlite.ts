@@ -213,15 +213,19 @@ export function removeLogById(id: number): { changes: number } {
 // БОТ-ЧИТ
 // ============================================
 
-export const exportSecurityAlertsMany = db.transaction((adminId: string, alerts: { suspect: string; action: string; data: string }[]) => {
+export const exportSecurityAlertsMany = db.transaction((adminId: string, alerts: { suspect: string; action: string; data: string; originalDate?: string }[]) => {
   const stmt = db.prepare(`
-    INSERT INTO security_alerts (suspect, suspected_action, work_data, admin_id, count)
-    VALUES (@suspect, @action, @data, @adminId, 1)
+    INSERT INTO security_alerts (suspect, suspected_action, work_data, admin_id, count, created_at)
+    VALUES (@suspect, @action, @data, @adminId, 1, COALESCE(@originalDate, datetime('now', 'localtime')))
     ON CONFLICT(suspect, suspected_action) DO UPDATE SET
       count = count + 1,
       work_data = @data,
       updated_at = datetime('now', 'localtime'),
-      admin_id = @adminId
+      admin_id = @adminId,
+      created_at = CASE 
+        WHEN @originalDate IS NOT NULL AND @originalDate != '' THEN @originalDate
+        ELSE created_at
+      END
   `);
 
   for (const alert of alerts) {
@@ -229,7 +233,8 @@ export const exportSecurityAlertsMany = db.transaction((adminId: string, alerts:
       suspect: alert.suspect,
       action: alert.action,
       data: alert.data,
-      adminId: adminId
+      adminId: adminId,
+      originalDate: alert.originalDate || null
     });
   }
 });
@@ -250,6 +255,17 @@ export function getSecurityAlertsBySuspect(suspect: string, status?: 'OPEN' | 'C
   return db.prepare(query).all(suspect) as SecurityAlert[];
 }
 
+export function closeAlertsBySuspectIfExists(suspect: string, adminId: string): number {
+  const result = db.prepare(`
+    UPDATE security_alerts 
+    SET status = 'CLOSED', 
+        admin_id = ?, 
+        updated_at = datetime('now', 'localtime')
+    WHERE suspect = ? AND status = 'OPEN'
+  `).run(adminId, suspect);
+  return result.changes;
+}
+
 export function closeAlert(id: number, adminId: string): { changes: number } {
   const result = db.prepare(`
     UPDATE security_alerts 
@@ -259,17 +275,6 @@ export function closeAlert(id: number, adminId: string): { changes: number } {
     WHERE id = ? AND status = 'OPEN'
   `).run(adminId, id);
   return { changes: result.changes };
-}
-
-export function closeAlertsBySuspect(suspect: string, adminId: string): number {
-  const result = db.prepare(`
-    UPDATE security_alerts 
-    SET status = 'CLOSED', 
-        admin_id = ?, 
-        updated_at = datetime('now', 'localtime')
-    WHERE suspect = ? AND status = 'OPEN'
-  `).run(adminId, suspect);
-  return result.changes;
 }
 
 export function reopenAlert(id: number, adminId: string): { changes: number } {

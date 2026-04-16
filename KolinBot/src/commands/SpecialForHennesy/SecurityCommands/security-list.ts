@@ -6,28 +6,29 @@ import { getAdminSurname, getSecurityAlerts, getSecurityAccess } from '../../../
 
 export const data = new SlashCommandBuilder()
     .setName("лог-бот-чит")
-    .setDescription("[Security] Список подозреваемых ");
+    .setDescription("[Security] Список подозреваемых");
 
 export async function execute(inter: ChatInputCommandInteraction) {
     const securityLevel = getSecurityAccess(inter.user.id);
-            if (securityLevel !== 'yes') {
-                return inter.reply({ 
-                    content: '❌ У вас нет доступа к этой команде!', 
-                    ephemeral: true 
-                });
-            }
+    if (securityLevel !== 'yes') {
+        return inter.reply({ 
+            content: '❌ У вас нет доступа к этой команде!', 
+            ephemeral: true 
+        });
+    }
 
     await inter.deferReply();
 
-    const alerts = getSecurityAlerts();
+    const alerts = getSecurityAlerts('OPEN');
 
     if (!alerts || alerts.length === 0) {
-        return inter.editReply(`🔍 В базе данных пока нет записей.`);
+        return inter.editReply(`🔍 Нет открытых подозрений в базе данных.`);
     }
 
     const MAX_PER_PAGE = 10;
     const totalPages = Math.ceil(alerts.length / MAX_PER_PAGE);
     let currentPage = 0;
+    let collectorActive = true;
 
     const generateEmbed = (page: number) => {
         const start = page * MAX_PER_PAGE;
@@ -35,10 +36,10 @@ export async function execute(inter: ChatInputCommandInteraction) {
         const currentAlerts = alerts.slice(start, end);
 
         const embed = new EmbedBuilder()
-            .setTitle("🚨 Реестр подозреваемых")
+            .setTitle("🚨 Реестр подозреваемых (открытые)")
             .setColor(Colors.DarkRed)
             .setTimestamp()
-            .setFooter({ text: `Страница ${page + 1} из ${totalPages} | Всего записей: ${alerts.length}` });
+            .setFooter({ text: `Страница ${page + 1} из ${totalPages} | Всего открытых: ${alerts.length}` });
 
         const description = currentAlerts.map(alert => {
             const date = new Date(alert.created_at);
@@ -54,7 +55,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
                    `┗ 🔍 ${alert.work_data} — ${adminName}\n`;
         }).join('\n');
 
-        embed.setDescription(description);
+        embed.setDescription(description || 'Нет записей на этой странице');
         return embed;
     };
 
@@ -82,7 +83,11 @@ export async function execute(inter: ChatInputCommandInteraction) {
     const collector = message.createMessageComponentCollector({ time: 60000 });
 
     collector.on('collect', async (i) => {
-        if (i.user.id !== inter.user.id) return i.reply({ content: "Это не ваше меню", ephemeral: true });
+        if (!collectorActive) return;
+        
+        if (i.user.id !== inter.user.id) {
+            return i.reply({ content: "❌ Это не ваше меню", ephemeral: true });
+        }
 
         if (i.customId === 'prev_page') currentPage--;
         if (i.customId === 'next_page') currentPage++;
@@ -101,5 +106,28 @@ export async function execute(inter: ChatInputCommandInteraction) {
         );
 
         await i.update({ embeds: [generateEmbed(currentPage)], components: [updatedRow] });
+    });
+
+    collector.on('end', async () => {
+        collectorActive = false;
+        // Деактивируем кнопки после окончания времени
+        const disabledRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder()
+                .setCustomId('prev_page')
+                .setLabel('⬅️ Назад')
+                .setStyle(ButtonStyle.Secondary)
+                .setDisabled(true),
+            new ButtonBuilder()
+                .setCustomId('next_page')
+                .setLabel('Вперед ➡️')
+                .setStyle(ButtonStyle.Secondary)
+                .setDisabled(true)
+        );
+        
+        try {
+            await message.edit({ components: [disabledRow] });
+        } catch (error) {
+            // Сообщение могло быть удалено
+        }
     });
 }
