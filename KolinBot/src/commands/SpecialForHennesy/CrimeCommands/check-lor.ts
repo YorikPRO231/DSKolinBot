@@ -15,18 +15,30 @@ interface Member {
 
 // Паттерны для проверки
 const MAFIA_PATTERNS: Record<string, RegExp> = {
-    'Русская мафия': /(ov|ev|in|eva|ova|skiy|skaya|ina)$/i,
+    'Русская мафия': /(ov|ev|in|eva|ova|skiy|skaya|ina|skaiya)$/i,
     'Итальянская мафия': /(ini|etti|ello|one|ucci|ardi|ano|ani|enzi|elli|ardo|asco|izzi|ato|esi|ieri|aldo|iano)$/i,
     'Армянская мафия': /(yan|yanc|ian)$/i,
     'Мексиканская мафия': /(ez|as|os|es)$/i,
     'Японская мафия': /(uki|suki|zaki|moto|shi|zuki)$/i
 };
 
+
+const RUSSIAN_NAMES_PATTERN = /^(Ivan|Petr|Sergey|Alexey|Dmitry|Vladimir|Andrey|Mikhail|Nikolay|Boris|Viktor|Oleg|Pavel|Roman|Denis|Evgeny|Yury|Vasily|Alexandr|Maxim|Artem|Igor|Gleb|Kirill|Leonid|Anatoly|Valery|Yakov|Semen|Stepan|Fedor|Grigory|Arkady|Bogdan|Vadim|Vsevolod|Vyacheslav|Gennady|Daniil|Zakhar|Ilya|Konstantin|Lev|Matvey|Nikita|Ruslan|Timofey|Yaroslav|Anton|Egor|Svyatoslav|Stanislav|Georgy|Danila|Danya|Danil)$/i;
+
+const GANG_FACTIONS = [
+    'Marabunta Grande',
+    'Los Santos Vagos',
+    'East Side Ballas',
+    'Bloods Street Gang',
+    'The Families'
+];
+
+
 function parseFactionFromHeader(content: string): string | null {
     const lines = content.split('\n');
     for (const line of lines) {
         const match = line.match(/\(([^)]+)\)/);
-        if (match && (match[1].includes('Мафия') || match[1].includes('Mafia'))) {
+        if (match && (match[1].includes('Мафия') || match[1].includes('Mafia') || GANG_FACTIONS.some(g => match[1].includes(g)))) {
             return match[1];
         }
     }
@@ -96,10 +108,23 @@ function parseMembers(lines: string[]): Member[] {
     return members;
 }
 
+
+function isGangFaction(factionName: string | null): boolean {
+    if (!factionName) return false;
+    return GANG_FACTIONS.some(gang => factionName.includes(gang));
+}
+
 function isNicknameValid(nickname: string, factionName: string | null): boolean {
     if (!factionName) return true;
     
     const lowerNick = nickname.toLowerCase();
+
+    if (isGangFaction(factionName)) {
+        const hasRussianEnding = MAFIA_PATTERNS['Русская мафия'].test(lowerNick);
+        const isRussianName = RUSSIAN_NAMES_PATTERN.test(nickname);
+        
+        return !hasRussianEnding && !isRussianName;
+    }
     
     // Для итальянской мафии: проверяем строгое соответствие итальянским окончаниям
     if (factionName.includes('Итальян') || factionName.includes('Italian')) {
@@ -226,7 +251,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         const factionName = parseFactionFromHeader(fileContent);
         const members = parseMembers(lines);
         
-        const MIN_RANK_FOR_CHECK = 5;
+        const isGang = isGangFaction(factionName);
+        
+        const MIN_RANK_FOR_CHECK = isGang ? 2 : 5;
         
         const violations: Member[] = [];
         let validCount = 0;
@@ -257,27 +284,32 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         
         violations.sort((a, b) => b.rank - a.rank);
         
+        let description = factionName ? `Фракция: **${factionName}**` : `Проверено ников с ${MIN_RANK_FOR_CHECK}+ рангом: ${totalChecked}`;
+        if (isGang) {
+            description += '\n⚠️ **Внимание:** Для данной банды русские окончания и имена **ЗАПРЕЩЕНЫ**';
+        }
+        
         const embed = new EmbedBuilder()
             .setColor(color)
             .setTitle('Результат проверки лорности ников')
-            .setDescription(factionName ? `Фракция: **${factionName}**` : `Проверено ников с ${MIN_RANK_FOR_CHECK}+ рангом: ${totalChecked}`)
+            .setDescription(description)
             .addFields(
                 { name: 'Численность фракции', value: `${totalMembers} чел.`, inline: true },
-                { name: 'Проверено (5+ ранг)', value: `${totalChecked}`, inline: true },
-                { name: 'Пропущено (1-4 ранг)', value: `${lowRankSkipped}`, inline: true },
+                { name: `Проверено (${MIN_RANK_FOR_CHECK}+ ранг)`, value: `${totalChecked}`, inline: true },
+                { name: `Пропущено (1-${MIN_RANK_FOR_CHECK - 1} ранг)`, value: `${lowRankSkipped}`, inline: true },
                 { name: 'Норма NRP ников', value: `${violationLevel.min}-${violationLevel.max}`, inline: true },
                 { name: 'Найдено NRP ников', value: `${violationsCount}`, inline: true },
                 { name: 'Статус', value: violationLevel.message, inline: false },
                 { name: 'Валидных ников', value: `${validCount}`, inline: true },
                 { name: 'NRP ников', value: `${violationsCount}`, inline: true }
             )
-            .setFooter({ text: 'Проверяются только игроки с рангом 5 и выше | NRP ники требуют исправления' })
+            .setFooter({ text: `Проверяются игроки с рангом ${MIN_RANK_FOR_CHECK} и выше | NRP ники требуют исправления` })
             .setTimestamp();
         
         if (violations.length > 0) {
             const violationList = violations.slice(0, 25).map(v => `• ${v.nickname} (ранг ${v.rank})`).join('\n');
             embed.addFields({ 
-                name: `Список NRP ников (5+ ранг)${violations.length > 25 ? ` — показаны первые 25 из ${violations.length}` : ''}`, 
+                name: `Список NRP ников (${MIN_RANK_FOR_CHECK}+ ранг)${violations.length > 25 ? ` — показаны первые 25 из ${violations.length}` : ''}`, 
                 value: violationList.substring(0, 1024), 
                 inline: false 
             });
@@ -286,16 +318,23 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         let reportText = 'ОТЧЕТ О ПРОВЕРКЕ ЛОРНОСТИ НИКОВ\n';
         reportText += '='.repeat(60) + '\n\n';
         reportText += factionName ? `Фракция: ${factionName}\n` : '';
+        if (isGang) {
+            reportText += `⚠️ ПРАВИЛО: Для данной банды русские окончания и имена ЗАПРЕЩЕНЫ\n`;
+        }
         reportText += `Дата проверки: ${new Date().toLocaleString()}\n`;
         reportText += `Численность фракции: ${totalMembers} чел.\n`;
-        reportText += `Проверено ников (5+ ранг): ${totalChecked}\n`;
-        reportText += `Пропущено (1-4 ранг): ${lowRankSkipped}\n`;
+        reportText += `Проверено ников (${MIN_RANK_FOR_CHECK}+ ранг): ${totalChecked}\n`;
+        reportText += `Пропущено (1-${MIN_RANK_FOR_CHECK - 1} ранг): ${lowRankSkipped}\n`;
         reportText += `Норма NRP ников: ${violationLevel.min}-${violationLevel.max}\n`;
         reportText += `Найдено NRP ников: ${violationsCount}\n`;
         reportText += `Статус: ${violationLevel.message}\n\n`;
         
         if (violations.length > 0) {
-            reportText += 'СПИСОК NRP НИКОВ (НЕ СООТВЕТСТВУЮТ, РАНГ 5+):\n';
+            if (isGang) {
+                reportText += `СПИСОК NRP НИКОВ (СОДЕРЖАТ РУССКИЕ ОКОНЧАНИЯ/ИМЕНА, РАНГ ${MIN_RANK_FOR_CHECK}+):\n`;
+            } else {
+                reportText += `СПИСОК NRP НИКОВ (НЕ СООТВЕТСТВУЮТ ЛОРУ, РАНГ ${MIN_RANK_FOR_CHECK}+):\n`;
+            }
             reportText += '-'.repeat(40) + '\n';
             for (const violation of violations) {
                 reportText += `${violation.nickname} (ранг ${violation.rank})\n`;
@@ -305,11 +344,15 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         
         reportText += 'ПРАВИЛА ЛОРНЫХ ОКОНЧАНИЙ:\n';
         reportText += '-'.repeat(40) + '\n';
-        reportText += 'Русская мафия: -ov, -ev, -in (Ivanov, Sobolev, Pushkin)\n';
-        reportText += 'Итальянская мафия: -ini, -ino, -elli, -etti, -atti, -oni, -icci, -ano, -acci, -izzi\n';
-        reportText += 'Армянская мафия: -yan, -yanc, -ian (Galstyan, Sargsian)\n';
-        reportText += 'Мексиканская мафия: -ez, -as, -os, -es (Rodriguez, Vargas, Rios)\n';
-        reportText += '\nПримечание: Проверяются только игроки с рангом 5 и выше.\n';
+        reportText += 'Русская мафия: -ov, -ev, -in, -eva, -ova, -skiy, -skaya, -ina (проверка с 5 ранга)\n';
+        reportText += 'Итальянская мафия: -ini, -etti, -ello, -one, -ucci, -ardi, -ano и др. (проверка с 5 ранга)\n';
+        reportText += 'Армянская мафия: -yan, -yanc, -ian (проверка с 5 ранга)\n';
+        reportText += 'Мексиканская мафия: -ez, -as, -os, -es (проверка с 5 ранга)\n';
+        reportText += '\n';
+        reportText += 'ДЛЯ БАНД (Marabunta Grande, Los Santos Vagos, East Side Ballas, Bloods Street Gang, The Families):\n';
+        reportText += `❌ ЗАПРЕЩЕНЫ русские окончания (-ov, -ev, -in и др.) и русские имена (Ivan, Sergey и др.)\n`;
+        reportText += `⚠️ Проверка начинается со 2 ранга!\n`;
+        reportText += `\nПримечание: Для мафий проверяются игроки с ранга 5, для банд - со 2 ранга.\n`;
         
         const reportBuffer = Buffer.from(reportText, 'utf-8');
         const reportAttachment = new AttachmentBuilder(reportBuffer, { name: `lore_check_${Date.now()}.txt` });

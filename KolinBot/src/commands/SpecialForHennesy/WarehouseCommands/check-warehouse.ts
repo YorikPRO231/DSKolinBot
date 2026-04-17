@@ -102,7 +102,12 @@ export const data = new SlashCommandBuilder()
             { name: "FIB", value: FRACTION_TYPES.FIB },
             { name: "GOV", value: FRACTION_TYPES.GOV },
             { name: "ARMY", value: FRACTION_TYPES.ARMY },
-            { name: "SASPA", value: FRACTION_TYPES.SASPA }
+            { name: "SASPA", value: FRACTION_TYPES.SASPA },
+            { name: "The Families", value: FRACTION_TYPES.FAM },
+            { name: "Los Santos Vagos", value: FRACTION_TYPES.LSV },
+            { name: "East Side Ballas", value: FRACTION_TYPES.ESB },
+            { name: "Marabunta Grande", value: FRACTION_TYPES.MG },
+            { name: "Bloods Street Gang", value: FRACTION_TYPES.BSG }
         )
     );
 
@@ -424,12 +429,10 @@ function parseLogEntry(line: string, showWeaponNumbers: boolean = true): LogEntr
         };
     }
     
-    // Трейды игнорируем
     if (lowerType.includes("трейд")) {
         return null;
     }
     
-    // Определяем локацию
     if (lowerType.includes("фракционный склад") || lowerType.includes("фракционный бот")) {
         location = 'faction_storage';
     } else if (lowerType.includes("квартир") || lowerType === "квартира" || 
@@ -491,7 +494,7 @@ function analyzeLogs(data: string, showWeaponNumbers: boolean = true): AnalysisR
     // Фракционный инвентарь игрока
     const factionInventory: StorageBalance = {};
     
-    // Взято со склада (брутто)
+    // Взято со склада
     const totalTakenFromFaction: StorageBalance = {};
     
     // Возвращено на склад
@@ -607,7 +610,6 @@ function analyzeLogs(data: string, showWeaponNumbers: boolean = true): AnalysisR
         }
     }
     
-    // Суммарные остатки в личном имуществе
     const remainingInPersonal: StorageBalance = {};
     for (const balance of Object.values(remainingByLocation)) {
         for (const [item, count] of Object.entries(balance) as [string, number][]) {
@@ -617,7 +619,6 @@ function analyzeLogs(data: string, showWeaponNumbers: boolean = true): AnalysisR
         }
     }
     
-    // Чистое взятое (нетто)
     const netTaken: StorageBalance = {};
     for (const [item, taken] of Object.entries(totalTakenFromFaction)) {
         const returned = totalReturnedToFaction[item] || 0;
@@ -781,7 +782,7 @@ async function sendReportToWebhook(
     }
     
     let codeContent = `Админ: ${adminName}\n`;
-    codeContent += `Статк: ${statick}\n`;
+    codeContent += `Статик: ${statick}\n`;
     codeContent += `Фракция: ${FRACTION_INFO[fraction as FractionType]?.label || fraction}\n`;
     codeContent += `Наказание: ${punishmentType}${punishmentDuration ? ` (${punishmentDuration})` : ""}\n`;
     codeContent += `\n${"─".repeat(50)}\n\n`;
@@ -988,7 +989,6 @@ async function processPunishment(
         await sendReportToWebhook(adminDisplayName, statick, fraction, punishmentName, durationText, analysis, "https://cdn.discordapp.com/avatars/939953853527392286/a_380cd7c3a53eecfea5a3e20d2267ae36.gif", showWeaponNumbers);
     }
 
-    // Проверяем тип interaction для правильного ответа
     if ('editReply' in inter && typeof inter.editReply === 'function') {
         await inter.editReply({ 
             content: `✅ Нарушение зарегистрировано: **${adminSurname}**\nНаказание: ${punishmentName} ${durationText}\n\n**Команда:**\n\`${commandText}\``,

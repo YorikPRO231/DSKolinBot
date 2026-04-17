@@ -9,7 +9,12 @@ export const FRACTION_TYPES = {
     FIB: "FIB",
     GOV: "GOV",
     ARMY: "ARMY",
-    SASPA: "SASPA"
+    SASPA: "SASPA",
+    FAM: "FAM",
+    MG: "MG-13",
+    LSV: "LSV",
+    ESB: "ESB",
+    BSG: "BSG"
 } as const;
 
 export type FractionType = keyof typeof FRACTION_TYPES;
@@ -25,5 +30,10 @@ export const FRACTION_INFO: Record<FractionType, { label: string }> = {
     FIB: { label: "FIB" },
     GOV: { label: "Government" },
     ARMY: { label: "SANG" },
-    SASPA: { label: "SASPA" }
+    SASPA: { label: "SASPA" },
+    FAM: { label: "The Families" },
+    MG: { label: "Marabunta Grande" },
+    LSV: { label: "Los Santos Vagos" },
+    ESB: { label: "East Side Ballas" },
+    BSG: { label: "Bloods Street Gang" }
 };

@@ -49,8 +49,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     
     const adminId = interaction.user.id;
     const adminName = interaction.user.displayName;
-    const adminSurname = getAdminSurname(adminId);
-    const fullAdminName = adminSurname ? `${adminName} (${adminSurname})` : adminName;
+    const fullAdminName = adminName;
     const fullResult = comment ? `${result}\nКомментарий: ${comment}` : result;
     
     try {
