@@ -155,73 +155,31 @@ function getViolationLevel(totalMembers: number, violationsCount: number): {
     min: number;
     max: number;
 } {
-    let min = 0, max = 0;
+    const THRESHOLDS = [
+        { maxTotal: 100,  normal: 7,  warning: 10,  min: 0  },
+        { maxTotal: 200,  normal: 11, warning: 14,  min: 7  },
+        { maxTotal: 300,  normal: 14, warning: 18,  min: 11 },
+        { maxTotal: 400,  normal: 18, warning: 23,  min: 14 },
+        { maxTotal: 500,  normal: 21, warning: 27,  min: 18 },
+        { maxTotal: 600,  normal: 25, warning: 32,  min: 21 },
+        { maxTotal: 700,  normal: 28, warning: 36,  min: 25 },
+        { maxTotal: 800,  normal: 32, warning: 41,  min: 28 },
+        { maxTotal: 900,  normal: 35, warning: 45,  min: 32 },
+        { maxTotal: 1000, normal: 38, warning: 49,  min: 35 }
+    ];
     
-    if (totalMembers <= 100) {
-        min = 0; max = 7;
-        if (violationsCount <= 7) return { level: 'normal', message: 'В пределах нормы', min, max };
-        else if (violationsCount <= 10) return { level: 'warning', message: 'Превышение нормы, требуется предупреждение', min, max };
-        else return { level: 'danger', message: 'Критическое превышение, рекомендуется выдать минуса', min, max };
-    }
-    else if (totalMembers <= 200) {
-        min = 7; max = 11;
-        if (violationsCount <= 11) return { level: 'normal', message: 'В пределах нормы', min, max };
-        else if (violationsCount <= 14) return { level: 'warning', message: 'Превышение нормы, требуется предупреждение', min, max };
-        else return { level: 'danger', message: 'Критическое превышение, рекомендуется выдать минуса', min, max };
-    }
-    else if (totalMembers <= 300) {
-        min = 11; max = 14;
-        if (violationsCount <= 14) return { level: 'normal', message: 'В пределах нормы', min, max };
-        else if (violationsCount <= 18) return { level: 'warning', message: 'Превышение нормы, требуется предупреждение', min, max };
-        else return { level: 'danger', message: 'Критическое превышение, рекомендуется выдать минуса', min, max };
-    }
-    else if (totalMembers <= 400) {
-        min = 14; max = 18;
-        if (violationsCount <= 18) return { level: 'normal', message: 'В пределах нормы', min, max };
-        else if (violationsCount <= 23) return { level: 'warning', message: 'Превышение нормы, требуется предупреждение', min, max };
-        else return { level: 'danger', message: 'Критическое превышение, рекомендуется выдать минуса', min, max };
-    }
-    else if (totalMembers <= 500) {
-        min = 18; max = 21;
-        if (violationsCount <= 21) return { level: 'normal', message: 'В пределах нормы', min, max };
-        else if (violationsCount <= 27) return { level: 'warning', message: 'Превышение нормы, требуется предупреждение', min, max };
-        else return { level: 'danger', message: 'Критическое превышение, рекомендуется выдать минуса', min, max };
-    }
-    else if (totalMembers <= 600) {
-        min = 21; max = 25;
-        if (violationsCount <= 25) return { level: 'normal', message: 'В пределах нормы', min, max };
-        else if (violationsCount <= 32) return { level: 'warning', message: 'Превышение нормы, требуется предупреждение', min, max };
-        else return { level: 'danger', message: 'Критическое превышение, рекомендуется выдать минуса', min, max };
-    }
-    else if (totalMembers <= 700) {
-        min = 25; max = 28;
-        if (violationsCount <= 28) return { level: 'normal', message: 'В пределах нормы', min, max };
-        else if (violationsCount <= 36) return { level: 'warning', message: 'Превышение нормы, требуется предупреждение', min, max };
-        else return { level: 'danger', message: 'Критическое превышение, рекомендуется выдать минуса', min, max };
-    }
-    else if (totalMembers <= 800) {
-        min = 28; max = 32;
-        if (violationsCount <= 32) return { level: 'normal', message: 'В пределах нормы', min, max };
-        else if (violationsCount <= 41) return { level: 'warning', message: 'Превышение нормы, требуется предупреждение', min, max };
-        else return { level: 'danger', message: 'Критическое превышение, рекомендуется выдать минуса', min, max };
-    }
-    else if (totalMembers <= 900) {
-        min = 32; max = 35;
-        if (violationsCount <= 35) return { level: 'normal', message: 'В пределах нормы', min, max };
-        else if (violationsCount <= 45) return { level: 'warning', message: 'Превышение нормы, требуется предупреждение', min, max };
-        else return { level: 'danger', message: 'Критическое превышение, рекомендуется выдать минуса', min, max };
-    }
-    else if (totalMembers <= 1000) {
-        min = 35; max = 38;
-        if (violationsCount <= 38) return { level: 'normal', message: 'В пределах нормы', min, max };
-        else if (violationsCount <= 49) return { level: 'warning', message: 'Превышение нормы, требуется предупреждение', min, max };
-        else return { level: 'danger', message: 'Критическое превышение, рекомендуется выдать минуса', min, max };
-    }
-    else {
-        min = 38; max = 41;
-        if (violationsCount <= 38) return { level: 'normal', message: 'В пределах нормы', min, max };
-        else if (violationsCount <= 50) return { level: 'warning', message: 'Превышение нормы, требуется предупреждение', min, max };
-        else return { level: 'danger', message: 'Критическое превышение, рекомендуется выдать минуса', min, max };
+    const threshold = THRESHOLDS.find(t => totalMembers <= t.maxTotal) ?? 
+        { normal: 38, warning: 50, min: 38, maxTotal: Infinity };
+    
+    const max = threshold.normal;
+    const min = threshold.min;
+    
+    if (violationsCount <= threshold.normal) {
+        return { level: 'normal', message: 'В пределах нормы', min, max };
+    } else if (violationsCount <= threshold.warning) {
+        return { level: 'warning', message: 'Превышение нормы, требуется предупреждение', min, max };
+    } else {
+        return { level: 'danger', message: 'Критическое превышение, рекомендуется выдать минуса', min, max };
     }
 }
 

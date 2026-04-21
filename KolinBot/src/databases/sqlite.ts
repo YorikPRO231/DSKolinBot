@@ -34,7 +34,7 @@ db.exec(`
   );
 
   -- ============================================
-  -- БЕЗОПАСНОСТЬ (БОТ-ЧИТ)
+  -- БОТ-ЧИТ
   -- ============================================
   CREATE TABLE IF NOT EXISTS security_alerts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -306,6 +306,26 @@ export function getSecurityLogs(limit: number = 100): SecurityLog[] {
     ORDER BY checked_at DESC 
     LIMIT ?
   `).all(limit) as SecurityLog[];
+}
+
+export function addSecurityRequest(
+  suspect: string,
+  adminId: string,
+  reason: string,
+  video: string
+): void {
+  const workData = `Причина: ${reason} | Видео: ${video}`;
+
+  db.prepare(`
+    INSERT INTO security_alerts (suspect, suspected_action, work_data, admin_id, count, status)
+    VALUES (?, ?, ?, ?, 1, 'OPEN')
+    ON CONFLICT(suspect, suspected_action) DO UPDATE SET
+      count = count + 1,
+      work_data = ?,
+      admin_id = ?,
+      updated_at = datetime('now', 'localtime'),
+      status = 'OPEN'
+  `).run(suspect, 'Запрос проверки от админа', workData, adminId, workData, adminId);
 }
 
 // ============================================

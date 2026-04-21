@@ -21,24 +21,40 @@ import { addLog, getAdminSurname } from '../../../databases/sqlite';
 import { PUNISHMENT_TYPES, PunishmentType } from '../../../utils/constants/punishments';
 import { FRACTION_TYPES, FRACTION_INFO, FractionType } from '../../../utils/constants/fractions';
 
-// ============================================
-// КОНСТАНТЫ
-// ============================================
+const FRACTION_GROUPS = {
+    MAFIA: [FRACTION_TYPES.MM, FRACTION_TYPES.RM, FRACTION_TYPES.LCN, FRACTION_TYPES.YAK, FRACTION_TYPES.AM] as FractionType[],
+    GANG: [FRACTION_TYPES.FAM, FRACTION_TYPES.LSV, FRACTION_TYPES.ESB, FRACTION_TYPES.MG, FRACTION_TYPES.BSG] as FractionType[],
+    STATE: [FRACTION_TYPES.LSPD, FRACTION_TYPES.LSSD, FRACTION_TYPES.FIB, FRACTION_TYPES.GOV, FRACTION_TYPES.ARMY, FRACTION_TYPES.SASPA] as FractionType[]
+};
 
-const CRIME_FACTIONS: FractionType[] = [FRACTION_TYPES.MM, FRACTION_TYPES.RM, FRACTION_TYPES.LCN, FRACTION_TYPES.YAK, FRACTION_TYPES.AM];
-const WEBHOOK_URL = process.env.REPORT_WEBHOOK_URL || "";
+const WEBHOOK_URLS = {
+    MAFIA: process.env.REPORT_WEBHOOK_MAFIA || process.env.REPORT_WEBHOOK_URL || "",
+    GANG: process.env.REPORT_WEBHOOK_GANG || "",
+    STATE: process.env.REPORT_WEBHOOK_STATE || "",
+    DEFAULT: ""
+};
+
+const WEBHOOK_AVATARS = {
+    MAFIA: "https://cdn.discordapp.com/avatars/939953853527392286/a_380cd7c3a53eecfea5a3e20d2267ae36.gif",
+    GANG: "https://cdn.discordapp.com/avatars/939953853527392286/a_380cd7c3a53eecfea5a3e20d2267ae36.gif",
+    STATE: "https://cdn.discordapp.com/avatars/939953853527392286/a_380cd7c3a53eecfea5a3e20d2267ae36.gif",
+    DEFAULT: undefined
+};
 
 const LOCATION_NAMES: Record<string, string> = {
     houses: "Дома/квартиры",
     personalCars: "Личный транспорт",
     fractionCars: "Фракционный транспорт",
-    familyWarehouse: "Склад особняка",
+    familyWarehouse: "Склад офиса/особняка",
     camper: "Кемпер"
 };
 
-// ============================================
-// ТИПЫ ДАННЫХ
-// ============================================
+const GROUP_COLORS: Record<string, number> = {
+    MAFIA: 0x8B0000,
+    GANG: 0x800080,
+    STATE: 0x00008B,
+    DEFAULT: 0x2B2D31
+};
 
 interface LogEntry {
     datetime: Date;
@@ -56,6 +72,21 @@ interface LogEntry {
 
 interface StorageBalance {
     [item: string]: number;
+}
+
+interface WeaponStorage {
+    [weaponId: string]: { 
+        count: number;
+        baseName: string;   
+    };
+}
+
+interface PersonalStorageDetailed {
+    houses: WeaponStorage;
+    personalCars: WeaponStorage;
+    fractionCars: WeaponStorage;
+    familyWarehouse: WeaponStorage;
+    camper: WeaponStorage;
 }
 
 interface PersonalStorage {
@@ -81,10 +112,6 @@ interface AnalysisResult {
     totalEarnings: number;
     hasViolation: boolean;
 }
-
-// ============================================
-// ОСНОВНАЯ ФУНКЦИЯ
-// ============================================
 
 export const data = new SlashCommandBuilder()
     .setName("проверить-склад")
@@ -112,25 +139,15 @@ export const data = new SlashCommandBuilder()
     );
 
 export async function execute(inter: ChatInputCommandInteraction) {
-    let adminDisplayName = inter.user.displayName;
-    
-    if (!adminDisplayName || adminDisplayName === inter.user.username) {
-        adminDisplayName = inter.user.globalName || inter.user.username;
-    }
-    
-    const member = await inter.guild?.members.fetch(inter.user.id).catch(() => null);
-    if (member && member.nickname) {
-        adminDisplayName = member.nickname;
-    }
-    
+    const adminDisplayName = getAdminDisplayName(inter);
     const adminSurname = getAdminSurname(inter.user.id);
+    
     if (!adminSurname) {
         return inter.reply({ content: "Вы не зарегистрированы!", flags: [MessageFlags.Ephemeral] });
     }
 
     await inter.deferReply();
 
-    let statick = "";
     const fraction = inter.options.getString("фракция") as FractionType;
     const attachment = inter.options.getAttachment("лог-файл")!;
 
@@ -138,67 +155,23 @@ export async function execute(inter: ChatInputCommandInteraction) {
         const response = await axios.get(attachment.url, { responseType: 'text' });
         const fileContent = response.data;
 
-        const firstLine = fileContent.split('\n')[0];
-        const staticMatch = firstLine.match(/\[(\d+)\]/);
-        if (staticMatch) {
-            statick = staticMatch[1];
-        } else {
+        const statick = extractStatick(fileContent);
+        if (!statick) {
             return inter.editReply("❌ Не удалось найти статик в файле.");
         }
 
         const analysis = analyzeLogs(fileContent);
         const report = generateReport(statick, fraction, analysis);
 
-        const hasViolation = analysis.hasViolation;
-        
-        const isTooLong = report.length > 1800;
-        const embed = new EmbedBuilder()
-            .setTitle(`🔍 Результаты проверки: #${statick}`)
-            .setColor(hasViolation ? 0xFF4444 : 0x44FF44)
-            .setDescription(isTooLong ? "📄 Полный отчет прикреплен файлом ниже." : `\`\`\`\n${report}\n\`\`\``)
-            .setFooter({ text: hasViolation ? "⚠️ Обнаружено нарушение!" : "✅ Нарушений не обнаружено" });
-
-        const files: AttachmentBuilder[] = [];
-        if (isTooLong) {
-            files.push(new AttachmentBuilder(Buffer.from(report, 'utf-8'), { name: `report_${statick}.txt` }));
-        }
-
-        const row = hasViolation ? new ActionRowBuilder<ButtonBuilder>().addComponents(
-            new ButtonBuilder().setCustomId('btn_violation').setLabel('Зафиксировать нарушение').setStyle(ButtonStyle.Danger),
-            new ButtonBuilder().setCustomId('btn_ok').setLabel('Нарушений нет').setStyle(ButtonStyle.Secondary)
-        ) : null;
+        const embed = createReportEmbed(statick, fraction, analysis, report);
+        const files = createReportFile(report, statick);
+        const row = createActionRow(analysis.hasViolation);
 
         const message = await inter.editReply({ embeds: [embed], components: row ? [row] : [], files });
 
-        if (!hasViolation) return;
+        if (!analysis.hasViolation) return;
 
-        let isProcessed = false;
-
-        const collector = message.createMessageComponentCollector({ componentType: ComponentType.Button, time: 600000 });
-
-        collector.on('collect', async (btnInter: ButtonInteraction) => {
-            if (btnInter.user.id !== inter.user.id) {
-                return btnInter.reply({ content: "Не ваш лог!", flags: [MessageFlags.Ephemeral] });
-            }
-
-            if (isProcessed) {
-                return btnInter.reply({ content: "Нарушение уже обработано!", flags: [MessageFlags.Ephemeral] });
-            }
-
-            if (btnInter.customId === 'btn_ok') {
-                isProcessed = true;
-                collector.stop();
-                await btnInter.update({ content: "✅ Проверка завершена: Чисто.", embeds: [], components: [], files: [] });
-                return;
-            }
-
-            if (btnInter.customId === 'btn_violation') {
-                isProcessed = true;
-                collector.stop();
-                await btnInter.update({ components: [] });
-                await showPunishmentModal(btnInter, statick, fraction, adminSurname, adminDisplayName, analysis, report, fileContent);
-            }
-        });
+        await handlePunishmentFlow(message, inter.user.id, statick, fraction, adminSurname, adminDisplayName, analysis, report, fileContent);
 
     } catch (e) {
         console.error(e);
@@ -206,9 +179,172 @@ export async function execute(inter: ChatInputCommandInteraction) {
     }
 }
 
-// ============================================
-// ПАРСИНГ ЛОГОВ
-// ============================================
+function getAdminDisplayName(inter: ChatInputCommandInteraction): string {
+    const member = inter.guild?.members.cache.get(inter.user.id);
+    return member?.nickname || inter.user.globalName || inter.user.displayName || inter.user.username;
+}
+
+function extractStatick(fileContent: string): string | null {
+    const firstLine = fileContent.split('\n')[0];
+    const staticMatch = firstLine.match(/\[(\d+)\]/);
+    return staticMatch ? staticMatch[1] : null;
+}
+
+function createReportEmbed(statick: string, fraction: FractionType, analysis: AnalysisResult, report: string): EmbedBuilder {
+    const isTooLong = report.length > 1800;
+    return new EmbedBuilder()
+        .setTitle(`🔍 Результаты проверки: #${statick}`)
+        .setColor(analysis.hasViolation ? 0xFF4444 : 0x44FF44)
+        .setDescription(isTooLong ? "📄 Полный отчет прикреплен файлом ниже." : `\`\`\`\n${report}\n\`\`\``)
+        .setFooter({ text: analysis.hasViolation ? "⚠️ Обнаружено нарушение!" : "✅ Нарушений не обнаружено" });
+}
+
+function createReportFile(report: string, statick: string): AttachmentBuilder[] {
+    if (report.length <= 1800) return [];
+    return [new AttachmentBuilder(Buffer.from(report, 'utf-8'), { name: `report_${statick}.txt` })];
+}
+
+function createActionRow(hasViolation: boolean): ActionRowBuilder<ButtonBuilder> | null {
+    if (!hasViolation) return null;
+    
+    return new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder().setCustomId('btn_violation').setLabel('Зафиксировать нарушение').setStyle(ButtonStyle.Danger),
+        new ButtonBuilder().setCustomId('btn_ok').setLabel('Нарушений нет').setStyle(ButtonStyle.Secondary)
+    );
+}
+
+async function handlePunishmentFlow(
+    message: any,
+    userId: string,
+    statick: string,
+    fraction: FractionType,
+    adminSurname: string,
+    adminDisplayName: string,
+    analysis: AnalysisResult,
+    report: string,
+    fileContent: string
+): Promise<void> {
+    let isProcessed = false;
+    const collector = message.createMessageComponentCollector({ componentType: ComponentType.Button, time: 600000 });
+
+    collector.on('collect', async (btnInter: ButtonInteraction) => {
+        if (btnInter.user.id !== userId) {
+            return btnInter.reply({ content: "Не ваш лог!", flags: [MessageFlags.Ephemeral] });
+        }
+
+        if (isProcessed) {
+            return btnInter.reply({ content: "Нарушение уже обработано!", flags: [MessageFlags.Ephemeral] });
+        }
+
+        if (btnInter.customId === 'btn_ok') {
+            isProcessed = true;
+            collector.stop();
+            await btnInter.update({ content: "✅ Проверка завершена: Чисто.", embeds: [], components: [], files: [] });
+            return;
+        }
+
+        if (btnInter.customId === 'btn_violation') {
+            isProcessed = true;
+            collector.stop();
+            await btnInter.update({ components: [] });
+            await showPunishmentModal(btnInter, statick, fraction, adminSurname, adminDisplayName, analysis, report, fileContent);
+        }
+    });
+}
+
+function getFractionGroup(fraction: FractionType): keyof typeof FRACTION_GROUPS | 'DEFAULT' {
+    for (const [group, fractions] of Object.entries(FRACTION_GROUPS)) {
+        if (fractions.includes(fraction)) {
+            return group as keyof typeof FRACTION_GROUPS;
+        }
+    }
+    return 'DEFAULT';
+}
+
+function getWebhookConfig(fraction: FractionType) {
+    const group = getFractionGroup(fraction);
+    
+    let webhookUrl = WEBHOOK_URLS[group] || WEBHOOK_URLS.DEFAULT;
+    const avatarUrl = WEBHOOK_AVATARS[group] || WEBHOOK_AVATARS.DEFAULT;
+    const color = GROUP_COLORS[group] || GROUP_COLORS.DEFAULT;
+    
+    if (!webhookUrl) {
+        webhookUrl = "";
+    }
+    
+    return { webhookUrl, avatarUrl, color, group };
+}
+
+const ITEM_MAP: Record<string, string> = {
+    '62mm': '7.62mm', 
+    '56mm': '5.56mm', 
+    '43mm': '11.43mm', 
+    '11.43mm': '11.43mm', 
+    '12mm': '12mm',
+    '7.62': '7.62mm',
+    '5.56': '5.56mm',
+    'аптечка': 'Аптечка', 
+    'аптечка пп': 'Аптечка ПП', 
+    'аптечка ems': 'Аптечка EMS',
+    'бинты': 'Бинты', 
+    'анальгетик': 'Анальгетик',
+    'боевой стимулятор': 'Боевой стимулятор', 
+    'броня': 'Броня', 
+    'бургер': 'Бургер', 
+    'пицца': 'Пицца',
+    'рагу': 'Рагу', 
+    'овощной салат': 'Овощной салат', 
+    'овощной смузи': 'Овощной смузи', 
+    'кола': 'Кола',
+    'спанк': 'SPANK', 
+    'spank': 'SPANK', 
+    'косяк': 'Косяк', 
+    'стаб-пак': 'Стаб-пак', 
+    'пак': 'Стаб-пак',
+    'материалы': 'Материалы', 
+    'ремонтный набор': 'Ремонтный набор', 
+    'канистра с бензином': 'Канистра с бензином',
+    'набор для костра': 'Набор для костра', 
+    'палатка': 'Палатка', 
+    'бумбокс': 'Бумбокс', 
+    'записка': 'Записка',
+    'фонарик': 'Фонарик', 
+    'бита': 'Бита', 
+    'резиновая дубинка': 'Резиновая дубинка',
+    'пистолет': 'Пистолет', 
+    'тяжелый пистолет': 'Тяжелый пистолет', 
+    'кольт': 'Кольт', 
+    'револьвер': 'Револьвер',
+    'старинный пистолет': 'Старинный пистолет', 
+    'ap пистолет': 'AP пистолет',
+    'pump shotgun': 'Pump Shotgun', 
+    'pump shothun': 'Pump Shotgun', 
+    'pump shotgun mk2': 'Pump Shotgun MK2',
+    'combat shotgun': 'Combat Shotgun', 
+    'assault shotgun': 'Assault Shotgun', 
+    'heavy shotgun': 'Heavy Shotgun',
+    'tactical smg': 'Tactical SMG', 
+    'assault smg': 'Assault SMG', 
+    'micro smg': 'Micro SMG',
+    'smg': 'SMG', 
+    'smg-mk2': 'SMG-MK2', 
+    'carbine rifle': 'Carbine Rifle', 
+    'service carbine': 'Service Carbine',
+    'battle rifle': 'Battle Rifle', 
+    'military rifle': 'Military Rifle', 
+    'compact rifle': 'Compact Rifle',
+    'gusenberg sweeper': 'Gusenberg Sweeper', 
+    'тазер': 'Тазер', 
+    'сигнальная ракетница': 'Сигнальная ракетница',
+    'дымовой гранатомет': 'Дымовой гранатомет', 
+    'коктейль молотова': 'Коктейль Молотова',
+    'обрез': 'Обрез', 
+    'special rifle': 'Special Rifle', 
+    'assault rifle': 'Assault Rifle',
+    'специальная винтовка': 'Special Rifle',
+    'штурмовая винтовка': 'Assault Rifle',
+    'карабин': 'Carbine Rifle',
+};
 
 function parseDateTime(dateStr: string, timeStr: string): Date {
     const [day, month, year] = dateStr.split('.');
@@ -216,149 +352,133 @@ function parseDateTime(dateStr: string, timeStr: string): Date {
     return new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes), parseInt(seconds));
 }
 
-function normalizeItemName(rawName: string, showWeaponNumbers: boolean = true): string {
-    let normalized = rawName
-        .trim()
-        .replace(/\s*\(\d+%\)/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-    
-    const itemMap: Record<string, string> = {
-        '62mm': '7.62mm',
-        '56mm': '5.56mm',
-        '43mm': '11.43mm',
-        '11.43mm': '11.43mm',
-        '12mm': '12mm',
-        'аптечка': 'Аптечка',
-        'аптечка пп': 'Аптечка ПП',
-        'бинты': 'Бинты',
-        'анальгетик': 'Анальгетик',
-        'боевой стимулятор': 'Боевой стимулятор',
-        'броня': 'Броня',
-        'бургер': 'Бургер',
-        'пицца': 'Пицца',
-        'рагу': 'Рагу',
-        'овощной салат': 'Овощной салат',
-        'овощной смузи': 'Овощной смузи',
-        'кола': 'Кола',
-        'спанк': 'SPANK',
-        'spank': 'SPANK',
-        'косяк': 'Косяк',
-        'стаб-пак': 'Стаб-пак',
-        'пак': 'Стаб-пак',
-        'материалы': 'Материалы',
-        'ремонтный набор': 'Ремонтный набор',
-        'канистра с бензином': 'Канистра с бензином',
-        'набор для костра': 'Набор для костра',
-        'палатка': 'Палатка',
-        'бумбокс': 'Бумбокс',
-        'записка': 'Записка',
-        'фонарик': 'Фонарик',
-        'бита': 'Бита',
-        'резиновая дубинка': 'Резиновая дубинка',
-        'пистолет': 'Пистолет',
-        'тяжелый пистолет': 'Тяжелый пистолет',
-        'кольт': 'Кольт',
-        'револьвер': 'Револьвер',
-        'старинный пистолет': 'Старинный пистолет',
-        'ap пистолет': 'AP пистолет',
-        'pump shotgun': 'Pump Shotgun',
-        'pump shothun': 'Pump Shotgun',
-        'pump shotgun mk2': 'Pump Shotgun MK2',
-        'combat shotgun': 'Combat Shotgun',
-        'assault shotgun': 'Assault Shotgun',
-        'heavy shotgun': 'Heavy Shotgun',
-        'tactical smg': 'Tactical SMG',
-        'assault smg': 'Assault SMG',
-        'micro smg': 'Micro SMG',
-        'smg': 'SMG',
-        'smg-mk2': 'SMG-MK2',
-        'carbine rifle': 'Carbine Rifle',
-        'service carbine': 'Service Carbine',
-        'battle rifle': 'Battle Rifle',
-        'military rifle': 'Military Rifle',
-        'compact rifle': 'Compact Rifle',
-        'gusenberg sweeper': 'Gusenberg Sweeper',
-        'тазер': 'Тазер',
-        'сигнальная ракетница': 'Сигнальная ракетница',
-        'дымовой гранатомет': 'Дымовой гранатомет',
-        'коктейль молотова': 'Коктейль Молотова',
-        'обрез': 'Обрез',
-        'special rifle': 'Special Rifle',
-        'assault rifle': 'Assault Rifle',
-    };
-    
-    const weaponWithNumberMatch = normalized.match(/^(assault rifle|special rifle|carbine rifle|service carbine|battle rifle|military rifle|compact rifle|gusenberg sweeper)\s*\(([A-Z0-9]+)\)$/i);
-    if (weaponWithNumberMatch) {
-        const weaponName = weaponWithNumberMatch[1].toLowerCase();
-        const weaponNumber = weaponWithNumberMatch[2];
-        
-        let normalizedWeapon = '';
-        for (const [key, value] of Object.entries(itemMap)) {
-            if (key.toLowerCase() === weaponName) {
-                normalizedWeapon = value;
-                break;
-            }
-        }
-        if (!normalizedWeapon) {
-            normalizedWeapon = weaponName.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-        }
-        
-        return showWeaponNumbers ? `${normalizedWeapon} (${weaponNumber})` : normalizedWeapon;
-    }
-    
-    const lowerRaw = normalized.toLowerCase();
-    for (const [key, value] of Object.entries(itemMap)) {
-        if (lowerRaw === key.toLowerCase() || lowerRaw.includes(key.toLowerCase())) {
-            return value;
-        }
-    }
-    
-    if (!showWeaponNumbers) {
-        normalized = normalized.replace(/\s*\([A-Z0-9]+\)/gi, '');
-    }
-    
-    if (normalized.match(/^\d+\.\d+$/) && !normalized.includes('mm')) {
-        normalized = normalized + 'mm';
-    }
-    
-    return normalized;
-}
-
 function extractItemAndCount(action: string, showWeaponNumbers: boolean = true): { item: string | null; count: number } {
-    const countMatch = action.match(/(\d+)\s*шт/i);
-    if (!countMatch) return { item: null, count: 0 };
+    let count = 0;
     
-    const count = parseInt(countMatch[1]);
+    const xCountMatch = action.match(/\(x(\d+)\)/i);
+    const shtCountMatch = action.match(/(\d+)\s*шт/i);
+    const colonCountMatch = action.match(/:\s*.*?(\d+)\s*шт/i);
     
-    const weaponWithNumberMatch = action.match(/:\s*([А-Яа-яA-Za-z\s]+\([A-Z0-9]+\))\s*\d+\s*шт/i);
-    if (weaponWithNumberMatch) {
-        return { item: normalizeItemName(weaponWithNumberMatch[1], showWeaponNumbers), count };
+    if (xCountMatch) {
+        count = parseInt(xCountMatch[1]);
+    } else if (shtCountMatch) {
+        count = parseInt(shtCountMatch[1]);
+    } else if (colonCountMatch) {
+        count = parseInt(colonCountMatch[1]);
     }
     
-    const patterns = [
-        /:\s*([А-Яа-яA-Za-z0-9\s()%+]+?)\s*\d+\s*шт/i,
-        /([А-Яа-яA-Za-z0-9\s()%+]+?)\s*\d+\s*шт/i,
-    ];
+    if (count === 0) return { item: null, count: 0 };
     
-    for (const pattern of patterns) {
-        const match = action.match(pattern);
-        if (match && match[1]) {
-            const item = normalizeItemName(match[1], showWeaponNumbers);
-            if (item.length >= 2) {
-                return { item, count };
-            }
+    const colonMatch = action.match(/:\s*([А-Яа-яA-Za-z0-9.\s]+?)(?:\s*\(\d+%\))?\s+\d+\s*шт/i);
+    if (colonMatch?.[1]) {
+        let itemName = colonMatch[1].trim();
+        itemName = itemName.replace(/\s*\(\d+%\)/g, '').replace(/\s*\(x\d+\)/gi, '').trim();
+        return { item: normalizeItemName(itemName, showWeaponNumbers), count };
+    }
+    
+    const weaponMatch = action.match(/([А-Яа-яA-Za-z\s]+)\s*\(([A-Z0-9]+)\)/i);
+    if (weaponMatch) {
+        const weaponName = weaponMatch[1].trim();
+        const weaponNumber = weaponMatch[2];
+        return { item: normalizeItemName(`${weaponName} (${weaponNumber})`, showWeaponNumbers), count };
+    }
+    
+    const ammoMatch = action.match(/(\d+\.?\d*\s*mm)/i);
+    if (ammoMatch?.[1]) {
+        let ammo = ammoMatch[1].replace(/\s+/g, '');
+        if (!ammo.includes('mm')) ammo += 'mm';
+        return { item: normalizeItemName(ammo, showWeaponNumbers), count };
+    }
+    
+    const afterVerbMatch = action.match(/(?:Кладет|Берет|Забрал|Положил|положил|забрал|кладет|берет)\s+(.+?)(?:\s*\(x\d+\)|\s+\d+\s*шт|$)/i);
+    if (afterVerbMatch?.[1]) {
+        let itemPart = afterVerbMatch[1].trim();
+        
+        itemPart = itemPart.replace(/\s*\(x\d+\)/gi, '').replace(/\s*\(\d+%\)/g, '').trim();
+        itemPart = itemPart.split(/\s+(?:на|в|из|со|—)/i)[0].trim();
+        
+        const ammoInPart = itemPart.match(/(\d+\.?\d*\s*mm)/i);
+        if (ammoInPart?.[1]) {
+            let ammo = ammoInPart[1].replace(/\s+/g, '');
+            if (!ammo.includes('mm')) ammo += 'mm';
+            return { item: normalizeItemName(ammo, showWeaponNumbers), count };
+        }
+        
+        itemPart = itemPart.replace(/\s*\([^)]*\)/g, '').trim();
+        
+        if (itemPart.length >= 2) {
+            return { item: normalizeItemName(itemPart, showWeaponNumbers), count };
         }
     }
     
     return { item: null, count: 0 };
 }
 
+function normalizeItemName(rawName: string, showWeaponNumbers: boolean = true): string {
+    let normalized = rawName.trim().replace(/\s+/g, ' ').trim();
+    
+    normalized = normalized.replace(/\s*\(x\d+\)/gi, '').trim();
+    
+    if (normalized.toLowerCase() === 'mm') {
+        return '7.62mm';
+    }
+    
+    const ammoPattern = /^(\d+\.?\d*)\s*mm$/i;
+    const ammoMatch = normalized.match(ammoPattern);
+    if (ammoMatch) {
+        return `${ammoMatch[1]}mm`;
+    }
+    
+    const weaponWithNumberMatch = normalized.match(/^([А-Яа-яA-Za-z\s]+)\s*\(([A-Z0-9]+)\)$/i);
+    if (weaponWithNumberMatch) {
+        const weaponName = weaponWithNumberMatch[1].trim();
+        const weaponNumber = weaponWithNumberMatch[2];
+        const lowerWeapon = weaponName.toLowerCase();
+        
+        for (const [key, value] of Object.entries(ITEM_MAP)) {
+            if (lowerWeapon.includes(key.toLowerCase()) || key.toLowerCase().includes(lowerWeapon)) {
+                return showWeaponNumbers ? `${value} (${weaponNumber})` : value;
+            }
+        }
+        
+        const normalizedWeapon = weaponName.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+        return showWeaponNumbers ? `${normalizedWeapon} (${weaponNumber})` : normalizedWeapon;
+    }
+    
+    const lowerRaw = normalized.toLowerCase();
+    for (const [key, value] of Object.entries(ITEM_MAP)) {
+        if (lowerRaw === key.toLowerCase() || lowerRaw.includes(key.toLowerCase())) {
+            return value;
+        }
+    }
+    
+    if (lowerRaw.includes('аптечка')) {
+        if (lowerRaw.includes('пп')) return 'Аптечка ПП';
+        if (lowerRaw.includes('ems')) return 'Аптечка EMS';
+        return 'Аптечка';
+    }
+    
+    if (lowerRaw.includes('стаб')) {
+        return 'Стаб-пак';
+    }
+    
+    if (!showWeaponNumbers) {
+        normalized = normalized.replace(/\s*\([A-Z0-9]+\)/gi, '');
+    }
+    
+    return normalized;
+}
+
 function isFactionSource(location: string, type: string): boolean {
-    return location === 'faction_storage' || 
-           location === 'fraction_car' ||
-           type.toLowerCase().includes("фракционный бот") ||
-           type.toLowerCase().includes("фракционный склад");
+    const lowerType = type.toLowerCase();
+    if (location === 'faction_storage') return true;
+    if (location === 'fraction_car') return true;
+    if (lowerType.includes("фракционный бот") ||
+        lowerType.includes("фракционный склад") ||
+        lowerType.includes("фракционный транспорт")) {
+        return true;
+    }
+    return false;
 }
 
 function parseLogEntry(line: string, showWeaponNumbers: boolean = true): LogEntry | null {
@@ -368,54 +488,36 @@ function parseLogEntry(line: string, showWeaponNumbers: boolean = true): LogEntr
     const [rawDateTime, type, action] = parts;
     const [rawDate, rawTime] = rawDateTime.split(', ');
     
-    let count = 0;
-    let soldCount = 0;
-    let money = 0;
-    let operation: 'take' | 'put' | 'craft' | 'sell' | 'trade_in' | 'trade_out' = 'take';
-    let location = 'unknown';
-    
     const lowerType = type.toLowerCase();
     const lowerAction = action.toLowerCase();
     
-    // Крафт
     if (lowerType.includes("крафт")) {
-        operation = 'craft';
-        location = 'craft';
-        const { item, count: c } = extractItemAndCount(action, showWeaponNumbers);
+        const { item, count } = extractItemAndCount(action, showWeaponNumbers);
         if (!item) return null;
         return {
             datetime: parseDateTime(rawDate, rawTime),
             rawDate, rawTime, type, action,
-            item, count: c,
-            operation, location
+            item, count,
+            operation: 'craft',
+            location: 'craft'
         };
     }
     
-    // Продажа через DarkVito
     if (lowerType.includes("darkvito")) {
-        operation = 'sell';
-        location = 'darkvito';
-        
-        let itemName = '';
         const itemMatch = action.match(/: ([0-9.]+mm|[А-Яа-яA-Za-z\s]+)/i);
-        if (itemMatch) {
-            itemName = normalizeItemName(itemMatch[1], showWeaponNumbers);
-        }
+        if (!itemMatch) return null;
         
-        if (!itemName) return null;
-        
+        const itemName = normalizeItemName(itemMatch[1], showWeaponNumbers);
         const soldMatch = action.match(/Продал\s+(\d+)\s+шт/i);
-        soldCount = soldMatch ? parseInt(soldMatch[1]) : 0;
+        let soldCount = soldMatch ? parseInt(soldMatch[1]) : 0;
         
         if (soldCount === 0) {
             const countInLotMatch = action.match(/: [0-9.]+mm — (\d+)\s+шт/i);
-            if (countInLotMatch) {
-                soldCount = parseInt(countInLotMatch[1]);
-            }
+            if (countInLotMatch) soldCount = parseInt(countInLotMatch[1]);
         }
         
         const moneyMatch = action.match(/\$([\d,]+)/);
-        money = moneyMatch ? parseInt(moneyMatch[1].replace(/,/g, '')) : 0;
+        const money = moneyMatch ? parseInt(moneyMatch[1].replace(/,/g, '')) : 0;
         
         return {
             datetime: parseDateTime(rawDate, rawTime),
@@ -424,37 +526,37 @@ function parseLogEntry(line: string, showWeaponNumbers: boolean = true): LogEntr
             count: soldCount,
             soldCount,
             money,
-            operation,
-            location
+            operation: 'sell',
+            location: 'darkvito'
         };
     }
     
-    if (lowerType.includes("трейд")) {
-        return null;
-    }
+    if (lowerType.includes("трейд")) return null;
     
-    if (lowerType.includes("фракционный склад") || lowerType.includes("фракционный бот")) {
-        location = 'faction_storage';
-    } else if (lowerType.includes("квартир") || lowerType === "квартира" || 
-               (lowerType.includes("дом") && !lowerAction.includes("особняк"))) {
-        location = 'house';
-    } else if (lowerType === "семья" && lowerAction.includes("склад особняка")) {
-        location = 'family_warehouse';
-    } else if (lowerType === "транспорт" || 
-               (lowerType === "семья" && (lowerAction.includes("из транспорта") || lowerAction.includes("в транспорт")))) {
-        location = 'personal_car';
-    } else if (lowerType.includes("фракционный транспорт")) {
+    let location = 'unknown';
+    if (lowerType === "фракционный транспорт") {
         location = 'fraction_car';
-    } else if (lowerType.includes("кемпер") || lowerType.includes("camper") || 
-               (lowerType.includes("транспорт") && lowerAction.includes("кемпер"))) {
+    }
+    else if (lowerType.includes("фракционный склад") || lowerType.includes("фракционный бот")) {
+        location = 'faction_storage';
+    }
+    else if (lowerType === "семья" && /склад\s+(офиса|особняка)/i.test(lowerAction)) {
+        location = 'family_warehouse';
+    }
+    else if (lowerType === "транспорт" && !lowerAction.includes("кемпер")) {
+        location = 'personal_car';
+    }
+    else if (lowerType.includes("кемпер") || lowerType.includes("camper") || (lowerType === "транспорт" && lowerAction.includes("кемпер"))) {
         location = 'camper';
-    } else if (lowerType.includes("особняк") && !lowerAction.includes("склад")) {
+    }
+    else if (lowerType.includes("квартир") || lowerType === "квартира" || (lowerType.includes("дом") && !lowerAction.includes("особняк"))) {
         location = 'house';
-    } else {
+    }
+    else {
         return null;
     }
     
-    // Определяем операцию
+    let operation: 'take' | 'put' = 'take';
     if (/забрал|берет|получил/i.test(action)) {
         operation = 'take';
     } else if (/положил|кладет/i.test(action)) {
@@ -463,20 +565,16 @@ function parseLogEntry(line: string, showWeaponNumbers: boolean = true): LogEntr
         return null;
     }
     
-    const { item, count: c } = extractItemAndCount(action, showWeaponNumbers);
-    if (!item || c === 0) return null;
+    const { item, count } = extractItemAndCount(action, showWeaponNumbers);
+    if (!item || count === 0) return null;
     
     return {
         datetime: parseDateTime(rawDate, rawTime),
         rawDate, rawTime, type, action,
-        item, count: c,
+        item, count,
         operation, location
     };
 }
-
-// ============================================
-// ОСНОВНОЙ АНАЛИЗ
-// ============================================
 
 function analyzeLogs(data: string, showWeaponNumbers: boolean = true): AnalysisResult {
     const lines = data.split('\n').map(l => l.trim()).filter(l => l.includes('","'));
@@ -484,27 +582,16 @@ function analyzeLogs(data: string, showWeaponNumbers: boolean = true): AnalysisR
     const entries: LogEntry[] = [];
     for (const line of lines) {
         const entry = parseLogEntry(line, showWeaponNumbers);
-        if (entry) {
-            entries.push(entry);
-        }
+        if (entry) entries.push(entry);
     }
     
     entries.sort((a, b) => a.datetime.getTime() - b.datetime.getTime());
     
-    // Фракционный инвентарь игрока
-    const factionInventory: StorageBalance = {};
+    const factionInventory: Map<string, number> = new Map();
+    const totalTakenFromFaction: Map<string, number> = new Map();
+    const totalReturnedToFaction: Map<string, number> = new Map();
+    const soldFromFaction: Map<string, number> = new Map();
     
-    // Взято со склада
-    const totalTakenFromFaction: StorageBalance = {};
-    
-    // Возвращено на склад
-    const totalReturnedToFaction: StorageBalance = {};
-    
-    // Продано из фракционного
-    const soldFromFaction: StorageBalance = {};
-    const soldFromFactionDetails: SaleDetail[] = [];
-    
-    // Остатки по местам
     const remainingByLocation: PersonalStorage = {
         houses: {},
         personalCars: {},
@@ -513,35 +600,45 @@ function analyzeLogs(data: string, showWeaponNumbers: boolean = true): AnalysisR
         camper: {}
     };
     
+    const soldFromFactionDetails: SaleDetail[] = [];
     let totalEarnings = 0;
     
-    function updateBalance(balance: StorageBalance, item: string, delta: number): void {
-        const current = balance[item] || 0;
-        const newVal = current + delta;
-        if (Math.abs(newVal) < 0.1) {
-            delete balance[item];
+    const updateBalance = (balance: Map<string, number> | StorageBalance, item: string, delta: number): void => {
+        if (balance instanceof Map) {
+            const newVal = (balance.get(item) || 0) + delta;
+            if (Math.abs(newVal) < 0.1) {
+                balance.delete(item);
+            } else {
+                balance.set(item, newVal);
+            }
         } else {
-            balance[item] = newVal;
+            const newVal = (balance[item] || 0) + delta;
+            if (Math.abs(newVal) < 0.1) {
+                delete balance[item];
+            } else {
+                balance[item] = newVal;
+            }
         }
-    }
+    };
+    
+    const getBalance = (balance: Map<string, number> | StorageBalance, item: string): number => {
+        if (balance instanceof Map) {
+            return balance.get(item) || 0;
+        }
+        return balance[item] || 0;
+    };
     
     for (const entry of entries) {
         const { item, count, operation, location, money, type } = entry;
         
-        // Продажи
         if (operation === 'sell') {
             totalEarnings += money || 0;
-            
-            const available = factionInventory[item] || 0;
+            const available = getBalance(factionInventory, item);
             if (available > 0) {
                 const soldAmount = Math.min(count, available);
                 updateBalance(factionInventory, item, -soldAmount);
                 updateBalance(soldFromFaction, item, soldAmount);
-                soldFromFactionDetails.push({
-                    item,
-                    count: soldAmount,
-                    money: money || 0
-                });
+                soldFromFactionDetails.push({ item, count: soldAmount, money: money || 0 });
             }
             continue;
         }
@@ -549,89 +646,83 @@ function analyzeLogs(data: string, showWeaponNumbers: boolean = true): AnalysisR
         const isFromFaction = operation === 'take' && isFactionSource(location, type);
         const isToFaction = operation === 'put' && isFactionSource(location, type);
         
-        // Взятие со склада
         if (isFromFaction) {
             updateBalance(factionInventory, item, count);
             updateBalance(totalTakenFromFaction, item, count);
         }
         
-        // Возврат на склад
         if (isToFaction) {
-            const available = factionInventory[item] || 0;
+            const available = getBalance(factionInventory, item);
             const returned = Math.min(count, available);
             updateBalance(factionInventory, item, -returned);
             updateBalance(totalReturnedToFaction, item, returned);
         }
         
-        // Перемещение в личное имущество
         if (operation === 'put' && !isToFaction && location !== 'craft') {
-            const available = factionInventory[item] || 0;
-            if (available > 0) {
-                const movedAmount = Math.min(count, available);
-                updateBalance(factionInventory, item, -movedAmount);
-                
-                if (location === 'house') {
-                    updateBalance(remainingByLocation.houses, item, movedAmount);
-                } else if (location === 'personal_car') {
-                    updateBalance(remainingByLocation.personalCars, item, movedAmount);
-                } else if (location === 'camper') {
-                    updateBalance(remainingByLocation.camper, item, movedAmount);
-                } else if (location === 'family_warehouse') {
-                    updateBalance(remainingByLocation.familyWarehouse, item, movedAmount);
-                }
-            }
+    const locationMap: Record<string, keyof PersonalStorage> = {
+        'house': 'houses',
+        'personal_car': 'personalCars',
+        'camper': 'camper',
+        'family_warehouse': 'familyWarehouse'
+    };
+    
+    const targetLocation = locationMap[location];
+    if (targetLocation) {
+        const available = getBalance(factionInventory, item);
+        if (available > 0) {
+            const movedAmount = Math.min(count, available);
+            updateBalance(remainingByLocation[targetLocation], item, movedAmount);
+            updateBalance(factionInventory, item, -movedAmount);
         }
+    }
+}
         
-        // Забор из личного имущества
         if (operation === 'take' && !isFromFaction && location !== 'craft') {
-            let takenAmount = 0;
+            const locationMap: Record<string, keyof PersonalStorage> = {
+                'house': 'houses',
+                'personal_car': 'personalCars',
+                'camper': 'camper',
+                'family_warehouse': 'familyWarehouse'
+            };
             
-            if (location === 'house') {
-                const available = remainingByLocation.houses[item] || 0;
-                takenAmount = Math.min(count, available);
-                updateBalance(remainingByLocation.houses, item, -takenAmount);
-            } else if (location === 'personal_car') {
-                const available = remainingByLocation.personalCars[item] || 0;
-                takenAmount = Math.min(count, available);
-                updateBalance(remainingByLocation.personalCars, item, -takenAmount);
-            } else if (location === 'camper') {
-                const available = remainingByLocation.camper[item] || 0;
-                takenAmount = Math.min(count, available);
-                updateBalance(remainingByLocation.camper, item, -takenAmount);
-            } else if (location === 'family_warehouse') {
-                const available = remainingByLocation.familyWarehouse[item] || 0;
-                takenAmount = Math.min(count, available);
-                updateBalance(remainingByLocation.familyWarehouse, item, -takenAmount);
-            }
-            
-            if (takenAmount > 0) {
-                updateBalance(factionInventory, item, takenAmount);
+            const sourceLocation = locationMap[location];
+            if (sourceLocation) {
+                const available = getBalance(remainingByLocation[sourceLocation], item);
+                const takenAmount = Math.min(count, available);
+                if (takenAmount > 0) {
+                    updateBalance(remainingByLocation[sourceLocation], item, -takenAmount);
+                }
             }
         }
     }
     
     const remainingInPersonal: StorageBalance = {};
     for (const balance of Object.values(remainingByLocation)) {
-        for (const [item, count] of Object.entries(balance) as [string, number][]) {
-            if (count > 0) {
-                updateBalance(remainingInPersonal, item, count);
+        for (const [item, count] of Object.entries(balance)) {
+            if ((count as number) > 0) {
+                remainingInPersonal[item] = (remainingInPersonal[item] || 0) + (count as number);
             }
         }
     }
     
-    const netTaken: StorageBalance = {};
-    for (const [item, taken] of Object.entries(totalTakenFromFaction)) {
-        const returned = totalReturnedToFaction[item] || 0;
-        if (taken - returned > 0) {
-            netTaken[item] = taken - returned;
+    const takenFromFactionObj: StorageBalance = {};
+    for (const [item, count] of totalTakenFromFaction.entries()) {
+        const returned = totalReturnedToFaction.get(item) || 0;
+        if (count - returned > 0) {
+            takenFromFactionObj[item] = count - returned;
         }
     }
     
-    const hasViolation = Object.keys(remainingInPersonal).length > 0 || Object.keys(soldFromFaction).length > 0;
+    const soldFromFactionObj: StorageBalance = {};
+    for (const [item, count] of soldFromFaction.entries()) {
+        soldFromFactionObj[item] = count;
+    }
+    
+    const hasViolation = Object.keys(remainingInPersonal).length > 0 || Object.keys(soldFromFactionObj).length > 0;
     
     return {
-        takenFromFaction: netTaken,
-        soldFromFaction,
+        takenFromFaction: takenFromFactionObj,
+        soldFromFaction: soldFromFactionObj,
         soldFromFactionDetails,
         remainingInPersonal,
         remainingByLocation,
@@ -640,21 +731,15 @@ function analyzeLogs(data: string, showWeaponNumbers: boolean = true): AnalysisR
     };
 }
 
-// ============================================
-// ФОРМИРОВАНИЕ ОТЧЕТА
-// ============================================
-
 function formatBalance(title: string, balance: StorageBalance, indent: string = "  "): string {
-    const entries = Object.entries(balance) as [string, number][];
+    const entries = Object.entries(balance).filter(([, count]) => count > 0);
     if (entries.length === 0) return "";
     
     entries.sort((a, b) => b[1] - a[1]);
     
     let result = `[${title}]\n`;
     for (const [name, count] of entries) {
-        if (count > 0) {
-            result += `${indent}${name}: ${count.toLocaleString()} шт.\n`;
-        }
+        result += `${indent}${name}: ${count.toLocaleString()} шт.\n`;
     }
     return result + "\n";
 }
@@ -673,8 +758,8 @@ function generateReport(statick: string, fraction: FractionType, analysis: Analy
     
     if (analysis.soldFromFactionDetails.length > 0) {
         report += `[ПРОДАНО ЧЕРЕЗ DARKVITO]\n`;
-        let totalMoney = 0;
         const soldSummary: StorageBalance = {};
+        let totalMoney = 0;
         
         for (const sale of analysis.soldFromFactionDetails) {
             soldSummary[sale.item] = (soldSummary[sale.item] || 0) + sale.count;
@@ -688,7 +773,24 @@ function generateReport(statick: string, fraction: FractionType, analysis: Analy
     }
     
     let hasRemaining = false;
+    const familyWarehouseItems = Object.entries(analysis.remainingByLocation.familyWarehouse)
+        .filter(([, count]) => count > 0);
+
+    if (familyWarehouseItems.length > 0) {
+        if (!hasRemaining) {
+            report += `[ОСТАТКИ В ЛИЧНОМ ИМУЩЕСТВЕ]\n`;
+            hasRemaining = true;
+        }
+        report += `\n  ${LOCATION_NAMES.familyWarehouse}:\n`;
+        familyWarehouseItems.sort((a, b) => b[1] - a[1]);
+        for (const [item, count] of familyWarehouseItems) {
+            report += `    ${item}: ${count.toLocaleString()} шт.\n`;
+        }
+    }
+
     for (const [location, balance] of Object.entries(analysis.remainingByLocation)) {
+        if (location === 'familyWarehouse') continue;
+        
         const positiveEntries = (Object.entries(balance) as [string, number][]).filter(([, count]) => count > 0);
         if (positiveEntries.length > 0) {
             if (!hasRemaining) {
@@ -702,6 +804,7 @@ function generateReport(statick: string, fraction: FractionType, analysis: Analy
             }
         }
     }
+    
     if (!hasRemaining && Object.keys(analysis.soldFromFaction).length === 0) {
         report += `[ОСТАТКИ В ЛИЧНОМ ИМУЩЕСТВЕ]\n  Нет данных\n\n`;
     } else if (!hasRemaining) {
@@ -728,22 +831,18 @@ function generateReport(statick: string, fraction: FractionType, analysis: Analy
     return report;
 }
 
-// ============================================
-// ОТПРАВКА В ВЕБХУК
-// ============================================
-
 async function sendReportToWebhook(
     adminName: string,
     statick: string,
-    fraction: string,
+    fraction: FractionType,
     punishmentType: string,
     punishmentDuration: string,
     analysis: AnalysisResult,
-    avatarUrl?: string,
     showWeaponNumbers: boolean = true
 ): Promise<void> {
-    if (!WEBHOOK_URL) {
-        console.log("Webhook URL не настроен");
+    const { webhookUrl, avatarUrl, color, group } = getWebhookConfig(fraction);
+    
+    if (!webhookUrl) {
         return;
     }
 
@@ -752,10 +851,8 @@ async function sendReportToWebhook(
         totalLeaked[item] = (totalLeaked[item] || 0) + count;
     }
     
-    const stolenLines: string[] = [];
-    for (const [item, count] of Object.entries(totalLeaked)) {
-        stolenLines.push(`  ${item}: ${count.toLocaleString()} шт.`);
-    }
+    const stolenLines = Object.entries(totalLeaked)
+        .map(([item, count]) => `  ${item}: ${count.toLocaleString()} шт.`);
     const stolenText = stolenLines.join("\n") || "  нет";
     
     let remainingText = "";
@@ -772,18 +869,17 @@ async function sendReportToWebhook(
     const hasSales = Object.keys(analysis.soldFromFaction).length > 0;
     let soldText = "";
     if (hasSales) {
-        const soldLines: string[] = [];
-        for (const [item, count] of Object.entries(analysis.soldFromFaction)) {
-            soldLines.push(`  ${item}: ${count.toLocaleString()} шт.`);
-        }
+        const soldLines = Object.entries(analysis.soldFromFaction)
+            .map(([item, count]) => `  ${item}: ${count.toLocaleString()} шт.`);
         soldText = `\n\nПродано через DarkVito:\n${soldLines.join("\n")}`;
         soldText += `\n\nВыручка: $${analysis.totalEarnings.toLocaleString()}`;
-        soldText += `\n\n<@478169919783960577>\nОбнулить ${statick} на  ${analysis.totalEarnings}\nПричина: Слив склада фракции ${FRACTION_INFO[fraction as FractionType]?.label}`;
+        soldText += `\n\n<@478169919783960577>\nОбнулить ${statick} на ${analysis.totalEarnings}\nПричина: Слив склада фракции ${FRACTION_INFO[fraction]?.label}`;
     }
     
     let codeContent = `Админ: ${adminName}\n`;
     codeContent += `Статик: ${statick}\n`;
-    codeContent += `Фракция: ${FRACTION_INFO[fraction as FractionType]?.label || fraction}\n`;
+    codeContent += `Фракция: ${FRACTION_INFO[fraction]?.label || fraction}\n`;
+    codeContent += `Группа: ${group}\n`;
     codeContent += `Наказание: ${punishmentType}${punishmentDuration ? ` (${punishmentDuration})` : ""}\n`;
     codeContent += `\n${"─".repeat(50)}\n\n`;
     codeContent += `Слито (не возвращено на склад):\n${stolenText}\n`;
@@ -800,35 +896,32 @@ async function sendReportToWebhook(
     codeContent += `\n${"─".repeat(50)}\n`;
     codeContent += `ID: ${statick}`;
     
-    const colors: Record<string, number> = {
-        "Бан": 0xFF0000,
-        "IBAN": 0x8B0000,
-        "Бан + Варн": 0xFF4500,
-        "Варн": 0xFFA500,
-        "Деморган": 0xFF8C00
-    };
-    
     const embed = {
-        title: "Слив склада",
-        color: colors[punishmentType] || 0x2B2D31,
+        title: `Слив склада [${group}]`,
+        color,
         description: `\`\`\`\n${codeContent}\n\`\`\``,
         footer: { text: `Зафиксировано: ${new Date().toLocaleString()}` }
     };
     
     try {
-        await axios.post(WEBHOOK_URL, {
+        await axios.post(webhookUrl, {
             embeds: [embed],
-            username: "Складской Контроль",
+            username: `Складской Контроль - ${group}`,
             ...(avatarUrl && { avatar_url: avatarUrl })
         });
     } catch (error) {
-        console.error("Ошибка отправки в вебхук:", error);
+        console.error(`Ошибка отправки в вебхук для группы ${group}:`, error);
     }
 }
 
-// ============================================
-// НАКАЗАНИЯ
-// ============================================
+const PUNISHMENT_CONFIG = {
+    iban: { type: PUNISHMENT_TYPES.IBAN, name: "IBAN", needsDuration: false },
+    warnban: { type: PUNISHMENT_TYPES.WARN_BAN, name: "Бан + Варн", needsDuration: true, durationUnit: "дн." },
+    ban: { type: PUNISHMENT_TYPES.BAN, name: "Бан", needsDuration: true, durationUnit: "дн." },
+    warn: { type: PUNISHMENT_TYPES.WARN, name: "Варн", needsDuration: false },
+    jail: { type: PUNISHMENT_TYPES.AJAIL, name: "Деморган", needsDuration: true, durationUnit: "мин." },
+    curator: { type: PUNISHMENT_TYPES.WARN, name: "Выговор от куратора", needsDuration: false, isCuratorReprimand: true }
+};
 
 async function showPunishmentModal(
     btnInter: ButtonInteraction,
@@ -840,16 +933,28 @@ async function showPunishmentModal(
     report: string,
     fileContent: string
 ): Promise<void> {
+    const isStateFraction = FRACTION_GROUPS.STATE.includes(fraction);
+
+    const selectOptions = [
+        { label: 'Бан', description: 'Обычный бан аккаунта', value: 'ban' },
+        { label: 'IBAN', description: 'Перманентный бан', value: 'iban' },
+        { label: 'Варн', description: 'Предупреждение', value: 'warn' },
+        { label: 'Бан + Варн', description: 'Бан и предупреждение одновременно', value: 'warnban' },
+        { label: 'Деморган', description: 'Деморган', value: 'jail' }
+    ];
+
+    if (isStateFraction) {
+        selectOptions.push({ 
+            label: 'Выговор от куратора', 
+            description: 'Предупреждение с требованием вернуть имущество', 
+            value: 'curator' 
+        });
+    }
+
     const punishmentSelect = new StringSelectMenuBuilder()
         .setCustomId('punish_type_select')
         .setPlaceholder('Выберите тип наказания')
-        .addOptions([
-            { label: 'Бан', description: 'Обычный бан аккаунта', value: 'ban' },
-            { label: 'IBAN', description: 'Перманентный бан', value: 'iban' },
-            { label: 'Варн', description: 'Предупреждение', value: 'warn' },
-            { label: 'Бан + Варн', description: 'Бан и предупреждение одновременно', value: 'warnban' },
-            { label: 'Деморган', description: 'Деморган', value: 'jail' }
-        ]);
+        .addOptions(selectOptions);
 
     const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(punishmentSelect);
 
@@ -870,12 +975,12 @@ async function showPunishmentModal(
         }
 
         const punishmentType = selectInter.values[0];
-        const needsDuration = ['ban', 'warnban', 'jail'].includes(punishmentType);
+        const config = PUNISHMENT_CONFIG[punishmentType as keyof typeof PUNISHMENT_CONFIG];
         
-        if (!needsDuration) {
+        if (!config.needsDuration) {
             await selectInter.update({ components: [] });
             await processPunishment(selectInter, statick, fraction, adminSurname, adminDisplayName, punishmentType, null, analysis, report, true);
-    return;
+            return;
         }
 
         const modal = new ModalBuilder()
@@ -934,69 +1039,99 @@ async function processPunishment(
     report: string,
     showWeaponNumbers: boolean = true
 ): Promise<void> {
+    const config = PUNISHMENT_CONFIG[punishmentType as keyof typeof PUNISHMENT_CONFIG];
     const fractionShort = fraction;
+    
     let commandText = "";
     let durationText = "";
-    let finalType: PunishmentType;
-    let punishmentName = "";
+    let responseContent = "";
 
-    switch (punishmentType) {
-        case 'iban':
-            finalType = PUNISHMENT_TYPES.IBAN;
-            commandText = `offiban ${statick} Слив склада ${fractionShort} // by ${adminSurname}`;
-            durationText = `Перманентно`;
-            punishmentName = "IBAN";
-            break;
-        case 'warnban':
-            finalType = PUNISHMENT_TYPES.WARN_BAN;
-            const days = duration || "30";
-            commandText = `offban ${statick} ${days} Слив склада ${fractionShort} // by ${adminSurname}\noffwarn ${statick} Слив склада ${fractionShort} // by ${adminSurname}`;
-            durationText = `${days} дн. + варн`;
-            punishmentName = "Бан + Варн";
-            break;
-        case 'ban':
-            finalType = PUNISHMENT_TYPES.BAN;
-            const banDays = duration || "30";
-            commandText = `offban ${statick} ${banDays} Слив склада ${fractionShort} // by ${adminSurname}`;
-            durationText = `${banDays} дн.`;
-            punishmentName = "Бан";
-            break;
-        case 'warn':
-            finalType = PUNISHMENT_TYPES.WARN;
-            commandText = `offwarn ${statick} Слив склада ${fractionShort} // by ${adminSurname}`;
-            durationText = "1 варн";
-            punishmentName = "Варн";
-            break;
-        case 'jail':
-            finalType = PUNISHMENT_TYPES.AJAIL;
-            const mins = duration || "100";
-            commandText = `offprison ${statick} ${mins} Слив склада ${fractionShort} // by ${adminSurname}`;
-            durationText = `${mins} мин.`;
-            punishmentName = "Деморган";
-            break;
-        default:
-            finalType = PUNISHMENT_TYPES.BAN;
-            commandText = `offban ${statick} 30 Слив склада ${fractionShort} // by ${adminSurname}`;
-            durationText = `30 дн.`;
-            punishmentName = "Бан";
+    if (punishmentType === 'curator') {
+        const storageLocations: string[] = [];
+        
+        for (const [location, balance] of Object.entries(analysis.remainingByLocation) as [string, StorageBalance][]) {
+            const items = (Object.entries(balance) as [string, number][]).filter(([, count]) => count > 0);
+            if (items.length > 0) {
+                storageLocations.push(LOCATION_NAMES[location] || location);
+            }
+        }
+        
+        const locationsText = storageLocations.length > 0 
+            ? storageLocations.join(', ') 
+            : 'неизвестном месте';
+        
+        let itemsToReturn = '';
+        for (const [location, balance] of Object.entries(analysis.remainingByLocation) as [string, StorageBalance][]) {
+            const items = (Object.entries(balance) as [string, number][]).filter(([, count]) => count > 0);
+            if (items.length > 0) {
+                itemsToReturn += `\n**${LOCATION_NAMES[location] || location}:**\n`;
+                for (const [item, count] of items.sort((a, b) => b[1] - a[1])) {
+                    itemsToReturn += `• ${item}: ${count.toLocaleString()} шт.\n`;
+                }
+            }
+        }
+        
+        durationText = "Выговор";
+
+        const curatorEmbed = new EmbedBuilder()
+            .setColor(0xFFA500)
+            .setDescription(
+                `**УКАЖИТЕ ТУТ ДС ${statick}**\n` +
+                `Хранение гос. имущества в: ${locationsText.toLocaleLowerCase()}\n\n` +
+                `**Список того, что необходимо вернуть:**\n` +
+                `${itemsToReturn}\n` +
+                `**24 часа на то, чтобы сдать на склад фракции.**\n` +
+                `**1/1 - NEXT BAN**`
+            );
+
+        if ('editReply' in inter && typeof inter.editReply === 'function') {
+            await inter.editReply({ embeds: [curatorEmbed] });
+        } else {
+            await inter.reply({ embeds: [curatorEmbed] });
+        }
+        return;
+    } else {
+        switch (punishmentType) {
+            case 'iban':
+                commandText = `offiban ${statick} Слив склада ${fractionShort} // by ${adminSurname}`;
+                durationText = `Перманентно`;
+                break;
+            case 'warnban':
+                const days = duration || "30";
+                commandText = `offban ${statick} ${days} Слив склада ${fractionShort} // by ${adminSurname}\noffwarn ${statick} Слив склада ${fractionShort} // by ${adminSurname}`;
+                durationText = `${days} дн. + варн`;
+                break;
+            case 'ban':
+                const banDays = duration || "30";
+                commandText = `offban ${statick} ${banDays} Слив склада ${fractionShort} // by ${adminSurname}`;
+                durationText = `${banDays} дн.`;
+                break;
+            case 'warn':
+                commandText = `offwarn ${statick} Слив склада ${fractionShort} // by ${adminSurname}`;
+                durationText = "1 варн";
+                break;
+            case 'jail':
+                const mins = duration || "100";
+                commandText = `offprison ${statick} ${mins} Слив склада ${fractionShort} // by ${adminSurname}`;
+                durationText = `${mins} мин.`;
+                break;
+            default:
+                commandText = `offban ${statick} 30 Слив склада ${fractionShort} // by ${adminSurname}`;
+                durationText = `30 дн.`;
+        }
+        
+        responseContent = `✅ Нарушение зарегистрировано: **${adminSurname}**\nНаказание: ${config.name} ${durationText}\n\n**Команда:**\n\`${commandText}\``;
     }
 
-    const reportBuffer = Buffer.from(report, 'utf-8');
-    await addLog(inter.user.id, statick, finalType, JSON.stringify({}), reportBuffer, durationText);
-
-    const isCrimeFaction = CRIME_FACTIONS.includes(fraction);
-    if (isCrimeFaction) {
-        await sendReportToWebhook(adminDisplayName, statick, fraction, punishmentName, durationText, analysis, "https://cdn.discordapp.com/avatars/939953853527392286/a_380cd7c3a53eecfea5a3e20d2267ae36.gif", showWeaponNumbers);
+    if (punishmentType !== 'curator') {
+        const reportBuffer = Buffer.from(report, 'utf-8');
+        await addLog(inter.user.id, statick, config.type, JSON.stringify({}), reportBuffer, durationText);
+        await sendReportToWebhook(adminDisplayName, statick, fraction, config.name, durationText, analysis, showWeaponNumbers);
     }
 
     if ('editReply' in inter && typeof inter.editReply === 'function') {
-        await inter.editReply({ 
-            content: `✅ Нарушение зарегистрировано: **${adminSurname}**\nНаказание: ${punishmentName} ${durationText}\n\n**Команда:**\n\`${commandText}\``,
-        });
+        await inter.editReply({ content: responseContent });
     } else {
-        await inter.followUp({ 
-            content: `✅ Нарушение зарегистрировано: **${adminSurname}**\nНаказание: ${punishmentName} ${durationText}\n\n**Команда:**\n\`${commandText}\``,
-            flags: [MessageFlags.Ephemeral]
-        });
+        await inter.followUp({ content: responseContent, flags: [MessageFlags.Ephemeral] });
     }
 }

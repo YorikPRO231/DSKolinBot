@@ -49,25 +49,29 @@ const SPECIAL_PROGRAMS: Record<string, {
     factions: string[], 
     maxRank: number, 
     aliases: string[],
-    leadershipRanks: number[]
+    leadershipRanks: number[],
+    reservedRank: number
 }> = {
     'GATE': {
         factions: ['LSPD'],
         maxRank: 6,
         aliases: ['gate', 'гейт'],
-        leadershipRanks: [12, 13]
+        leadershipRanks: [12, 13],
+        reservedRank: 6
     },
     'HRT': {
         factions: ['FIB'],
         maxRank: 6,
         aliases: ['hrt', 'хрт'],
-        leadershipRanks: [8, 9]
+        leadershipRanks: [8, 9],
+        reservedRank: 6
     },
     'VICE': {
         factions: ['LSSD'],
         maxRank: 6,
         aliases: ['vice', 'вайс'],
-        leadershipRanks: [8, 9]
+        leadershipRanks: [8, 9],
+        reservedRank: 6
     }
 };
 
@@ -250,6 +254,69 @@ function validateReason(reason: string, faction: string, newRank: string): { isV
     return { isValid: true };
 }
 
+function calculateRealRankDifference(
+    oldLevel: number, 
+    newLevel: number, 
+    faction: string,
+    reason: string,
+    newRank: string
+): { actualDifference: number; skippedRank: number | null; message: string } {
+    const specialProgram = getSpecialProgramInfo(reason, faction, newRank, newLevel);
+    
+    if (specialProgram.program && specialProgram.isValid && newLevel === 6) {
+        const skippedCount = 6 - oldLevel;
+        if (skippedCount > 1) {
+            return {
+                actualDifference: 1,
+                skippedRank: 6,
+                message: `Программа ${specialProgram.program}: ранг 6 зарезервирован, фактическое повышение с ${oldLevel} до 6 считается как +1 ранг (пропущены ранги ${oldLevel + 1}-5)`
+            };
+        }
+        return {
+            actualDifference: newLevel - oldLevel,
+            skippedRank: null,
+            message: `Программа ${specialProgram.program}: стандартное повышение`
+        };
+    }
+    
+    const factionUpper = faction.toUpperCase();
+    let reservedRank6Faction: string | null = null;
+    
+    for (const [programName, programInfo] of Object.entries(SPECIAL_PROGRAMS)) {
+        if (programInfo.factions.includes(factionUpper) && programInfo.reservedRank === 6) {
+            reservedRank6Faction = programName;
+            break;
+        }
+    }
+    
+    if (reservedRank6Faction && oldLevel < 6 && newLevel > 6) {
+        const effectiveOldLevel = oldLevel;
+        const effectiveNewLevel = newLevel - 1; // Вычитаем зарезервированный ранг
+        const actualDifference = effectiveNewLevel - effectiveOldLevel;
+        
+        return {
+            actualDifference,
+            skippedRank: 6,
+            message: `Внимание: ранг 6 зарезервирован под программу ${reservedRank6Faction}! Фактическое повышение: с ${oldLevel} до ${newLevel} (без учета 6 ранга = +${actualDifference} ранга)`
+        };
+    }
+    
+    if (reservedRank6Faction && oldLevel === 5 && newLevel === 7) {
+        return {
+            actualDifference: 1,
+            skippedRank: 6,
+            message: `С 5 на 7 ранг: ранг 6 зарезервирован под программу ${reservedRank6Faction}, фактическое повышение считается как +1 ранг`
+        };
+    }
+    
+    return {
+        actualDifference: newLevel - oldLevel,
+        skippedRank: null,
+        message: `Стандартное повышение: +${newLevel - oldLevel} ранга`
+    };
+}
+
+
 function checkRankJumpViolation(
     oldLevel: number, 
     newLevel: number, 
@@ -260,6 +327,9 @@ function checkRankJumpViolation(
     reason: string,
     newRank: string
 ): { isViolation: boolean; isNeedCheck: boolean; allowed: number; message: string } {
+    const rankDiff = calculateRealRankDifference(oldLevel, newLevel, faction, reason, newRank);
+    const levelDiff = rankDiff.actualDifference;
+    
     const specialProgram = getSpecialProgramInfo(reason, faction, newRank, newLevel);
     
     if (specialProgram.program) {
@@ -278,6 +348,15 @@ function checkRankJumpViolation(
                 isNeedCheck: false,
                 allowed: newLevel, 
                 message: `Назначение на руководящую должность в программе ${specialProgram.program} (разрешено, ранг ${newLevel})`
+            };
+        }
+        
+        if (newLevel === 6 && oldLevel < 6) {
+            return { 
+                isViolation: false, 
+                isNeedCheck: false,
+                allowed: 6, 
+                message: `Программа ${specialProgram.program}: повышение до 6 ранга (разрешено, фактически +1 ранг)`
             };
         }
         
@@ -301,7 +380,6 @@ function checkRankJumpViolation(
         };
     }
     
-    const levelDiff = newLevel - oldLevel;
     const factionUpper = faction.toUpperCase();
     
     if (isLeadershipAppointment) {
@@ -324,14 +402,14 @@ function checkRankJumpViolation(
                 isViolation: false, 
                 isNeedCheck: false,
                 allowed: maxAllowed, 
-                message: `Назначение на руководящую должность (${factionType}): разрешено до +${maxAllowed} рангов (повышение на ${levelDiff} ранга)`
+                message: `Назначение на руководящую должность (${factionType}): разрешено до +${maxAllowed} рангов (фактическое повышение на ${levelDiff} ранга)${rankDiff.skippedRank ? ` (пропущен ранг ${rankDiff.skippedRank})` : ''}`
             };
         } else {
             return { 
                 isViolation: true, 
                 isNeedCheck: false,
                 allowed: maxAllowed, 
-                message: `Нарушение 12.8: При назначении на руководящую должность (${factionType}) разрешено максимум +${maxAllowed} ранга (повышение на ${levelDiff} ранга)`
+                message: `Нарушение 12.8: При назначении на руководящую должность (${factionType}) разрешено максимум +${maxAllowed} ранга (фактическое повышение на ${levelDiff} ранга)${rankDiff.skippedRank ? ` (пропущен ранг ${rankDiff.skippedRank})` : ''}`
             };
         }
     }
@@ -343,7 +421,7 @@ function checkRankJumpViolation(
             isViolation: false, 
             isNeedCheck: false,
             allowed: 1, 
-            message: `Обычное повышение: +1 ранг (разрешено)` 
+            message: `Обычное повышение: +1 ранг (разрешено)${rankDiff.skippedRank ? ` (пропущен ранг ${rankDiff.skippedRank})` : ''}` 
         };
     }
     
@@ -352,7 +430,7 @@ function checkRankJumpViolation(
             isViolation: false,
             isNeedCheck: true,
             allowed: 2, 
-            message: `Требует проверки: повышение на 2 ранга. Проверьте наличие военного билета! (с военником разрешено, без военника - нарушение 12.7)`
+            message: `Требует проверки: фактическое повышение на 2 ранга. Проверьте наличие военного билета! (с военником разрешено, без военника - нарушение 12.7)${rankDiff.skippedRank ? ` (пропущен ранг ${rankDiff.skippedRank})` : ''}`
         };
     }
     
@@ -361,7 +439,7 @@ function checkRankJumpViolation(
             isViolation: true, 
             isNeedCheck: false,
             allowed: 2, 
-            message: `Нарушение 12.7: повышение на ${levelDiff} ранга (максимум: 1 ранг, с военником: 2 ранга)`
+            message: `Нарушение 12.7: фактическое повышение на ${levelDiff} ранга (максимум: 1 ранг, с военником: 2 ранга)${rankDiff.skippedRank ? ` (пропущен ранг ${rankDiff.skippedRank})` : ''}`
         };
     }
     
@@ -370,7 +448,7 @@ function checkRankJumpViolation(
             isViolation: false, 
             isNeedCheck: false,
             allowed: 0, 
-            message: `Понижение в должности (не проверяется)` 
+            message: `Понижение в должности (не проверяется)${rankDiff.skippedRank ? ` (пропущен ранг ${rankDiff.skippedRank})` : ''}` 
         };
     }
     
@@ -378,7 +456,7 @@ function checkRankJumpViolation(
         isViolation: false, 
         isNeedCheck: false,
         allowed: maxAllowed, 
-        message: `Разрешено до ${maxAllowed} ранга (повышение на ${levelDiff} ранга)` 
+        message: `Разрешено до ${maxAllowed} ранга (фактическое повышение на ${levelDiff} ранга)${rankDiff.skippedRank ? ` (пропущен ранг ${rankDiff.skippedRank})` : ''}` 
     };
 }
 
