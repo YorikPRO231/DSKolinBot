@@ -496,7 +496,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                 character: values[1] || '',
                 faction: values[2] || '',
                 text: actionText,
-                time: values[4] || '',
+                time: (values[4] || '').trim(),
                 promotedCharacter: actionMatch[1].trim(),
                 promotedId: actionMatch[2].trim(),
                 oldRank: actionMatch[3].trim(),

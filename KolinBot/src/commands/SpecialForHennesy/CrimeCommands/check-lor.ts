@@ -16,8 +16,8 @@ interface Member {
 // Паттерны для проверки
 const MAFIA_PATTERNS: Record<string, RegExp> = {
     'Русская мафия': /(ov|ev|in|eva|ova|skiy|skaya|ina|skaiya)$/i,
-    'Итальянская мафия': /(ini|etti|ello|one|ucci|ardi|ano|ani|enzi|elli|ardo|asco|izzi|ato|esi|ieri|aldo|iano)$/i,
-    'Армянская мафия': /(yan|yanc|ian)$/i,
+    'Итальянская мафия': /(ini|etti|ello|one|ucci|ardi|ano|ani|enzi|elli|ardo|asco|izzi|ato|esi|ieri|aldo|iano|acci|ossi|etty|ino|ecci|atti|oni|otti)$/i,
+    'Армянская мафия': /(yan|yanc|ian|jan)$/i,
     'Мексиканская мафия': /(ez|as|os|es)$/i,
     'Японская мафия': /(uki|suki|zaki|moto|shi|zuki)$/i
 };

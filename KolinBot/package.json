@@ -17,8 +17,9 @@
   "dependencies": {
     "@discordjs/builders": "^1.14.1",
     "@discordjs/rest": "^2.6.1",
-    "axios": "^1.15.0",
+    "axios": "^1.15.2",
     "better-sqlite3": "^12.8.0",
+    "cheerio": "^1.2.0",
     "discord-api-types": "^0.38.45",
     "discord.js": "^14.26.2",
     "dotenv": "^17.4.1"

@@ -77,6 +77,21 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
+
+  -- ============================================
+  -- Нашивки
+  -- ============================================
+  CREATE TABLE IF NOT EXISTS state_patches (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    passport INTEGER UNIQUE,
+    username TEXT NOT NULL,
+    discord_id TEXT NOT NULL,
+    faction TEXT NOT NULL,
+    patch TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    history TEXT DEFAULT '[]'
+  );
+
   CREATE INDEX IF NOT EXISTS idx_inspection_passport ON inspection_reports(passport);
   CREATE INDEX IF NOT EXISTS idx_inspection_created ON inspection_reports(created_at DESC);
 `);
@@ -132,6 +147,25 @@ export interface InspectionReport {
   admin_name?: string;
   created_at: string;
 }
+
+export interface StatePatch {
+    id: number,
+    passport: number,
+    username : string,
+    discord_id : string,
+    faction : string,
+    patch : string,
+    created_at : string,
+    history : string
+}
+
+export interface PatchHistory {
+    faction: string,
+    patch: string,
+    created_at: string,
+    updated_at: string
+}
+
 
 // ============================================
 // АДМИНИСТРАТОРЫ
@@ -371,6 +405,81 @@ export function getInspectionReportsByAdmin(adminId: string, limit: number = 50)
     ORDER BY created_at DESC 
     LIMIT ?
   `).all(adminId, limit) as InspectionReport[];
+}
+
+
+// ============================================
+// Нашивки
+// ============================================
+
+export function pushPlayerId(passport : number, username : string, discord_id : string, faction : string, patch : string): void {
+  const now = new Date().toISOString()
+  const existing = db.prepare('SELECT * FROM state_patches WHERE passport = ?').get(passport) as StatePatch | undefined
+
+  let history: PatchHistory[] = []
+
+  if (existing) {
+    try {
+      history = JSON.parse(existing.history) as PatchHistory[]
+    } catch (e) {
+      console.warn(`Ошибка парсинга истории для паспорта ${passport}: ${existing.history}`)
+    }
+
+    history.push({
+      created_at: existing.created_at,
+      faction: existing.faction,
+      patch: existing.patch,
+      updated_at: now
+    })
+    if (history.length > 15) {
+        history = history.slice(-15)
+    }
+  }
+
+  db.prepare(
+      `INSERT INTO state_patches (passport, username, discord_id, faction, patch, history, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(passport) DO UPDATE SET
+       username = excluded.username,
+       discord_id = excluded.discord_id,
+       faction = excluded.faction,
+       patch = excluded.patch,
+       history = excluded.history,
+       created_at = excluded.created_at`
+  ).run(passport, username, discord_id, faction, patch, JSON.stringify(history), now)
+}
+
+export function retrievePlayerPatch(passport: number) {
+    return db.prepare('SELECT * FROM state_patches WHERE passport = ?').get(passport) as StatePatch | undefined;
+}
+
+export function findPlayerPatch(patch: string): StatePatch[] {
+    const results = db.prepare('SELECT * FROM state_patches WHERE patch LIKE ?').all(`%${patch}%`) as StatePatch[];
+    return results || [];
+}
+
+export function generateUniqueDigits(passport: number, faction: string): string {
+    let digits: string;
+    let attempts = 0;
+    const maxAttempts = 100;
+    
+    do {
+        digits = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+        attempts++;
+        
+        const existing = db.prepare(
+            'SELECT patch FROM state_patches WHERE faction = ? AND patch LIKE ? AND passport != ?'
+        ).get(faction, `%${digits}]`, passport) as { patch: string } | undefined;
+        
+        if (!existing) break;
+        
+    } while (attempts < maxAttempts);
+    
+    return digits;
+}
+
+export function getSelfPatches(discord_id: string) {
+  return db.prepare(`SELECT * from state_patches WHERE discord_id = ?`).all(discord_id) as StatePatch[] | undefined
 }
 
 // ============================================

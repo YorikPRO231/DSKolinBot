@@ -27,6 +27,9 @@ const FRACTION_GROUPS = {
     STATE: [FRACTION_TYPES.LSPD, FRACTION_TYPES.LSSD, FRACTION_TYPES.FIB, FRACTION_TYPES.GOV, FRACTION_TYPES.ARMY, FRACTION_TYPES.SASPA] as FractionType[]
 };
 
+// Префиксы государственного оружия
+const GOVERNMENT_WEAPON_PREFIXES = ['LSPD', 'LSSD', 'FIB', 'GOV', 'SASPA', 'ARMY'];
+
 const WEBHOOK_URLS = {
     MAFIA: process.env.REPORT_WEBHOOK_MAFIA || process.env.REPORT_WEBHOOK_URL || "",
     GANG: process.env.REPORT_WEBHOOK_GANG || "",
@@ -63,6 +66,7 @@ interface LogEntry {
     type: string;
     action: string;
     item: string;
+    weaponNumber?: string; // Номер оружия (например, FIB80388)
     count: number;
     soldCount?: number;
     money?: number;
@@ -105,6 +109,7 @@ interface SaleDetail {
 
 interface AnalysisResult {
     takenFromFaction: StorageBalance;
+    takenGovernmentWeapons: StorageBalance; // Гос. оружие, взятое из любых источников
     soldFromFaction: StorageBalance;
     soldFromFactionDetails: SaleDetail[];
     remainingInPersonal: StorageBalance;
@@ -275,6 +280,13 @@ function getWebhookConfig(fraction: FractionType) {
     return { webhookUrl, avatarUrl, color, group };
 }
 
+// Проверка, является ли оружие государственным по номеру
+function isGovernmentWeapon(weaponNumber?: string): boolean {
+    if (!weaponNumber) return false;
+    const upperNumber = weaponNumber.toUpperCase();
+    return GOVERNMENT_WEAPON_PREFIXES.some(prefix => upperNumber.startsWith(prefix));
+}
+
 const ITEM_MAP: Record<string, string> = {
     '62mm': '7.62mm', 
     '56mm': '5.56mm', 
@@ -352,7 +364,16 @@ function parseDateTime(dateStr: string, timeStr: string): Date {
     return new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes), parseInt(seconds));
 }
 
-function extractItemAndCount(action: string, showWeaponNumbers: boolean = true): { item: string | null; count: number } {
+// Функция для извлечения номера оружия из строки
+function extractWeaponNumber(action: string): string | undefined {
+    const weaponMatch = action.match(/\(([A-Z0-9]+)\)/);
+    if (weaponMatch) {
+        return weaponMatch[1];
+    }
+    return undefined;
+}
+
+function extractItemAndCount(action: string, showWeaponNumbers: boolean = true): { item: string | null; count: number; weaponNumber?: string } {
     let count = 0;
     
     const xCountMatch = action.match(/\(x(\d+)\)/i);
@@ -373,14 +394,15 @@ function extractItemAndCount(action: string, showWeaponNumbers: boolean = true):
     if (colonMatch?.[1]) {
         let itemName = colonMatch[1].trim();
         itemName = itemName.replace(/\s*\(\d+%\)/g, '').replace(/\s*\(x\d+\)/gi, '').trim();
-        return { item: normalizeItemName(itemName, showWeaponNumbers), count };
+        const weaponNumber = extractWeaponNumber(action);
+        return { item: normalizeItemName(itemName, showWeaponNumbers), count, weaponNumber };
     }
     
     const weaponMatch = action.match(/([А-Яа-яA-Za-z\s]+)\s*\(([A-Z0-9]+)\)/i);
     if (weaponMatch) {
         const weaponName = weaponMatch[1].trim();
         const weaponNumber = weaponMatch[2];
-        return { item: normalizeItemName(`${weaponName} (${weaponNumber})`, showWeaponNumbers), count };
+        return { item: normalizeItemName(`${weaponName} (${weaponNumber})`, showWeaponNumbers), count, weaponNumber };
     }
     
     const ammoMatch = action.match(/(\d+\.?\d*\s*mm)/i);
@@ -407,7 +429,8 @@ function extractItemAndCount(action: string, showWeaponNumbers: boolean = true):
         itemPart = itemPart.replace(/\s*\([^)]*\)/g, '').trim();
         
         if (itemPart.length >= 2) {
-            return { item: normalizeItemName(itemPart, showWeaponNumbers), count };
+            const weaponNumber = extractWeaponNumber(action);
+            return { item: normalizeItemName(itemPart, showWeaponNumbers), count, weaponNumber };
         }
     }
     
@@ -565,13 +588,14 @@ function parseLogEntry(line: string, showWeaponNumbers: boolean = true): LogEntr
         return null;
     }
     
-    const { item, count } = extractItemAndCount(action, showWeaponNumbers);
+    const { item, count, weaponNumber } = extractItemAndCount(action, showWeaponNumbers);
     if (!item || count === 0) return null;
     
     return {
         datetime: parseDateTime(rawDate, rawTime),
         rawDate, rawTime, type, action,
         item, count,
+        weaponNumber: weaponNumber,
         operation, location
     };
 }
@@ -587,10 +611,16 @@ function analyzeLogs(data: string, showWeaponNumbers: boolean = true): AnalysisR
     
     entries.sort((a, b) => a.datetime.getTime() - b.datetime.getTime());
     
+    // Инвентарь фракции (только для обычного оружия)
     const factionInventory: Map<string, number> = new Map();
     const totalTakenFromFaction: Map<string, number> = new Map();
     const totalReturnedToFaction: Map<string, number> = new Map();
     const soldFromFaction: Map<string, number> = new Map();
+    
+    // Гос. оружие - считается отдельно (слив в любом случае)
+    const governmentTaken: Map<string, number> = new Map();
+    const governmentReturned: Map<string, number> = new Map();
+    const governmentSold: Map<string, number> = new Map();
     
     const remainingByLocation: PersonalStorage = {
         houses: {},
@@ -629,16 +659,29 @@ function analyzeLogs(data: string, showWeaponNumbers: boolean = true): AnalysisR
     };
     
     for (const entry of entries) {
-        const { item, count, operation, location, money, type } = entry;
+        const { item, count, operation, location, money, type, weaponNumber } = entry;
+        const isGovWeapon = isGovernmentWeapon(weaponNumber);
         
         if (operation === 'sell') {
             totalEarnings += money || 0;
-            const available = getBalance(factionInventory, item);
-            if (available > 0) {
-                const soldAmount = Math.min(count, available);
-                updateBalance(factionInventory, item, -soldAmount);
-                updateBalance(soldFromFaction, item, soldAmount);
-                soldFromFactionDetails.push({ item, count: soldAmount, money: money || 0 });
+            
+            if (isGovWeapon) {
+                // Гос. оружие - проверяем, было ли оно взято
+                const available = getBalance(governmentTaken, item);
+                if (available > 0) {
+                    const soldAmount = Math.min(count, available);
+                    updateBalance(governmentTaken, item, -soldAmount);
+                    updateBalance(governmentSold, item, soldAmount);
+                    soldFromFactionDetails.push({ item, count: soldAmount, money: money || 0 });
+                }
+            } else {
+                const available = getBalance(factionInventory, item);
+                if (available > 0) {
+                    const soldAmount = Math.min(count, available);
+                    updateBalance(factionInventory, item, -soldAmount);
+                    updateBalance(soldFromFaction, item, soldAmount);
+                    soldFromFactionDetails.push({ item, count: soldAmount, money: money || 0 });
+                }
             }
             continue;
         }
@@ -646,37 +689,64 @@ function analyzeLogs(data: string, showWeaponNumbers: boolean = true): AnalysisR
         const isFromFaction = operation === 'take' && isFactionSource(location, type);
         const isToFaction = operation === 'put' && isFactionSource(location, type);
         
-        if (isFromFaction) {
-            updateBalance(factionInventory, item, count);
-            updateBalance(totalTakenFromFaction, item, count);
+        // Обработка взятия/возврата в зависимости от типа оружия
+        if (isGovWeapon) {
+            // Гос. оружие: любое взятие с ЛЮБОГО источника = слив
+            if (operation === 'take') {
+                updateBalance(governmentTaken, item, count);
+            }
+            
+            if (operation === 'put' && isToFaction) {
+                const available = getBalance(governmentTaken, item);
+                const returned = Math.min(count, available);
+                updateBalance(governmentTaken, item, -returned);
+                updateBalance(governmentReturned, item, returned);
+            }
+        } else {
+            // Обычное оружие: только взятие с фракции = слив
+            if (isFromFaction) {
+                updateBalance(factionInventory, item, count);
+                updateBalance(totalTakenFromFaction, item, count);
+            }
+            
+            if (isToFaction) {
+                const available = getBalance(factionInventory, item);
+                const returned = Math.min(count, available);
+                updateBalance(factionInventory, item, -returned);
+                updateBalance(totalReturnedToFaction, item, returned);
+            }
         }
         
-        if (isToFaction) {
-            const available = getBalance(factionInventory, item);
-            const returned = Math.min(count, available);
-            updateBalance(factionInventory, item, -returned);
-            updateBalance(totalReturnedToFaction, item, returned);
-        }
-        
+        // Отслеживание перемещений в личное имущество
         if (operation === 'put' && !isToFaction && location !== 'craft') {
-    const locationMap: Record<string, keyof PersonalStorage> = {
-        'house': 'houses',
-        'personal_car': 'personalCars',
-        'camper': 'camper',
-        'family_warehouse': 'familyWarehouse'
-    };
-    
-    const targetLocation = locationMap[location];
-    if (targetLocation) {
-        const available = getBalance(factionInventory, item);
-        if (available > 0) {
-            const movedAmount = Math.min(count, available);
-            updateBalance(remainingByLocation[targetLocation], item, movedAmount);
-            updateBalance(factionInventory, item, -movedAmount);
+            const locationMap: Record<string, keyof PersonalStorage> = {
+                'house': 'houses',
+                'personal_car': 'personalCars',
+                'camper': 'camper',
+                'family_warehouse': 'familyWarehouse'
+            };
+            
+            const targetLocation = locationMap[location];
+            if (targetLocation) {
+                if (isGovWeapon) {
+                    const available = getBalance(governmentTaken, item);
+                    if (available > 0) {
+                        const movedAmount = Math.min(count, available);
+                        updateBalance(remainingByLocation[targetLocation], item, movedAmount);
+                        updateBalance(governmentTaken, item, -movedAmount);
+                    }
+                } else {
+                    const available = getBalance(factionInventory, item);
+                    if (available > 0) {
+                        const movedAmount = Math.min(count, available);
+                        updateBalance(remainingByLocation[targetLocation], item, movedAmount);
+                        updateBalance(factionInventory, item, -movedAmount);
+                    }
+                }
+            }
         }
-    }
-}
         
+        // Отслеживание взятия из личного имущества (возврат)
         if (operation === 'take' && !isFromFaction && location !== 'craft') {
             const locationMap: Record<string, keyof PersonalStorage> = {
                 'house': 'houses',
@@ -713,16 +783,35 @@ function analyzeLogs(data: string, showWeaponNumbers: boolean = true): AnalysisR
         }
     }
     
+    // Гос. оружие - считаем то, что не возвращено
+    const takenGovernmentObj: StorageBalance = {};
+    for (const [item, count] of governmentTaken.entries()) {
+        const returned = governmentReturned.get(item) || 0;
+        if (count - returned > 0) {
+            takenGovernmentObj[item] = count - returned;
+        }
+    }
+    
     const soldFromFactionObj: StorageBalance = {};
     for (const [item, count] of soldFromFaction.entries()) {
         soldFromFactionObj[item] = count;
     }
     
-    const hasViolation = Object.keys(remainingInPersonal).length > 0 || Object.keys(soldFromFactionObj).length > 0;
+    const soldGovernmentObj: StorageBalance = {};
+    for (const [item, count] of governmentSold.entries()) {
+        soldGovernmentObj[item] = count;
+    }
+    
+    // Нарушение есть, если есть не возвращённое гос. оружие ИЛИ обычное оружие
+    const hasViolation = Object.keys(remainingInPersonal).length > 0 || 
+                         Object.keys(soldFromFactionObj).length > 0 ||
+                         Object.keys(takenGovernmentObj).length > 0 ||
+                         Object.keys(soldGovernmentObj).length > 0;
     
     return {
         takenFromFaction: takenFromFactionObj,
-        soldFromFaction: soldFromFactionObj,
+        takenGovernmentWeapons: takenGovernmentObj,
+        soldFromFaction: { ...soldFromFactionObj, ...soldGovernmentObj },
         soldFromFactionDetails,
         remainingInPersonal,
         remainingByLocation,
@@ -751,8 +840,14 @@ function generateReport(statick: string, fraction: FractionType, analysis: Analy
     report += `${"─".repeat(50)}\n\n`;
     
     if (Object.keys(analysis.takenFromFaction).length > 0) {
-        report += formatBalance("ВЗЯТО СО СКЛАДА", analysis.takenFromFaction);
-    } else {
+        report += formatBalance("ВЗЯТО СО СКЛАДА (обычное)", analysis.takenFromFaction);
+    }
+    
+    if (Object.keys(analysis.takenGovernmentWeapons).length > 0) {
+        report += formatBalance("ВЗЯТО ГОС. ОРУЖИЯ (ЛЮБОЙ ИСТОЧНИК)", analysis.takenGovernmentWeapons);
+    }
+    
+    if (Object.keys(analysis.takenFromFaction).length === 0 && Object.keys(analysis.takenGovernmentWeapons).length === 0) {
         report += `[ВЗЯТО СО СКЛАДА]\n  Нет данных\n\n`;
     }
     
@@ -940,7 +1035,8 @@ async function showPunishmentModal(
         { label: 'IBAN', description: 'Перманентный бан', value: 'iban' },
         { label: 'Варн', description: 'Предупреждение', value: 'warn' },
         { label: 'Бан + Варн', description: 'Бан и предупреждение одновременно', value: 'warnban' },
-        { label: 'Деморган', description: 'Деморган', value: 'jail' }
+        { label: 'Деморган', description: 'Деморган', value: 'jail' },
+        { label: 'Деморган + Варн', description: "Деморган и варн одновременно", value: 'jailwarn'}
     ];
 
     if (isStateFraction) {
@@ -1114,6 +1210,11 @@ async function processPunishment(
                 const mins = duration || "100";
                 commandText = `offprison ${statick} ${mins} Слив склада ${fractionShort} // by ${adminSurname}`;
                 durationText = `${mins} мин.`;
+                break;
+            case 'jailwarn':
+                const minutes = duration || "100";
+                commandText = `offprison ${statick} ${minutes} Слив склада ${fractionShort} // by ${adminSurname}\noffwarn ${statick} Слив склада ${fractionShort} // by ${adminSurname}`;
+                durationText = `${minutes} мин. + варн`;
                 break;
             default:
                 commandText = `offban ${statick} 30 Слив склада ${fractionShort} // by ${adminSurname}`;

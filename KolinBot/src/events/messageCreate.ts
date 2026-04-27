@@ -16,6 +16,7 @@ export async function execute(message: Message) {
             if (userIdMatch) {
                 const userId = userIdMatch[1];
                 const targetUser = await message.client.user?.client.users.fetch(userId);
+                const member = await message.guild?.members.fetch(message.author.id).catch(() => null)
                 if (!targetUser) return;
 
                 const attachments = Array.from(message.attachments.values());
@@ -43,6 +44,9 @@ export async function execute(message: Message) {
 
                 await message.react('✅');
                 await repliedMessage.react('✅');
+                const newEmbed = EmbedBuilder.from(repliedMessage.embeds[0])
+                 .setFooter({text: `Обработано: ${member?.nickname} `})
+                await repliedMessage.edit({ embeds: [newEmbed] });
             }
         }
     } catch (error) {

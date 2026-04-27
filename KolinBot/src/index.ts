@@ -17,7 +17,10 @@ const client = new Client({
         GatewayIntentBits.Guilds,          
         GatewayIntentBits.GuildMessages,    
         GatewayIntentBits.MessageContent,  
-        GatewayIntentBits.DirectMessages    
+        GatewayIntentBits.DirectMessages,
+        GatewayIntentBits.GuildMembers,   
+        GatewayIntentBits.GuildVoiceStates,
+        GatewayIntentBits.GuildModeration
     ],
     partials: [
         Partials.Channel,                  
@@ -32,40 +35,28 @@ function shouldLoadCommandForServer(commandPath: string, serverId?: string): boo
     
     const normalizedPath = commandPath.replace(/\\/g, '/');
     
-    const isForServerCommand = normalizedPath.includes('/ForServer/');
-    
-    const isSpecialCommand = normalizedPath.includes('/SpecialForHennesy/');
-    const AdminsCommands = normalizedPath.includes('/AdminsCommands/')
-    
-    const adminGuilds = process.env.ADMINS?.split(',').map(id => id.trim()) || [];
-    const stateFactionsGuilds = process.env.STATE_FACTIONS?.split(',').map(id => id.trim()) || [];
-    const adminServer = process.env.ADMIN_SERVER?.split(',').map(id => id.trim()) || [];
-    
-    if (isSpecialCommand) {
-        const shouldLoad = adminGuilds.includes(serverId);
-        if (!shouldLoad) {
-            console.log(`⏭️ Пропущена SpecialForHennesy команда (сервер ${serverId} не в ADMINS): ${path.basename(commandPath)}`);
-        }
-        return shouldLoad;
+    const folderToEnvMap: Record<string, string | undefined> = {
+        'SpecialForHennesy': process.env.ADMINS,
+        'AdminsCommands': process.env.ADMIN_SERVER,
+        'ForServer': process.env.STATE_FACTIONS
+    };
+
+    if (normalizedPath.includes('/ForAllServers/') && serverId != process.env.ADMIN_SERVER) {
+        return true;
     }
 
-    if(AdminsCommands) {
-        const shouldLoad = adminServer.includes(serverId)
-        if(!shouldLoad) {
-            console.log(`⏭️ Пропущена AdminServer команда (сервер ${serverId} не в AdminsCommand): ${path.basename(commandPath)}`);
+    for (const [folderName, envValue] of Object.entries(folderToEnvMap)) {
+        if (normalizedPath.includes(`/${folderName}/`)) {
+            const allowedServers = envValue?.split(',').map(id => id.trim()) || [];
+            const canLoad = allowedServers.includes(serverId);
+            
+            if (!canLoad) {
+                console.log(`⏭️ Пропущена команда из ${folderName}: ${path.basename(commandPath)} (сервер не в списке)`);
+            }
+            return canLoad;
         }
-        return shouldLoad
     }
-    
-    if (isForServerCommand) {
-        const shouldLoad = stateFactionsGuilds.includes(serverId);
-        if (!shouldLoad) {
-            console.log(`⏭️ Пропущена ForServer команда (сервер ${serverId} не в STATE_FACTIONS): ${path.basename(commandPath)}`);
-        }
-        return shouldLoad;
-    }
-    
-    console.log(`⏭️ Пропущена команда (не в ForServer и не в SpecialForHennesy): ${path.basename(commandPath)}`);
+
     return false;
 }
 
@@ -82,11 +73,6 @@ async function loadCommands() {
     const commandFiles = getAllFiles(commandsPath);
     console.log(`📁 Найдено файлов команд: ${commandFiles.length}`);
     
-    const adminGuilds = process.env.ADMINS?.split(',').map(id => id.trim()) || [];
-    const stateFactionsGuilds = process.env.STATE_FACTIONS?.split(',').map(id => id.trim()) || [];
-    
-    console.log(`👑 ADMINS гильдии: ${adminGuilds.join(', ') || 'не указаны'}`);
-    console.log(`🏛️ STATE_FACTIONS гильдии: ${stateFactionsGuilds.join(', ') || 'не указаны'}`);
     console.log(`🎯 Текущий сервер: ${serverId || 'не указан'}`);
     
     const filteredCommandFiles = commandFiles.filter(filePath => {
