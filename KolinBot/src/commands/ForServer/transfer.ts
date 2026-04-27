@@ -9,7 +9,6 @@ import {
 } from 'discord.js';
 
 /**
- * Таблица перевода согласно вашему скриншоту.
  * Формат: [Куда][Откуда] -> { новый_ранг, мин_старый, макс_старый }
  */
 const transferTable: Record<string, Record<string, { new: number, min: number, max: number }[]>> = {

@@ -66,7 +66,7 @@ interface LogEntry {
     type: string;
     action: string;
     item: string;
-    weaponNumber?: string; // Номер оружия (например, FIB80388)
+    weaponNumber?: string; 
     count: number;
     soldCount?: number;
     money?: number;
@@ -76,21 +76,6 @@ interface LogEntry {
 
 interface StorageBalance {
     [item: string]: number;
-}
-
-interface WeaponStorage {
-    [weaponId: string]: { 
-        count: number;
-        baseName: string;   
-    };
-}
-
-interface PersonalStorageDetailed {
-    houses: WeaponStorage;
-    personalCars: WeaponStorage;
-    fractionCars: WeaponStorage;
-    familyWarehouse: WeaponStorage;
-    camper: WeaponStorage;
 }
 
 interface PersonalStorage {
@@ -109,7 +94,7 @@ interface SaleDetail {
 
 interface AnalysisResult {
     takenFromFaction: StorageBalance;
-    takenGovernmentWeapons: StorageBalance; // Гос. оружие, взятое из любых источников
+    takenGovernmentWeapons: StorageBalance; 
     soldFromFaction: StorageBalance;
     soldFromFactionDetails: SaleDetail[];
     remainingInPersonal: StorageBalance;
@@ -280,7 +265,6 @@ function getWebhookConfig(fraction: FractionType) {
     return { webhookUrl, avatarUrl, color, group };
 }
 
-// Проверка, является ли оружие государственным по номеру
 function isGovernmentWeapon(weaponNumber?: string): boolean {
     if (!weaponNumber) return false;
     const upperNumber = weaponNumber.toUpperCase();
@@ -364,7 +348,6 @@ function parseDateTime(dateStr: string, timeStr: string): Date {
     return new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes), parseInt(seconds));
 }
 
-// Функция для извлечения номера оружия из строки
 function extractWeaponNumber(action: string): string | undefined {
     const weaponMatch = action.match(/\(([A-Z0-9]+)\)/);
     if (weaponMatch) {
