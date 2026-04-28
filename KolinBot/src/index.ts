@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 import { getAllFiles } from './utils/fileUtils';
+import * as logger from './logger';
 
 dotenv.config();
 
@@ -20,7 +21,8 @@ const client = new Client({
         GatewayIntentBits.DirectMessages,
         GatewayIntentBits.GuildMembers,   
         GatewayIntentBits.GuildVoiceStates,
-        GatewayIntentBits.GuildModeration
+        GatewayIntentBits.GuildModeration,
+        GatewayIntentBits.GuildPresences
     ],
     partials: [
         Partials.Channel,                  
@@ -41,8 +43,8 @@ function shouldLoadCommandForServer(commandPath: string, serverId?: string): boo
         'ForServer': process.env.STATE_FACTIONS
     };
 
-    if (normalizedPath.includes('/ForAllServers/') && serverId != process.env.ADMIN_SERVER) {
-        return true;
+    if (normalizedPath.includes('/ForAllServers/')) {
+        return serverId !== process.env.ADMIN_SERVER;
     }
 
     for (const [folderName, envValue] of Object.entries(folderToEnvMap)) {
@@ -51,12 +53,15 @@ function shouldLoadCommandForServer(commandPath: string, serverId?: string): boo
             const canLoad = allowedServers.includes(serverId);
             
             if (!canLoad) {
-                console.log(`⏭️ Пропущена команда из ${folderName}: ${path.basename(commandPath)} (сервер не в списке)`);
+                console.log(`⏭️ Пропущена команда из ${folderName}: ${path.basename(commandPath)} (сервер ${serverId} не в списке)`);
+            } else {
+                console.log(`✅ Команда из ${folderName} будет загружена на сервер ${serverId}`);
             }
             return canLoad;
         }
     }
 
+    console.log(`⏭️ Пропущена команда: ${path.basename(commandPath)} (не в специальной папке)`);
     return false;
 }
 
@@ -72,17 +77,9 @@ async function loadCommands() {
     
     const commandFiles = getAllFiles(commandsPath);
     console.log(`📁 Найдено файлов команд: ${commandFiles.length}`);
-    
     console.log(`🎯 Текущий сервер: ${serverId || 'не указан'}`);
     
-    const filteredCommandFiles = commandFiles.filter(filePath => {
-        const shouldLoad = shouldLoadCommandForServer(filePath, serverId);
-        return shouldLoad;
-    });
-    
-    console.log(`📁 Будет загружено команд: ${filteredCommandFiles.length}`);
-    
-    for (const filePath of filteredCommandFiles) {
+    for (const filePath of commandFiles) {
         try {
             const command = await import(filePath);
             
@@ -92,8 +89,16 @@ async function loadCommands() {
                     console.log(`⚠️ Дубликат команды: ${commandName}`);
                     continue;
                 }
-                client.commands.set(commandName, command);
-                commands.push(command.data.toJSON());
+                
+                client.commands.set(commandName, {
+                    ...command,
+                    filePath: filePath  
+                });
+                
+                commands.push({
+                    ...command.data.toJSON(),
+                    _filePath: filePath  
+                });
                 
                 const relativePath = path.relative(commandsPath, filePath);
                 console.log(`✅ Загружена команда: ${commandName} (${relativePath})`);
@@ -101,8 +106,16 @@ async function loadCommands() {
             } else if (Array.isArray(command.data)) {
                 for (const cmd of command.data) {
                     if (cmd.name && cmd.description && !client.commands.has(cmd.name)) {
-                        client.commands.set(cmd.name, { ...command, data: cmd });
-                        commands.push(cmd.toJSON());
+                        client.commands.set(cmd.name, {
+                            ...command,
+                            data: cmd,
+                            filePath: filePath  
+                        });
+                        
+                        commands.push({
+                            ...cmd.toJSON(),
+                            _filePath: filePath
+                        });
                         
                         const relativePath = path.relative(commandsPath, filePath);
                         console.log(`✅ Загружена команда: ${cmd.name} (${relativePath})`);
@@ -114,29 +127,63 @@ async function loadCommands() {
         }
     }
     
+    console.log(`📁 Всего загружено команд: ${client.commands.size}`);
     return commands;
 }
 
 async function registerGuildCommands(commands: any[]) {
-    if (!process.env.TOKEN || !process.env.CLIENT_ID || !process.env.GUILD_ID) {
-        console.error('❌ Нужны TOKEN, CLIENT_ID и GUILD_ID в .env файле');
+    if (!process.env.TOKEN || !process.env.CLIENT_ID) {
+        console.error('❌ Нужны TOKEN и CLIENT_ID в .env файле');
         return;
     }
     
     const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
     
-    try {
-        console.log('🔄 Регистрация команд для гильдии...');
-        await rest.put(
-            Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
-            { body: commands }
-        );
-        console.log(`✅ Зарегистрировано ${commands.length} команд`);
-        if (commands.length > 0) {
-            console.log('📋 Команды:', commands.map(cmd => `/${cmd.name}`).join(', '));
+    const guildIds = new Set<string>();
+    if (process.env.GUILD_ID) guildIds.add(process.env.GUILD_ID);
+    if (process.env.ADMIN_SERVER) guildIds.add(process.env.ADMIN_SERVER);
+    if (process.env.ADMINS) {
+        process.env.ADMINS.split(',').forEach(id => guildIds.add(id.trim()));
+    }
+    if (process.env.STATE_FACTIONS) {
+        process.env.STATE_FACTIONS.split(',').forEach(id => guildIds.add(id.trim()));
+    }
+    
+    console.log(`🎯 Серверы для регистрации: ${Array.from(guildIds).join(', ')}`);
+    
+    for (const guildId of guildIds) {
+        try {
+            const guildCommands = commands
+                .filter(cmd => {
+                    const filePath = (cmd as any)._filePath;
+                    if (!filePath) {
+                        console.log(`⚠️ Команда ${cmd.name} не имеет пути к файлу`);
+                        return false;
+                    }
+                    return shouldLoadCommandForServer(filePath, guildId);
+                })
+                .map(cmd => {
+                    const { _filePath, ...cleanCmd } = cmd;
+                    return cleanCmd;
+                });
+            
+            if (guildCommands.length === 0) {
+                console.log(`⚠️ Нет команд для сервера ${guildId}`);
+                continue;
+            }
+            
+            console.log(`🔄 Регистрация ${guildCommands.length} команд для сервера ${guildId}...`);
+            await rest.put(
+                Routes.applicationGuildCommands(process.env.CLIENT_ID, guildId),
+                { body: guildCommands }
+            );
+            
+            const cmdNames = guildCommands.map(cmd => `/${cmd.name}`).join(', ');
+            console.log(`✅ Зарегистрировано ${guildCommands.length} команд на сервере ${guildId}: ${cmdNames}`);
+            
+        } catch (error) {
+            console.error(`❌ Ошибка регистрации на сервере ${guildId}:`, error);
         }
-    } catch (error) {
-        console.error('❌ Ошибка регистрации:', error);
     }
 }
 
@@ -173,6 +220,7 @@ async function loadEvents() {
         }
     }
 }
+
 
 async function start() {
     console.log('🚀 Запуск бота...');

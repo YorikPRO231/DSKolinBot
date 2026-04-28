@@ -32,8 +32,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const description = interaction.options.getString('суть');
     const image = interaction.options.getAttachment('скриншот');
     
-    const TARGET_CHANNEL_ID = '1494095206994411731';
-    const SENIOR_ROLE_ID = '1486138193697964042'; 
+    const TARGET_CHANNEL_ID = '1316831634376364055';
+    const SENIOR_ROLE_ID = '1316831633554542670'; 
 
     const channel = interaction.guild?.channels.cache.get(TARGET_CHANNEL_ID);
     if (!channel?.isTextBased()) return interaction.reply({ content: 'Канал не найден.', ephemeral: true });
