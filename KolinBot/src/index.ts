@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 import { getAllFiles } from './utils/fileUtils';
-import * as logger from './logger';
+import * as config from "./utils/config";
 
 dotenv.config();
 
@@ -37,10 +37,11 @@ function shouldLoadCommandForServer(commandPath: string, serverId?: string): boo
     
     const normalizedPath = commandPath.replace(/\\/g, '/');
     
-    const folderToEnvMap: Record<string, string | undefined> = {
-        'SpecialForHennesy': process.env.ADMINS,
-        'AdminsCommands': process.env.ADMIN_SERVER,
-        'ForServer': process.env.STATE_FACTIONS
+    const folderToEnvMap: Record<string, string[] | undefined> = {
+        'SpecialForHennesy': config.CHECK_SERVER_ID,
+        'AdminsCommands': config.ADMINS_SERVER_ID,
+        'ForServer': config.EMERGENCY_SERVER_ID,
+        'ForStateServers': config.getStateServerIds(),
     };
 
     if (normalizedPath.includes('/ForAllServers/')) {
@@ -49,7 +50,7 @@ function shouldLoadCommandForServer(commandPath: string, serverId?: string): boo
 
     for (const [folderName, envValue] of Object.entries(folderToEnvMap)) {
         if (normalizedPath.includes(`/${folderName}/`)) {
-            const allowedServers = envValue?.split(',').map(id => id.trim()) || [];
+            const allowedServers = envValue?.map(id => id.trim()) || [];
             const canLoad = allowedServers.includes(serverId);
             
             if (!canLoad) {
@@ -71,7 +72,7 @@ async function loadCommands() {
     const serverId = process.env.GUILD_ID;
     
     if (!fs.existsSync(commandsPath)) {
-        console.log('⚠️ Папка commands не найдена');
+        console.log('⚠️ Папка commands йдена');
         return commands;
     }
     
@@ -140,14 +141,7 @@ async function registerGuildCommands(commands: any[]) {
     const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
     
     const guildIds = new Set<string>();
-    if (process.env.GUILD_ID) guildIds.add(process.env.GUILD_ID);
-    if (process.env.ADMIN_SERVER) guildIds.add(process.env.ADMIN_SERVER);
-    if (process.env.ADMINS) {
-        process.env.ADMINS.split(',').forEach(id => guildIds.add(id.trim()));
-    }
-    if (process.env.STATE_FACTIONS) {
-        process.env.STATE_FACTIONS.split(',').forEach(id => guildIds.add(id.trim()));
-    }
+    config.getAllServerIds().forEach(id => guildIds.add(id));
     
     console.log(`🎯 Серверы для регистрации: ${Array.from(guildIds).join(', ')}`);
     

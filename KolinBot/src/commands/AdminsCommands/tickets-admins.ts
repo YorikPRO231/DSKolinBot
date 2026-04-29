@@ -1,8 +1,7 @@
 import { 
     EmbedBuilder, 
     ChatInputCommandInteraction, 
-    SlashCommandBuilder, 
-    PermissionFlagsBits 
+    SlashCommandBuilder
 } from 'discord.js';
 
 export const data = new SlashCommandBuilder()

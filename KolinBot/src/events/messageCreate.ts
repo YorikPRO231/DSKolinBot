@@ -16,7 +16,8 @@ export async function execute(message: Message) {
             if (userIdMatch) {
                 const userId = userIdMatch[1];
                 const targetUser = await message.client.user?.client.users.fetch(userId);
-                const member = await message.guild?.members.fetch(message.author.id).catch(() => null)
+                const member = await message.guild?.members.fetch(message.author.id).catch(() => null);
+                const displayName = member?.nickname || message.author.displayName || message.author.username;
                 if (!targetUser) return;
 
                 const attachments = Array.from(message.attachments.values());
@@ -24,7 +25,7 @@ export async function execute(message: Message) {
                 const dmEmbed = new EmbedBuilder()
                     .setColor(0x2B2D31)
                     .setAuthor({ 
-                        name: `Старший администратор ${message.author.username} ответил вам:`, 
+                        name: `Старший администратор ${displayName} ответил вам:`, 
                         iconURL: message.author.displayAvatarURL() 
                     })
                     .setDescription(message.content || (attachments.length > 0 ? "(Прикрепленные файлы ниже)" : "Сообщение без текста"))
