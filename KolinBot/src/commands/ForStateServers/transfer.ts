@@ -19,8 +19,8 @@ export const data = new SlashCommandBuilder()
             { name: 'LSPD', value: 'LSPD' },
             { name: 'LSSD', value: 'LSSD' },
             { name: 'SASPA', value: 'SASPA' },
-            { name: 'Army', value: 'NG' },
-            { name: 'USSS', value: 'USSS' }
+            { name: 'ARMY', value: 'ARMY' },
+            { name: 'USSS', value: 'GOV' }
         ));
 
 export async function execute(interaction: ChatInputCommandInteraction) {

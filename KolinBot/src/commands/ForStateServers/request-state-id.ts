@@ -1,6 +1,8 @@
 import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder} from 'discord.js';
 import {findPlayerPatch, retrievePlayerPatch} from "../../databases/sqlite";
 import type {StatePatch, PatchHistory} from "../../databases/sqlite";
+import { GOV_ACCESS_PATCH_REQUEST, DETECTIVE_PATCH_ACCESS_ROLES_ID } from '../../utils/config';
+import { DETECTIVES_INFO } from '../../utils/constants/fractions';
 
 export const data = new SlashCommandBuilder()
     .setName("поиск-нашивки")
@@ -20,6 +22,14 @@ export async function execute(inter: ChatInputCommandInteraction) {
     const passport = inter.options.getInteger('паспорт');
     const patch = inter.options.getString('нашивка');
 
+    const gm = await inter.guild?.members.fetch(inter.user.id).catch(() => null);
+    const hasRole = gm?.roles?.cache?.some((r: any) => GOV_ACCESS_PATCH_REQUEST.includes(r.id));
+    if (!hasRole) {
+        return inter.reply({
+            content:'Данную команду можно использовать только в дискорде правительства с соответствующим доступом.', flags: MessageFlags.Ephemeral
+        })
+    }
+
     if (passport === null && patch === null) {
         return inter.reply({
             content: 'Укажите номер паспорта или текст нашивки для поиска.',
@@ -28,10 +38,11 @@ export async function execute(inter: ChatInputCommandInteraction) {
     }
 
     await inter.deferReply();
+    const authorName = `${inter.guild?.name || 'GTA 5 RP'}`.trim();
 
     const embed = new EmbedBuilder()
         .setAuthor({
-            name: inter.guild?.name || 'GTA 5 RP',
+            name: authorName,
             iconURL: inter.guild?.iconURL() || undefined
         })
         .setTitle('Поиск нашивок')
@@ -47,9 +58,13 @@ export async function execute(inter: ChatInputCommandInteraction) {
         if (!ps) {
             embed.setDescription('По указанному паспорту ничего не найдено.');
         } else {
-            embed.setDescription(formatPatchResult('Поиск по паспорту', ps));
-            embed.setThumbnail(inter.guild?.members.cache.get(ps.discord_id)?.displayAvatarURL() || null);
-            addHistoryToEmbed(embed, ps);
+            if (isDetectivePatch(ps.faction) && !hasDetectiveAccess(gm)) {
+                embed.setDescription('❌ **Доступ запрещен:** У вас нет прав на просмотр детективных нашивок.');
+            } else {
+                embed.setDescription(formatPatchResult('Поиск по паспорту', ps));
+                embed.setThumbnail(inter.guild?.members.cache.get(ps.discord_id)?.displayAvatarURL() || null);
+                addHistoryToEmbed(embed, ps);
+            }
         }
     }
 
@@ -57,19 +72,42 @@ export async function execute(inter: ChatInputCommandInteraction) {
         const matches = findPlayerPatch(patch);
         if (!matches || matches.length === 0) {
             embed.setDescription('По указанной нашивке ничего не найдено.');
-        } else if (matches.length === 1) {
-            embed.setDescription(formatPatchResult('Поиск по нашивке', matches[0]));
-            embed.setThumbnail(inter.guild?.members.cache.get(matches[0].discord_id)?.displayAvatarURL() || null);
-            addHistoryToEmbed(embed, matches[0]);
         } else {
-            const matchDescriptions = matches.map((ps, index) =>
-                `${index + 1}. **${ps.username}** (Паспорт: \`${ps.passport}\`)\n\`\`\`${ps.patch}\`\`\``
-            );
-            embed.setDescription(`Найдено совпадений: ${matches.length}\n\n${matchDescriptions.join('\n\n')}`);
+            const hasAccess = hasDetectiveAccess(gm);
+            const filteredMatches = hasAccess ? matches : matches.filter(m => !isDetectivePatch(m.faction));
+            
+            if (filteredMatches.length === 0) {
+                embed.setDescription('❌ **Доступ запрещен:** Найдены только детективные нашивки, к которым у вас нет доступа.');
+            } else if (filteredMatches.length === 1) {
+                embed.setDescription(formatPatchResult('Поиск по нашивке', filteredMatches[0]));
+                embed.setThumbnail(inter.guild?.members.cache.get(filteredMatches[0].discord_id)?.displayAvatarURL() || null);
+                addHistoryToEmbed(embed, filteredMatches[0]);
+            } else {
+                const matchDescriptions = filteredMatches.map((ps, index) =>
+                    `${index + 1}. **${ps.username}** (Паспорт: \`${ps.passport}\`)\n\`\`\`${ps.patch}\`\`\``
+                );
+                
+                let description = `Найдено совпадений: ${filteredMatches.length}`;
+                if (!hasAccess && filteredMatches.length < matches.length) {
+                    description += ` (скрыто детективных: ${matches.length - filteredMatches.length})`;
+                }
+                description += `\n\n${matchDescriptions.join('\n\n')}`;
+                
+                embed.setDescription(description);
+            }
         }
     }
 
     return inter.editReply({embeds: [embed]});
+}
+
+function isDetectivePatch(faction: string): boolean {
+    return Object.keys(DETECTIVES_INFO).includes(faction);
+}
+
+function hasDetectiveAccess(member: any): boolean {
+    if (!member) return false;
+    return member.roles?.cache?.some((r: any) => DETECTIVE_PATCH_ACCESS_ROLES_ID.includes(r.id)) || false;
 }
 
 function formatPatchResult(title: string, ps: StatePatch): string {

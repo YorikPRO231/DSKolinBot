@@ -4,7 +4,8 @@ import path from 'path';
 import dotenv from 'dotenv';
 import { getAllFiles } from './utils/fileUtils';
 import * as config from "./utils/config";
-
+import { DETECTIVES_INFO, FRACTION_INFO } from './utils/constants/fractions'
+import { startGoogleFormsServer, initializeGoogleFormsServer } from './server';
 dotenv.config();
 
 declare module 'discord.js' {
@@ -36,12 +37,16 @@ function shouldLoadCommandForServer(commandPath: string, serverId?: string): boo
     if (!serverId) return false;
     
     const normalizedPath = commandPath.replace(/\\/g, '/');
+    const CHP = [FRACTION_INFO['CHP_SERVER'].discord_id]
+    const detectivesId = Object.values(DETECTIVES_INFO).map(info => info.discord_id);
+
     
     const folderToEnvMap: Record<string, string[] | undefined> = {
         'SpecialForHennesy': config.CHECK_SERVER_ID,
         'AdminsCommands': config.ADMINS_SERVER_ID,
-        'ForServer': config.EMERGENCY_SERVER_ID,
-        'ForStateServers': config.getStateServerIds(),
+        'ForServer': CHP,
+        'ForStateServers': [...config.getStateServerIds(), ...Object.values(DETECTIVES_INFO).map(i => i.discord_id)],
+        'DetectiveCommands': detectivesId
     };
 
     if (normalizedPath.includes('/ForAllServers/')) {
@@ -51,19 +56,11 @@ function shouldLoadCommandForServer(commandPath: string, serverId?: string): boo
     for (const [folderName, envValue] of Object.entries(folderToEnvMap)) {
         if (normalizedPath.includes(`/${folderName}/`)) {
             const allowedServers = envValue?.map(id => id.trim()) || [];
-            const canLoad = allowedServers.includes(serverId);
-            
-            if (!canLoad) {
-                console.log(`⏭️ Пропущена команда из ${folderName}: ${path.basename(commandPath)} (сервер ${serverId} не в списке)`);
-            } else {
-                console.log(`✅ Команда из ${folderName} будет загружена на сервер ${serverId}`);
-            }
-            return canLoad;
+            return allowedServers.includes(serverId);
         }
     }
 
-    console.log(`⏭️ Пропущена команда: ${path.basename(commandPath)} (не в специальной папке)`);
-    return false;
+    return false; 
 }
 
 async function loadCommands() {
@@ -72,13 +69,12 @@ async function loadCommands() {
     const serverId = process.env.GUILD_ID;
     
     if (!fs.existsSync(commandsPath)) {
-        console.log('⚠️ Папка commands йдена');
+        console.log('⚠️ Папка commands не найдена');
         return commands;
     }
     
     const commandFiles = getAllFiles(commandsPath);
     console.log(`📁 Найдено файлов команд: ${commandFiles.length}`);
-    console.log(`🎯 Текущий сервер: ${serverId || 'не указан'}`);
     
     for (const filePath of commandFiles) {
         try {
@@ -101,9 +97,6 @@ async function loadCommands() {
                     _filePath: filePath  
                 });
                 
-                const relativePath = path.relative(commandsPath, filePath);
-                console.log(`✅ Загружена команда: ${commandName} (${relativePath})`);
-                
             } else if (Array.isArray(command.data)) {
                 for (const cmd of command.data) {
                     if (cmd.name && cmd.description && !client.commands.has(cmd.name)) {
@@ -117,9 +110,6 @@ async function loadCommands() {
                             ...cmd.toJSON(),
                             _filePath: filePath
                         });
-                        
-                        const relativePath = path.relative(commandsPath, filePath);
-                        console.log(`✅ Загружена команда: ${cmd.name} (${relativePath})`);
                     }
                 }
             }
@@ -128,7 +118,7 @@ async function loadCommands() {
         }
     }
     
-    console.log(`📁 Всего загружено команд: ${client.commands.size}`);
+    console.log(`✅ Загружено команд: ${client.commands.size}`);
     return commands;
 }
 
@@ -150,10 +140,7 @@ async function registerGuildCommands(commands: any[]) {
             const guildCommands = commands
                 .filter(cmd => {
                     const filePath = (cmd as any)._filePath;
-                    if (!filePath) {
-                        console.log(`⚠️ Команда ${cmd.name} не имеет пути к файлу`);
-                        return false;
-                    }
+                    if (!filePath) return false;
                     return shouldLoadCommandForServer(filePath, guildId);
                 })
                 .map(cmd => {
@@ -162,8 +149,7 @@ async function registerGuildCommands(commands: any[]) {
                 });
             
             if (guildCommands.length === 0) {
-                console.log(`⚠️ Нет команд для сервера ${guildId}`);
-                continue;
+                continue; 
             }
             
             console.log(`🔄 Регистрация ${guildCommands.length} команд для сервера ${guildId}...`);
@@ -172,8 +158,7 @@ async function registerGuildCommands(commands: any[]) {
                 { body: guildCommands }
             );
             
-            const cmdNames = guildCommands.map(cmd => `/${cmd.name}`).join(', ');
-            console.log(`✅ Зарегистрировано ${guildCommands.length} команд на сервере ${guildId}: ${cmdNames}`);
+            console.log(`✅ Зарегистрировано ${guildCommands.length} команд на сервере ${guildId}`);
             
         } catch (error) {
             console.error(`❌ Ошибка регистрации на сервере ${guildId}:`, error);
@@ -215,21 +200,23 @@ async function loadEvents() {
     }
 }
 
-
 async function start() {
     console.log('🚀 Запуск бота...');
-    console.log(`🎯 Целевой сервер: ${process.env.GUILD_ID || 'не указан'}`);
-    console.log('📂 Правила загрузки команд:');
-    console.log('   - SpecialForHennesy → только для серверов из ADMINS');
-    console.log('   - ForServer → только для серверов из STATE_FACTIONS');
     
     const commands = await loadCommands();
     await loadEvents();
 
+    startGoogleFormsServer()
+
+    client.once('ready', (readyClient) => {
+        initializeGoogleFormsServer(readyClient);
+        console.log('✅ Google Forms интеграция активирована');
+    });
+
     if (commands.length > 0 && process.env.GUILD_ID) {
         await registerGuildCommands(commands);
     } else if (commands.length === 0) {
-        console.log('⚠️ Нет команд для регистрации на этом сервере');
+        console.log('⚠️ Нет команд для регистрации');
     }
     
     if (!process.env.TOKEN) {

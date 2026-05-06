@@ -1,25 +1,29 @@
 import {
   Events,
   Interaction,
-  GuildMember
+  GuildMember,
+  ButtonStyle,
+  ButtonBuilder,
+  ActionRowBuilder,
+  MessageActionRowComponentBuilder,
 } from "discord.js";
 import { setAdminSurname } from "../databases/sqlite";
-import { 
-  handleTransferSelect, 
-  handleApproveButton, 
-  handleApproveSelect, 
-  handleDenyButton, 
-  handleDenyModal 
+import {
+  handleTransferSelect,
+  handleApproveButton,
+  handleApproveSelect,
+  handleDenyButton,
+  handleDenyModal,
 } from "../utils/transferUtils";
-
-const ADMIN_ROLES = ["1495186421345161456", "ID_ROLE_2"];
 
 export const name = Events.InteractionCreate;
 
 export async function execute(interaction: Interaction) {
   // --- ОБРАБОТКА СЛЭШ-КОМАНД ---
   if (interaction.isChatInputCommand()) {
-    const command = (interaction.client as any).commands.get(interaction.commandName);
+    const command = (interaction.client as any).commands.get(
+      interaction.commandName,
+    );
 
     if (!command) {
       console.log(`Команда ${interaction.commandName} не найдена`);
@@ -31,10 +35,16 @@ export async function execute(interaction: Interaction) {
       console.log(`Выполнена команда: ${interaction.commandName}`);
     } catch (error) {
       console.error(`Ошибка в команде ${interaction.commandName}:`, error);
-      const errorMessage = error instanceof Error ? error.message : "Произошла ошибка при выполнении команды";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Произошла ошибка при выполнении команды";
       try {
         if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply({ content: `Ошибка: ${errorMessage}`, ephemeral: true });
+          await interaction.reply({
+            content: `Ошибка: ${errorMessage}`,
+            ephemeral: true,
+          });
         } else if (interaction.deferred && !interaction.replied) {
           await interaction.editReply({ content: `Ошибка: ${errorMessage}` });
         }
@@ -68,68 +78,70 @@ export async function execute(interaction: Interaction) {
   if (interaction.isButton()) {
     try {
       const member = interaction.member as GuildMember;
-      const hasRole = member?.roles?.cache?.some((r: any) => ADMIN_ROLES.includes(r.id));
 
       // --- ТВИНКИ ---
       if (interaction.customId.startsWith("twink_")) {
-        const twinkData = interaction.customId.split("_");
-        const memberId = twinkData[1];
-        const serverId = twinkData[2];
-        const guild = interaction.client.guilds.cache.get(serverId);
-        const targetMember = guild?.members?.cache.get(memberId);
+        await interaction.deferReply({ ephemeral: true });
 
-        if (!targetMember) {
-          return interaction.reply({
-            content: "Игрок не был найден в указанном дискорде.",
-            ephemeral: true,
-          });
+        const [, memberId, serverId] = interaction.customId.split("_");
+        const guild = interaction.client.guilds.cache.get(serverId);
+
+        if (!guild) {
+          return interaction.editReply({ content: "Сервер не найден." });
         }
 
         try {
-          await guild?.members.kick(targetMember, `Кикнут администратором ${interaction.user.id}`);
+          const targetMember = await guild.members
+            .fetch(memberId)
+            .catch(() => null);
 
-          const originalMessage = interaction.message;
-          const newRows: any[] = [];
-
-          for (const row of originalMessage.components) {
-            const ActionRowBuilder = require('discord.js').ActionRowBuilder;
-            const ButtonBuilder = require('discord.js').ButtonBuilder;
-            const ButtonStyle = require('discord.js').ButtonStyle;
-            
-            const actionRow = new ActionRowBuilder();
-            if (row.type === 1) {
-              for (const button of row.components) {
-                const newButton = ButtonBuilder.from(button);
-                if (button.customId === interaction.customId) {
-                  newButton.setStyle(ButtonStyle.Success);
-                  newButton.setDisabled(true);
-                }
-                actionRow.addComponents(newButton);
-              }
-              newRows.push(actionRow);
-            }
+          if (!targetMember) {
+            return interaction.editReply({
+              content: "Игрок не найден на сервере.",
+            });
           }
 
+          if (!targetMember.kickable) {
+            return interaction.editReply({
+              content: "У бота недостаточно прав для кика.",
+            });
+          }
+
+          const adminName = (interaction.member as GuildMember)?.displayName || interaction.user.username;
+          await targetMember.kick(`Админ: ${adminName} [${interaction.user.id}] Причина: твинк`);
+
+          const originalMessage = interaction.message;
+
+          const newRows = originalMessage.components.map((row) => {
+            const actionRow =
+              ActionRowBuilder.from<MessageActionRowComponentBuilder>(
+                row as any,
+              );
+
+            actionRow.components.forEach((component) => {
+              if (component instanceof ButtonBuilder) {
+                const data = component.data as any;
+                if (data.custom_id === interaction.customId) {
+                  component.setStyle(ButtonStyle.Success);
+                  component.setDisabled(true);
+                }
+              }
+            });
+
+            return actionRow;
+          });
+
           await originalMessage.edit({ components: newRows });
-          return interaction.reply({
-            content: `Игрок <@${memberId}> был успешно кикнут из ${guild?.name}`,
-            ephemeral: true,
+
+          return interaction.editReply({
+            content: `Игрок <@${memberId}> успешно кикнут из **${guild.name}**`,
           });
         } catch (error) {
-          console.error(`Ошибка при кике:`, error);
-          return interaction.reply({
-            content: "Произошла ошибка при попытке кикнуть игрока.",
-            ephemeral: true,
+          console.error(error);
+          return interaction.editReply({
+            content: "Ошибка при выполнении кика.",
           });
         }
-      }
-
-      // Проверка прав для кнопок переводов
-      if (!hasRole && interaction.customId.startsWith("tr_")) {
-        return interaction.reply({
-          content: "У вас нет прав для использования этой кнопки.",
-          ephemeral: true,
-        });
       }
 
       // --- КНОПКА ОДОБРИТЬ ПЕРЕВОД ---
@@ -145,11 +157,14 @@ export async function execute(interaction: Interaction) {
       }
 
       // --- КНОПКИ ПРОВЕРОК ---
-      if (interaction.customId === "check_approve" || interaction.customId === "check_deny") {
+      if (
+        interaction.customId === "check_approve" ||
+        interaction.customId === "check_deny"
+      ) {
         const oldEmbed = interaction.message.embeds[0];
         if (!oldEmbed) return;
 
-        const EmbedBuilder = require('discord.js').EmbedBuilder;
+        const EmbedBuilder = require("discord.js").EmbedBuilder;
         const newEmbed = EmbedBuilder.from(oldEmbed);
 
         if (interaction.customId === "check_approve") {

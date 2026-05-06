@@ -4,14 +4,15 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon --exec ts-node src/index.ts",
+    "dev": "nodemon --ignore 'data/**' --ignore '**/data/**' --exec ts-node src/index.ts",
     "build": "tsc",
+    "deploy-forms": "tsx src/deployFormsCommands.ts",
     "start": "node dist/index.js",
     "clean": "rimraf dist",
     "watch": "tsc --watch"
   },
   "keywords": [],
-  "author": "",
+  "author": "YorikPRO231",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {

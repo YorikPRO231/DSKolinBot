@@ -454,8 +454,15 @@ export function retrievePlayerPatch(passport: number) {
 }
 
 export function findPlayerPatch(patch: string): StatePatch[] {
-    const results = db.prepare('SELECT * FROM state_patches WHERE patch LIKE ?').all(`%${patch}%`) as StatePatch[];
-    return results || [];
+    return db.prepare(`
+        SELECT * FROM state_patches 
+        WHERE patch LIKE ? OR history LIKE ?
+    `).all(`%${patch}%`, `%${patch}%`) as StatePatch[];
+}
+
+export function getPatchByDiscord(discordId: string) {
+  const results = db.prepare('SELECT * FROM state_patches WHERE discord_id = ?').all(discordId) as StatePatch[] | undefined
+  return results || []
 }
 
 export function generateUniqueDigits(passport: number, faction: string): string {
@@ -464,7 +471,7 @@ export function generateUniqueDigits(passport: number, faction: string): string 
     const maxAttempts = 100;
     
     do {
-        digits = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+        digits = Math.floor(Math.random() * 100000).toString().padStart(5, '0');
         attempts++;
         
         const existing = db.prepare(
