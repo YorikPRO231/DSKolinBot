@@ -7,6 +7,7 @@ interface FormBinding {
     guildId: string;
     formName: string;
     pingRoleId?: string;
+    pingRoleId2?: string;
     createdAt: string;
 }
 
@@ -67,7 +68,7 @@ class BindingsManager {
         }
     }
 
-    addBinding(formId: string, channelId: string, guildId: string, formName?: string, pingRoleId?: string): FormBinding {
+    addBinding(id: string, formId: string, channelId: string, guildId: string, formName?: string, role1?: string, role2?: string): FormBinding {
         if (!formName || formName.trim() === '') {
             formName = `Форма ${formId.slice(-8)}`;
         }
@@ -77,7 +78,8 @@ class BindingsManager {
             channelId: channelId.trim(),
             guildId: guildId.trim(),
             formName: formName.trim(),
-            pingRoleId: pingRoleId?.trim(),
+            pingRoleId: role1?.trim(),
+            pingRoleId2: role2?.trim(),
             createdAt: new Date().toISOString()
         };
 

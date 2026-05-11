@@ -1,7 +1,8 @@
 import { 
     SlashCommandBuilder, 
     ChatInputCommandInteraction, 
-    EmbedBuilder 
+    EmbedBuilder,
+    MessageFlags
 } from 'discord.js';
 
 export const data = new SlashCommandBuilder()
@@ -9,9 +10,11 @@ export const data = new SlashCommandBuilder()
     .setDescription('Проверить задержку и статус работы бота');
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-    const sent = await interaction.deferReply({ fetchReply: true, ephemeral: true });
-    
-    const apiLatency = sent.createdTimestamp - interaction.createdTimestamp;
+    const startTime = Date.now();
+
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+    const apiLatency = startTime - interaction.createdTimestamp;
     const wsPing = interaction.client.ws.ping;
 
     const statusColor = wsPing < 150 ? 0x2ECC71 : (wsPing < 300 ? 0xF1C40F : 0xE74C3C);

@@ -6,37 +6,25 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const db = new Database(path.join(__dirname, 'data.sqlite'));
+const dbPath = path.join(__dirname, 'data.sqlite');
+const db = new Database(dbPath);
 
 try {
-    // Показываем примеры до замены
-    const before = db.prepare(`SELECT passport, faction, patch FROM state_patches WHERE faction LIKE '%Government%' LIMIT 3`).all();
-    console.log('📝 Примеры ДО замены:');
-    before.forEach(row => {
-        console.log(`  faction: ${row.faction}, patch: ${row.patch}`);
-    });
+    const tables = db.prepare(`SELECT name FROM sqlite_master WHERE type='table'`).all();
+    console.log('📋 Существующие таблицы:', tables.map(t => t.name).join(', '));
     
-    // Заменяем Government на USSS в поле faction
-    const result = db.prepare(`UPDATE state_patches SET faction = REPLACE(faction, 'Government', 'USSS') WHERE faction LIKE '%Government%'`).run();
+    const tableExists = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='infiltrations'`).get();
     
-    // Заменяем Government на USSS в поле patch
-    const patchResult = db.prepare(`UPDATE state_patches SET patch = REPLACE(patch, 'Government', 'USSS') WHERE patch LIKE '%Government%'`).run();
-    
-    // Заменяем в истории
-    const historyResult = db.prepare(`UPDATE state_patches SET history = REPLACE(history, 'Government', 'USSS') WHERE history LIKE '%Government%'`).run();
-    
-    console.log(`\n✅ Обновлено:`);
-    console.log(`   faction: ${result.changes}`);
-    console.log(`   patch: ${patchResult.changes}`);
-    console.log(`   history: ${historyResult.changes}`);
-    
-    // Показываем примеры после замены
-    const after = db.prepare(`SELECT passport, faction, patch FROM state_patches WHERE faction LIKE '%USSS%' LIMIT 3`).all();
-    console.log('\n📝 Примеры ПОСЛЕ замены:');
-    after.forEach(row => {
-        console.log(`  faction: ${row.faction}, patch: ${row.patch}`);
-    });
-    
+    if (!tableExists) {
+        console.log('❌ Таблица infiltrations не существует.');
+    } else {
+        const countBefore = db.prepare(`SELECT COUNT(*) as count FROM infiltrations`).get();
+        console.log(`📝 Количество записей в таблице: ${countBefore.count}`);
+        
+        db.prepare(`DROP TABLE infiltrations`).run();
+        
+        console.log('✅ Таблица infiltrations успешно удалена.');
+    }
 } catch (error) {
     console.error('❌ Ошибка:', error.message);
 } finally {

@@ -14,7 +14,8 @@ import {
     StringSelectMenuBuilder,
     StringSelectMenuInteraction,
     ModalSubmitInteraction,
-    ButtonInteraction
+    ButtonInteraction,
+    TextChannel
 } from 'discord.js';
 import axios from 'axios';
 import { addLog, getAdminSurname } from '../../../databases/sqlite';
@@ -30,19 +31,13 @@ const FRACTION_GROUPS = {
 // Префиксы государственного оружия
 const GOVERNMENT_WEAPON_PREFIXES = ['LSPD', 'LSSD', 'FIB', 'GOV', 'SASPA', 'ARMY'];
 
-const WEBHOOK_URLS = {
-    MAFIA: process.env.REPORT_WEBHOOK_MAFIA || process.env.REPORT_WEBHOOK_URL || "",
-    GANG: process.env.REPORT_WEBHOOK_GANG || "",
-    STATE: process.env.REPORT_WEBHOOK_STATE || "",
+const LOG_CHANNEL_IDS = {
+    MAFIA: "1316831636532232300",
+    GANG: "1316848781529972778",
+    STATE: "1316831637379743830",
     DEFAULT: ""
 };
 
-const WEBHOOK_AVATARS = {
-    MAFIA: "https://cdn.discordapp.com/avatars/939953853527392286/a_380cd7c3a53eecfea5a3e20d2267ae36.gif",
-    GANG: "https://cdn.discordapp.com/avatars/939953853527392286/a_380cd7c3a53eecfea5a3e20d2267ae36.gif",
-    STATE: "https://cdn.discordapp.com/avatars/939953853527392286/a_380cd7c3a53eecfea5a3e20d2267ae36.gif",
-    DEFAULT: undefined
-};
 
 const LOCATION_NAMES: Record<string, string> = {
     houses: "Дома/квартиры",
@@ -57,6 +52,13 @@ const GROUP_COLORS: Record<string, number> = {
     GANG: 0x800080,
     STATE: 0x00008B,
     DEFAULT: 0x2B2D31
+};
+
+const GROUP_NAMES: Record<string, string> = {
+    MAFIA: "Мафия",
+    GANG: "Банды", 
+    STATE: "Гос. структуры",
+    DEFAULT: "Неизвестно"
 };
 
 interface LogEntry {
@@ -249,20 +251,6 @@ function getFractionGroup(fraction: FractionType): keyof typeof FRACTION_GROUPS 
         }
     }
     return 'DEFAULT';
-}
-
-function getWebhookConfig(fraction: FractionType) {
-    const group = getFractionGroup(fraction);
-    
-    let webhookUrl = WEBHOOK_URLS[group] || WEBHOOK_URLS.DEFAULT;
-    const avatarUrl = WEBHOOK_AVATARS[group] || WEBHOOK_AVATARS.DEFAULT;
-    const color = GROUP_COLORS[group] || GROUP_COLORS.DEFAULT;
-    
-    if (!webhookUrl) {
-        webhookUrl = "";
-    }
-    
-    return { webhookUrl, avatarUrl, color, group };
 }
 
 function isGovernmentWeapon(weaponNumber?: string): boolean {
@@ -909,18 +897,26 @@ function generateReport(statick: string, fraction: FractionType, analysis: Analy
     return report;
 }
 
-async function sendReportToWebhook(
+async function sendReportToChannel(
+    client: any,
     adminName: string,
     statick: string,
     fraction: FractionType,
     punishmentType: string,
     punishmentDuration: string,
-    analysis: AnalysisResult,
-    showWeaponNumbers: boolean = true
+    analysis: AnalysisResult
 ): Promise<void> {
-    const { webhookUrl, avatarUrl, color, group } = getWebhookConfig(fraction);
+    const group = getFractionGroup(fraction);
+    const channelId = LOG_CHANNEL_IDS[group] || LOG_CHANNEL_IDS.DEFAULT;
     
-    if (!webhookUrl) {
+    if (!channelId) {
+        console.error(`Не указан канал для логов группы ${group}`);
+        return;
+    }
+
+    const channel = client.channels.cache.get(channelId) as TextChannel;
+    if (!channel) {
+        console.error(`Канал ${channelId} не найден`);
         return;
     }
 
@@ -951,13 +947,12 @@ async function sendReportToWebhook(
             .map(([item, count]) => `  ${item}: ${count.toLocaleString()} шт.`);
         soldText = `\n\nПродано через DarkVito:\n${soldLines.join("\n")}`;
         soldText += `\n\nВыручка: $${analysis.totalEarnings.toLocaleString()}`;
-        soldText += `\n\n<@478169919783960577>\nОбнулить ${statick} на ${analysis.totalEarnings}\nПричина: Слив склада фракции ${FRACTION_INFO[fraction]?.label}`;
     }
     
     let codeContent = `Админ: ${adminName}\n`;
     codeContent += `Статик: ${statick}\n`;
     codeContent += `Фракция: ${FRACTION_INFO[fraction]?.label || fraction}\n`;
-    codeContent += `Группа: ${group}\n`;
+    codeContent += `Группа: ${GROUP_NAMES[group] || group}\n`;
     codeContent += `Наказание: ${punishmentType}${punishmentDuration ? ` (${punishmentDuration})` : ""}\n`;
     codeContent += `\n${"─".repeat(50)}\n\n`;
     codeContent += `Слито (не возвращено на склад):\n${stolenText}\n`;
@@ -974,22 +969,13 @@ async function sendReportToWebhook(
     codeContent += `\n${"─".repeat(50)}\n`;
     codeContent += `ID: ${statick}`;
     
-    const embed = {
-        title: `Слив склада [${group}]`,
-        color,
-        description: `\`\`\`\n${codeContent}\n\`\`\``,
-        footer: { text: `Зафиксировано: ${new Date().toLocaleString()}` }
-    };
+    const embed = new EmbedBuilder()
+        .setTitle(`Слив склада [${GROUP_NAMES[group]}]`)
+        .setColor(GROUP_COLORS[group] || GROUP_COLORS.DEFAULT)
+        .setDescription(`\`\`\`\n${codeContent}\n\`\`\``)
+        .setFooter({ text: `Зафиксировано: ${new Date().toLocaleString()}` });
     
-    try {
-        await axios.post(webhookUrl, {
-            embeds: [embed],
-            username: `Складской Контроль - ${group}`,
-            ...(avatarUrl && { avatar_url: avatarUrl })
-        });
-    } catch (error) {
-        console.error(`Ошибка отправки в вебхук для группы ${group}:`, error);
-    }
+    await channel.send({ embeds: [embed] });
 }
 
 const PUNISHMENT_CONFIG = {
@@ -1210,7 +1196,7 @@ async function processPunishment(
     if (punishmentType !== 'curator') {
         const reportBuffer = Buffer.from(report, 'utf-8');
         await addLog(inter.user.id, statick, config.type, JSON.stringify({}), reportBuffer, durationText);
-        await sendReportToWebhook(adminDisplayName, statick, fraction, config.name, durationText, analysis, showWeaponNumbers);
+        await sendReportToChannel(inter.client, adminDisplayName, statick, fraction, config.name, durationText, analysis);
     }
 
     if ('editReply' in inter && typeof inter.editReply === 'function') {

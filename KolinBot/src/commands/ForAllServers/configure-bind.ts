@@ -1,98 +1,114 @@
 // src/commands/ForAllServers/configureBind.ts
-import { 
-    SlashCommandBuilder, 
-    ChatInputCommandInteraction,
-    EmbedBuilder,
-    ChannelType
-} from 'discord.js';
-import { bindingsManager } from '../../utils/bindingsManager';
-
-function extractFormId(input: string): string {
-    input = input.trim();
-    
-    if (/^[a-zA-Z0-9_-]{20,}$/.test(input)) return input;
-    
-    const match1 = input.match(/\/d\/e\/([a-zA-Z0-9_-]+)\//);
-    if (match1) return match1[1];
-    
-    const match2 = input.match(/\/d\/([a-zA-Z0-9_-]+)\//);
-    if (match2) return match2[1];
-    
-    const match3 = input.match(/\/d\/([a-zA-Z0-9_-]+)$/);
-    if (match3) return match3[1];
-    
-    return input;
-}
+import {
+  SlashCommandBuilder,
+  ChatInputCommandInteraction,
+  EmbedBuilder,
+  ChannelType,
+  MessageFlags
+} from "discord.js";
+import { bindingsManager } from "../../utils/bindingsManager";
+import { extractFormId } from "../../utils/fileUtils"
 
 export const data = new SlashCommandBuilder()
-    .setName('configure-bind')
-    .setDescription('Настроить привязку Google Form к каналу')
-    .addStringOption(option =>
-        option.setName('form_id')
-            .setDescription('ID Google Form или ссылка на форму')
-            .setRequired(true)
-    )
-    .addChannelOption(option =>
-        option.setName('channel')
-            .setDescription('Канал для отправки ответов')
-            .addChannelTypes(ChannelType.GuildText)
-            .setRequired(true)
-    )
-    .addRoleOption(option =>
-        option.setName('ping_role')
-            .setDescription('Роль для пинга при новом ответе')
-            .setRequired(false)
-    )
-    .addStringOption(option =>
-        option.setName('form_name')
-            .setDescription('Название формы (для удобства)')
-            .setRequired(false)
-    );
+  .setName("configure-bind")
+  .setDescription("Настроить привязку Google Form к каналу")
+  .addStringOption((option) =>
+    option
+      .setName("ссылка")
+      .setDescription("ID Google Form или ссылка на форму")
+      .setRequired(true),
+  )
+  .addChannelOption((option) =>
+    option
+      .setName("канал")
+      .setDescription("Канал для отправки ответов")
+      .addChannelTypes(ChannelType.GuildText)
+      .setRequired(true),
+  )
+  .addRoleOption((option) =>
+    option
+      .setName("роль1")
+      .setDescription("Первая роль для пинга")
+      .setRequired(false),
+  )
+  .addRoleOption((option) =>
+    option
+      .setName("роль2")
+      .setDescription("Вторая роль для пинга")
+      .setRequired(false),
+  )
+  .addStringOption((option) =>
+    option
+      .setName("название")
+      .setDescription("Название формы (для удобства)")
+      .setRequired(false),
+  );
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral});
 
-    try {
-        const inputFormId = interaction.options.getString('form_id', true);
-        const channel = interaction.options.getChannel('channel', true);
-        const pingRole = interaction.options.getRole('ping_role');
-        const formName = interaction.options.getString('form_name') ?? undefined;
-        
-        const formId = extractFormId(inputFormId);
+  try {
+    const inputFormId = interaction.options.getString("ссылка", true);
+    const channel = interaction.options.getChannel("канал", true);
+    const pingRole1 = interaction.options.getRole("роль1");
+    const pingRole2 = interaction.options.getRole("роль2");
+    const formName = interaction.options.getString("название") ?? undefined;
 
-        const binding = bindingsManager.addBinding(
-            formId, 
-            channel.id, 
-            interaction.guildId!, 
-            formName,
-            pingRole?.id
-        );
+    const formId = extractFormId(inputFormId);
 
-        const serverUrl = process.env.FORMS_SERVER_URL || `http://localhost:${process.env.FORMS_SERVER_PORT || 3000}`;
-        const formUrl = `https://docs.google.com/forms/d/${formId}/viewform`;
+    const role1Id = pingRole1?.id;
+    const role2Id = pingRole2?.id;
 
-        const embed = new EmbedBuilder()
-            .setColor(0x2ECC71)
-            .setTitle('Привязка настроена')
-            .setDescription(`Google Form привязана к ${channel}`)
-            .addFields(
-                {
-                    name: 'Информация',
-                    value: [
-                        `**Название:** ${binding.formName}`,
-                        `**Form ID:** \`${binding.formId}\``,
-                        `**Канал:** ${channel}`,
-                        `**Пинг роли:** ${pingRole ? `<@&${pingRole.id}>` : 'Не настроен'}`,
-                        `**Ссылка:** [Открыть форму](${formUrl})`
-                    ].join('\n'),
-                    inline: false
-                }
-            )
-            .setFooter({ text: 'Google Forms Integration' })
-            .setTimestamp();
+    const binding = bindingsManager.addBinding(
+      interaction.user.id,
+      formId,
+      channel.id,
+      interaction.guildId!,
+      formName,
+      role1Id,
+      role2Id,
+    );
 
-        const appsScriptCode = `
+    const pingRolesText = [pingRole1, pingRole2]
+      .filter(role => role !== null)
+      .map(role => `<@&${role!.id}>`)
+      .join(", ");
+
+
+    const formUrl = `https://docs.google.com/forms/d/${formId}/viewform`;
+
+    const embed = new EmbedBuilder()
+      .setColor(0x2ecc71)
+      .setTitle("Привязка настроена")
+      .setDescription(`Google Form привязана к ${channel}`)
+      .addFields({
+        name: "Информация",
+        value: [
+          `**Название:** ${binding.formName}`,
+          `**Form ID:** \`${binding.formId}\``,
+          `**Канал:** ${channel}`,
+          `**Пинг ролей:** ${pingRolesText || "Не настроены"}`,
+          `**Ссылка:** [Открыть форму](${formUrl})`,
+        ].join("\n"),
+        inline: false,
+      })
+      .setFooter({ text: "Google Forms Integration" })
+      .setTimestamp();
+
+    const appsScriptCode = `
 \`\`\`javascript
+(function() {
+  const triggers = ScriptApp.getProjectTriggers();
+  const hasTrigger = triggers.some(t => t.getHandlerFunction() === 'onFormSubmit');
+  
+  if (!hasTrigger) {
+    ScriptApp.newTrigger('onFormSubmit')
+      .forForm(FormApp.getActiveForm())
+      .onFormSubmit()
+      .create();
+  }
+})();
+
 function onFormSubmit(e) {
   const form = FormApp.getActiveForm();
   const itemResponses = e.response.getItemResponses();
@@ -102,7 +118,7 @@ function onFormSubmit(e) {
     answers[itemResponse.getItem().getTitle()] = itemResponse.getResponse();
   });
   
-  UrlFetchApp.fetch('${serverUrl}/webhook/form-response', {
+  UrlFetchApp.fetch('http://186.246.44.55:8080/webhook/form-response', {
     method: 'post',
     contentType: 'application/json',
     payload: JSON.stringify({
@@ -115,26 +131,18 @@ function onFormSubmit(e) {
     muteHttpExceptions: true
   });
 }
-
-function setupTrigger() {
-  ScriptApp.newTrigger('onFormSubmit')
-    .forForm(FormApp.getActiveForm())
-    .onFormSubmit()
-    .create();
-}
 \`\`\`
         `;
 
-        await interaction.editReply({ embeds: [embed] });
-        await interaction.followUp({ 
-            content: `**Инструкция по настройке:**\n1. Откройте Google Form\n2. Расширения → Apps Script\n3. Вставьте код ниже\n4. Запустите \`setupTrigger()\`\n5. Сохраните и авторизуйте\n\n${appsScriptCode}`,
-            ephemeral: true 
-        });
-
-    } catch (error) {
-        console.error('Error in configure-bind:', error);
-        await interaction.editReply({
-            content: '❌ Произошла ошибка при настройке привязки'
-        });
-    }
+    await interaction.editReply({ embeds: [embed] });
+    await interaction.followUp({ 
+            content: `**Инструкция по настройке:**\n1. Откройте Google Form\n2. Расширения → Apps Script\n3. Вставьте код ниже\n4. Запустите через кнопку выполнить\`setupTrigger()\`\n5. Сохраните и авторизуйте\n6. Отправьте несколько тестовых запросов (2-3шт)\n\n${appsScriptCode}`,
+            flags: MessageFlags.Ephemeral
+    });
+  } catch (error) {
+    console.error("Error in configure-bind:", error);
+    await interaction.editReply({
+      content: "❌ Произошла ошибка при настройке привязки",
+    });
+  }
 }

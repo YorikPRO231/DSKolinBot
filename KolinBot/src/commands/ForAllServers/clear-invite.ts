@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder, PermissionFlagsBits } from "discord.js";
+import { ChatInputCommandInteraction, SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from "discord.js";
 
 export const data = new SlashCommandBuilder()
   .setName("clear-invite")
@@ -11,7 +11,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
   if (!inter.guild) {
     return inter.reply({
       content: "Эту команду можно использовать только на сервере!",
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral
     });
   }
 

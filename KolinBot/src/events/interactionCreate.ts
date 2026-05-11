@@ -6,6 +6,7 @@ import {
   ButtonBuilder,
   ActionRowBuilder,
   MessageActionRowComponentBuilder,
+  MessageFlags
 } from "discord.js";
 import { setAdminSurname } from "../databases/sqlite";
 import {
@@ -15,11 +16,11 @@ import {
   handleDenyButton,
   handleDenyModal,
 } from "../utils/transferUtils";
+import {handleButton, handleModal} from "../utils/detectiveUtils";
 
 export const name = Events.InteractionCreate;
 
 export async function execute(interaction: Interaction) {
-  // --- ОБРАБОТКА СЛЭШ-КОМАНД ---
   if (interaction.isChatInputCommand()) {
     const command = (interaction.client as any).commands.get(
       interaction.commandName,
@@ -43,7 +44,7 @@ export async function execute(interaction: Interaction) {
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({
             content: `Ошибка: ${errorMessage}`,
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         } else if (interaction.deferred && !interaction.replied) {
           await interaction.editReply({ content: `Ошибка: ${errorMessage}` });
@@ -55,17 +56,14 @@ export async function execute(interaction: Interaction) {
     return;
   }
 
-  // --- ОБРАБОТКА SELECT MENU ---
   if (interaction.isStringSelectMenu()) {
     const member = interaction.member as GuildMember;
 
-    // Выбор фракции/персонажа для перевода
     if (interaction.customId.startsWith("select_transfer_")) {
       await handleTransferSelect(interaction, member);
       return;
     }
 
-    // Выбор фракции при одобрении (если пользователь в двух фракциях)
     if (interaction.customId.startsWith("approve_as_")) {
       await handleApproveSelect(interaction, member);
       return;
@@ -74,14 +72,12 @@ export async function execute(interaction: Interaction) {
     return;
   }
 
-  // --- ОБРАБОТКА КНОПОК ---
   if (interaction.isButton()) {
     try {
       const member = interaction.member as GuildMember;
 
-      // --- ТВИНКИ ---
       if (interaction.customId.startsWith("twink_")) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const [, memberId, serverId] = interaction.customId.split("_");
         const guild = interaction.client.guilds.cache.get(serverId);
@@ -144,19 +140,16 @@ export async function execute(interaction: Interaction) {
         }
       }
 
-      // --- КНОПКА ОДОБРИТЬ ПЕРЕВОД ---
       if (interaction.customId.startsWith("tr_approve_")) {
         await handleApproveButton(interaction, member);
         return;
       }
 
-      // --- КНОПКА ОТКЛОНИТЬ ПЕРЕВОД ---
       if (interaction.customId.startsWith("tr_deny_")) {
         await handleDenyButton(interaction, member);
         return;
       }
 
-      // --- КНОПКИ ПРОВЕРОК ---
       if (
         interaction.customId === "check_approve" ||
         interaction.customId === "check_deny"
@@ -188,13 +181,25 @@ export async function execute(interaction: Interaction) {
         await interaction.update({ embeds: [newEmbed], components: [] });
         return;
       }
+
+      if (interaction.customId.startsWith('dnames')) {
+        const member = interaction.member as GuildMember;
+        if (!member || !(member instanceof GuildMember)) {
+          return interaction.reply({
+            content: 'Не удалось получить данные участника.',
+            flags: MessageFlags.Ephemeral
+          });
+        }
+        await handleButton(interaction, member);
+        return;
+      }
     } catch (error) {
       console.error("Ошибка при обработке кнопки:", error);
       try {
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({
             content: "Произошла ошибка при обработке кнопки!",
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
       } catch (e) {
@@ -204,7 +209,6 @@ export async function execute(interaction: Interaction) {
     return;
   }
 
-  // --- ОБРАБОТКА МОДАЛЬНЫХ ОКОН ---
   if (interaction.isModalSubmit()) {
     try {
       const member = interaction.member as GuildMember;
@@ -214,7 +218,7 @@ export async function execute(interaction: Interaction) {
         setAdminSurname(interaction.user.id, surname);
         await interaction.reply({
           content: `Вы успешно зарегистрированы под фамилией **${surname}**.\nТеперь введите команду \`/добавить-лог\` еще раз.`,
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -223,13 +227,18 @@ export async function execute(interaction: Interaction) {
         await handleDenyModal(interaction, member);
         return;
       }
+      
+      if (interaction.customId.startsWith('dnames_')) {
+        await handleModal(interaction, member)
+        return;
+      }
     } catch (error) {
       console.error("Ошибка при обработке модального окна:", error);
       try {
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({
             content: "Произошла ошибка при обработке данных!",
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
       } catch (e) {

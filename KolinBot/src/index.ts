@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { getAllFiles } from './utils/fileUtils';
 import * as config from "./utils/config";
 import { DETECTIVES_INFO, FRACTION_INFO } from './utils/constants/fractions'
+import { logError } from './logger';
 import { startGoogleFormsServer, initializeGoogleFormsServer } from './server';
 dotenv.config();
 
@@ -226,5 +227,39 @@ async function start() {
     
     await client.login(process.env.TOKEN);
 }
+
+process.on('unhandledRejection', async (error: Error) => {
+  console.error('Необработанная ошибка (unhandledRejection):', error);
+  
+  try {
+    await logError(
+      client,
+      error,
+      'Глобальный обработчик - unhandledRejection'
+    );
+  } catch (logError) {
+    console.error('Ошибка при логировании unhandledRejection:', logError);
+  }
+});
+
+
+
+process.on('warning', async (warning: Error) => {
+  console.warn('Предупреждение:', warning);
+  
+  if (warning.name === 'DeprecationWarning') {
+    return;
+  }
+  
+  try {
+    await logError(
+      client,
+      warning,
+      'Глобальный обработчик - process warning'
+    );
+  } catch (logError) {
+    console.error('Ошибка при логировании warning:', logError);
+  }
+});
 
 start().catch(console.error);

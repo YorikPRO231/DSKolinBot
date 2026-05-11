@@ -1,4 +1,4 @@
-import { EmbedBuilder, ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
+import { EmbedBuilder, ChatInputCommandInteraction, SlashCommandBuilder, MessageFlags } from 'discord.js';
 
 export const data = new SlashCommandBuilder()
     .setName("help")
@@ -64,5 +64,5 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         })
         .setTimestamp();
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
 }

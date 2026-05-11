@@ -39,7 +39,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
 
     await inter.deferReply();
     const authorName = `${inter.guild?.name || 'GTA 5 RP'}`.trim();
-
+    let showDetectives = false;
     const embed = new EmbedBuilder()
         .setAuthor({
             name: authorName,
@@ -61,6 +61,9 @@ export async function execute(inter: ChatInputCommandInteraction) {
             if (isDetectivePatch(ps.faction) && !hasDetectiveAccess(gm)) {
                 embed.setDescription('❌ **Доступ запрещен:** У вас нет прав на просмотр детективных нашивок.');
             } else {
+                if (isDetectivePatch(ps.faction)) {
+                    showDetectives = true;
+                }
                 embed.setDescription(formatPatchResult('Поиск по паспорту', ps));
                 embed.setThumbnail(inter.guild?.members.cache.get(ps.discord_id)?.displayAvatarURL() || null);
                 addHistoryToEmbed(embed, ps);
@@ -75,7 +78,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
         } else {
             const hasAccess = hasDetectiveAccess(gm);
             const filteredMatches = hasAccess ? matches : matches.filter(m => !isDetectivePatch(m.faction));
-            
+            showDetectives = matches.some(m => isDetectivePatch(m.faction)) && filteredMatches.length > 0
             if (filteredMatches.length === 0) {
                 embed.setDescription('❌ **Доступ запрещен:** Найдены только детективные нашивки, к которым у вас нет доступа.');
             } else if (filteredMatches.length === 1) {
@@ -97,7 +100,26 @@ export async function execute(inter: ChatInputCommandInteraction) {
             }
         }
     }
+    if (showDetectives) {
+        let success = true;
+        await inter.user.send({embeds: [embed]}).catch(error => {
+            console.warn(`Не удалось отправить ЛС пользователю ${inter.user.tag}:`, error,)
+            success = false
+        });
 
+        const dEmbed = new EmbedBuilder().setAuthor({
+            name: authorName,
+            iconURL: inter.guild?.iconURL() || undefined
+        })
+            .setTitle('Поиск нашивок')
+            .setColor(0xf10000)
+            .setFooter({
+                text: inter.user.tag,
+                iconURL: inter.user.displayAvatarURL()
+            })
+            .setTimestamp().setDescription(success ? 'Отчет по поиску был отправлен в личные сообщения т.к содержал информацию о детективных нашивках.' : 'Не удалось отправить отчет в личные сообщения.');
+        return inter.editReply({embeds:[dEmbed]})
+    }
     return inter.editReply({embeds: [embed]});
 }
 

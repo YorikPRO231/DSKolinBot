@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder } from 'discord.js';
+import { ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder } from 'discord.js';
 import { setAdminSurname, getAdminSurname, setAdminSecurity } from '../../databases/sqlite';
 
 export const data = new SlashCommandBuilder()
@@ -36,18 +36,18 @@ export async function execute(inter: ChatInputCommandInteraction) {
     if (securityValue && inter.user.id !== process.env.OWNER_ID) {
         return await inter.reply({ 
             content: "У вас нет прав для изменения security доступа. Это доступно только владельцу бота.", 
-            ephemeral: true 
+            flags: MessageFlags.Ephemeral
         });
     }
 
     if (!newSurname && !securityValue) {
         return await inter.reply({ 
             content: "Укажите хотя бы один параметр для изменения: новую-фамилию или security", 
-            ephemeral: true 
+            flags: MessageFlags.Ephemeral
         });
     }
 
-    await inter.deferReply({ ephemeral: true });
+    await inter.deferReply({ flags: MessageFlags.Ephemeral });
 
     try {
         const embed = new EmbedBuilder()

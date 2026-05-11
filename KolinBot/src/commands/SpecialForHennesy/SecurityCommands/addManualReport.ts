@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder, MessageFlags } from 'discord.js';
 import { exportSecurityAlertsMany, getSecurityAccess } from '../../../databases/sqlite';
 
 export const data = new SlashCommandBuilder()
@@ -20,7 +20,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
     if (securityLevel !== 'yes') {
         return inter.reply({ 
             content: '❌ У вас нет доступа к этой команде!', 
-            ephemeral: true 
+            flags: MessageFlags.Ephemeral
         });
     }
 

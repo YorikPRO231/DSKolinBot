@@ -90,7 +90,22 @@ db.exec(`
     patch TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     history TEXT DEFAULT '[]'
+);
+  
+  -- ============================================
+  -- Внедрения
+  -- ============================================
+  CREATE TABLE IF NOT EXISTS infiltrations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      rank INTEGER NOT NULL,
+      faction TEXT NOT NULL,
+      detectivefaction TEXT NOT NULL,
+      detectiveid TEXT UNIQUE,
+      newnickname TEXT NOT NULL,
+      oldnickname TEXT NOT NULL,
+      passport TEXT NOT NULL
   );
+
 
   CREATE INDEX IF NOT EXISTS idx_inspection_passport ON inspection_reports(passport);
   CREATE INDEX IF NOT EXISTS idx_inspection_created ON inspection_reports(created_at DESC);
@@ -99,6 +114,8 @@ db.exec(`
 // ============================================
 // ТИПЫ
 // ============================================
+
+
 
 export interface Warehouse {
   id: number;
@@ -149,23 +166,47 @@ export interface InspectionReport {
 }
 
 export interface StatePatch {
-    id: number,
-    passport: number,
-    username : string,
-    discord_id : string,
-    faction : string,
-    patch : string,
-    created_at : string,
-    history : string
+  id: number,
+  passport: number,
+  username : string,
+  discord_id : string,
+  faction : string,
+  patch : string,
+  created_at : string,
+  history : string
 }
 
 export interface PatchHistory {
-    faction: string,
-    patch: string,
-    created_at: string,
-    updated_at: string
+  faction: string,
+  patch: string,
+  created_at: string,
+  updated_at: string
 }
 
+export interface Infiltration {
+  id: number;
+  rank: number;
+  faction: string;
+  detectivefaction: string;
+  detectiveid: string;
+  newnickname: string;
+  oldnickname: string;
+  passport: string;
+}
+
+// ============================================
+// ВНЕДРЕНИЯ
+// ============================================
+
+export function pushInfiltration(rank: number, faction: string, detectivefaction: string, detectiveid: string, newnickname: string, oldnickname: string, passport: string) {
+  db.prepare(`INSERT OR REPLACE INTO infiltrations (rank, faction, detectivefaction, detectiveid, newnickname, oldnickname, passport)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(rank, faction, detectivefaction, detectiveid, newnickname, oldnickname, passport)
+}
+
+export function retrieveInfiltration(detectiveid: string) {
+  return db.prepare('SELECT * FROM infiltrations WHERE detectiveid = ? ').get(detectiveid) as Infiltration | undefined
+}
 
 // ============================================
 // АДМИНИСТРАТОРЫ
@@ -200,17 +241,17 @@ export function getSecurityAccess(discordId: string): string | null {
 // ============================================
 
 export function addLog(
-  adm_id: string, 
-  pasport: string, 
-  punishment: string, 
-  items: any, 
-  log_file: Buffer, 
-  durationText: string
+    adm_id: string,
+    pasport: string,
+    punishment: string,
+    items: any,
+    log_file: Buffer,
+    durationText: string
 ): void {
   const serializedItems = typeof items === 'string' ? items : JSON.stringify(items);
-  
+
   db.prepare(`
-    INSERT INTO warehouse_drain (adm_id, pasport, punishment, items, log_file, duration, created_at) 
+    INSERT INTO warehouse_drain (adm_id, pasport, punishment, items, log_file, duration, created_at)
     VALUES (?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
   `).run(adm_id, pasport, punishment, serializedItems, log_file, durationText);
 }
@@ -223,17 +264,17 @@ export function getLogById(id: number): Warehouse | undefined {
 
 export function getLog(pasport: string): Warehouse | undefined {
   return db.prepare(`
-    SELECT * FROM warehouse_drain 
-    WHERE pasport = ? 
-    ORDER BY id DESC 
-    LIMIT 1
+    SELECT * FROM warehouse_drain
+    WHERE pasport = ?
+    ORDER BY id DESC
+      LIMIT 1
   `).get(pasport) as Warehouse | undefined;
 }
 
 export function getLogsByStatic(pasport: string): Warehouse[] {
   return db.prepare(`
-    SELECT * FROM warehouse_drain 
-    WHERE pasport = ? 
+    SELECT * FROM warehouse_drain
+    WHERE pasport = ?
     ORDER BY id DESC
   `).all(pasport) as Warehouse[];
 }
@@ -251,15 +292,15 @@ export const exportSecurityAlertsMany = db.transaction((adminId: string, alerts:
   const stmt = db.prepare(`
     INSERT INTO security_alerts (suspect, suspected_action, work_data, admin_id, count, created_at)
     VALUES (@suspect, @action, @data, @adminId, 1, COALESCE(@originalDate, datetime('now', 'localtime')))
-    ON CONFLICT(suspect, suspected_action) DO UPDATE SET
-      count = count + 1,
-      work_data = @data,
-      updated_at = datetime('now', 'localtime'),
-      admin_id = @adminId,
-      created_at = CASE 
-        WHEN @originalDate IS NOT NULL AND @originalDate != '' THEN @originalDate
-        ELSE created_at
-      END
+      ON CONFLICT(suspect, suspected_action) DO UPDATE SET
+                                                  count = count + 1,
+                                                  work_data = @data,
+                                                  updated_at = datetime('now', 'localtime'),
+                                                  admin_id = @adminId,
+                                                  created_at = CASE
+                                                  WHEN @originalDate IS NOT NULL AND @originalDate != '' THEN @originalDate
+                                                  ELSE created_at
+    END
   `);
 
   for (const alert of alerts) {
@@ -291,9 +332,9 @@ export function getSecurityAlertsBySuspect(suspect: string, status?: 'OPEN' | 'C
 
 export function closeAlertsBySuspectIfExists(suspect: string, adminId: string): number {
   const result = db.prepare(`
-    UPDATE security_alerts 
-    SET status = 'CLOSED', 
-        admin_id = ?, 
+    UPDATE security_alerts
+    SET status = 'CLOSED',
+        admin_id = ?,
         updated_at = datetime('now', 'localtime')
     WHERE suspect = ? AND status = 'OPEN'
   `).run(adminId, suspect);
@@ -302,9 +343,9 @@ export function closeAlertsBySuspectIfExists(suspect: string, adminId: string): 
 
 export function closeAlert(id: number, adminId: string): { changes: number } {
   const result = db.prepare(`
-    UPDATE security_alerts 
-    SET status = 'CLOSED', 
-        admin_id = ?, 
+    UPDATE security_alerts
+    SET status = 'CLOSED',
+        admin_id = ?,
         updated_at = datetime('now', 'localtime')
     WHERE id = ? AND status = 'OPEN'
   `).run(adminId, id);
@@ -313,9 +354,9 @@ export function closeAlert(id: number, adminId: string): { changes: number } {
 
 export function reopenAlert(id: number, adminId: string): { changes: number } {
   const result = db.prepare(`
-    UPDATE security_alerts 
-    SET status = 'OPEN', 
-        admin_id = ?, 
+    UPDATE security_alerts
+    SET status = 'OPEN',
+        admin_id = ?,
         updated_at = datetime('now', 'localtime')
     WHERE id = ? AND status = 'CLOSED'
   `).run(adminId, id);
@@ -323,10 +364,10 @@ export function reopenAlert(id: number, adminId: string): { changes: number } {
 }
 
 export function addSecurityLog(
-  username: string,
-  suspected_action: string,
-  admin_id: string,
-  check_results: string
+    username: string,
+    suspected_action: string,
+    admin_id: string,
+    check_results: string
 ): void {
   db.prepare(`
     INSERT INTO security_logs (username, suspected_action, admin_id, check_results, checked_at)
@@ -336,29 +377,29 @@ export function addSecurityLog(
 
 export function getSecurityLogs(limit: number = 100): SecurityLog[] {
   return db.prepare(`
-    SELECT * FROM security_logs 
-    ORDER BY checked_at DESC 
-    LIMIT ?
+    SELECT * FROM security_logs
+    ORDER BY checked_at DESC
+      LIMIT ?
   `).all(limit) as SecurityLog[];
 }
 
 export function addSecurityRequest(
-  suspect: string,
-  adminId: string,
-  reason: string,
-  video: string
+    suspect: string,
+    adminId: string,
+    reason: string,
+    video: string
 ): void {
   const workData = `Причина: ${reason} | Видео: ${video}`;
 
   db.prepare(`
     INSERT INTO security_alerts (suspect, suspected_action, work_data, admin_id, count, status)
     VALUES (?, ?, ?, ?, 1, 'OPEN')
-    ON CONFLICT(suspect, suspected_action) DO UPDATE SET
-      count = count + 1,
-      work_data = ?,
-      admin_id = ?,
-      updated_at = datetime('now', 'localtime'),
-      status = 'OPEN'
+      ON CONFLICT(suspect, suspected_action) DO UPDATE SET
+                                                  count = count + 1,
+                                                  work_data = ?,
+                                                  admin_id = ?,
+                                                  updated_at = datetime('now', 'localtime'),
+                                                  status = 'OPEN'
   `).run(suspect, 'Запрос проверки от админа', workData, adminId, workData, adminId);
 }
 
@@ -367,11 +408,11 @@ export function addSecurityRequest(
 // ============================================
 
 export function saveInspectionReport(
-  passport: string,
-  result: string,
-  adminId: string,
-  adminName?: string,
-  discordId?: string
+    passport: string,
+    result: string,
+    adminId: string,
+    adminName?: string,
+    discordId?: string
 ): number {
   const info = db.prepare(`
     INSERT INTO inspection_reports (passport, discord_id, result, admin_id, admin_name, created_at)
@@ -381,29 +422,29 @@ export function saveInspectionReport(
 }
 
 export function getInspectionReportsByPassportPaginated(
-  passport: string,
-  limit: number,
-  offset: number
+    passport: string,
+    limit: number,
+    offset: number
 ): { reports: InspectionReport[]; total: number } {
   const total = db.prepare('SELECT COUNT(*) as count FROM inspection_reports WHERE passport = ?')
-    .get(passport) as { count: number };
-  
+      .get(passport) as { count: number };
+
   const reports = db.prepare(`
-    SELECT * FROM inspection_reports 
-    WHERE passport = ? 
-    ORDER BY created_at DESC 
-    LIMIT ? OFFSET ?
+    SELECT * FROM inspection_reports
+    WHERE passport = ?
+    ORDER BY created_at DESC
+      LIMIT ? OFFSET ?
   `).all(passport, limit, offset) as InspectionReport[];
-  
+
   return { reports, total: total.count };
 }
 
 export function getInspectionReportsByAdmin(adminId: string, limit: number = 50): InspectionReport[] {
   return db.prepare(`
-    SELECT * FROM inspection_reports 
-    WHERE admin_id = ? 
-    ORDER BY created_at DESC 
-    LIMIT ?
+    SELECT * FROM inspection_reports
+    WHERE admin_id = ?
+    ORDER BY created_at DESC
+      LIMIT ?
   `).all(adminId, limit) as InspectionReport[];
 }
 
@@ -432,32 +473,32 @@ export function pushPlayerId(passport : number, username : string, discord_id : 
       updated_at: now
     })
     if (history.length > 15) {
-        history = history.slice(-15)
+      history = history.slice(-15)
     }
   }
 
   db.prepare(
       `INSERT INTO state_patches (passport, username, discord_id, faction, patch, history, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(passport) DO UPDATE SET
-       username = excluded.username,
-       discord_id = excluded.discord_id,
-       faction = excluded.faction,
-       patch = excluded.patch,
-       history = excluded.history,
-       created_at = excluded.created_at`
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(passport) DO UPDATE SET
+        username = excluded.username,
+                                    discord_id = excluded.discord_id,
+                                    faction = excluded.faction,
+                                    patch = excluded.patch,
+                                    history = excluded.history,
+                                    created_at = excluded.created_at`
   ).run(passport, username, discord_id, faction, patch, JSON.stringify(history), now)
 }
 
 export function retrievePlayerPatch(passport: number) {
-    return db.prepare('SELECT * FROM state_patches WHERE passport = ?').get(passport) as StatePatch | undefined;
+  return db.prepare('SELECT * FROM state_patches WHERE passport = ?').get(passport) as StatePatch | undefined;
 }
 
 export function findPlayerPatch(patch: string): StatePatch[] {
-    return db.prepare(`
-        SELECT * FROM state_patches 
-        WHERE patch LIKE ? OR history LIKE ?
-    `).all(`%${patch}%`, `%${patch}%`) as StatePatch[];
+  return db.prepare(`
+    SELECT * FROM state_patches
+    WHERE patch LIKE ? OR history LIKE ?
+  `).all(`%${patch}%`, `%${patch}%`) as StatePatch[];
 }
 
 export function getPatchByDiscord(discordId: string) {
@@ -466,23 +507,23 @@ export function getPatchByDiscord(discordId: string) {
 }
 
 export function generateUniqueDigits(passport: number, faction: string): string {
-    let digits: string;
-    let attempts = 0;
-    const maxAttempts = 100;
-    
-    do {
-        digits = Math.floor(Math.random() * 100000).toString().padStart(5, '0');
-        attempts++;
-        
-        const existing = db.prepare(
-            'SELECT patch FROM state_patches WHERE faction = ? AND patch LIKE ? AND passport != ?'
-        ).get(faction, `%${digits}]`, passport) as { patch: string } | undefined;
-        
-        if (!existing) break;
-        
-    } while (attempts < maxAttempts);
-    
-    return digits;
+  let digits: string;
+  let attempts = 0;
+  const maxAttempts = 100;
+
+  do {
+    digits = Math.floor(Math.random() * 100000).toString().padStart(5, '0');
+    attempts++;
+
+    const existing = db.prepare(
+        'SELECT patch FROM state_patches WHERE faction = ? AND patch LIKE ? AND passport != ?'
+    ).get(faction, `%${digits}]`, passport) as { patch: string } | undefined;
+
+    if (!existing) break;
+
+  } while (attempts < maxAttempts);
+
+  return digits;
 }
 
 export function getSelfPatches(discord_id: string) {
@@ -503,7 +544,7 @@ export function getStats(): {
   const alertsOpen = db.prepare("SELECT COUNT(*) as count FROM security_alerts WHERE status = 'OPEN'").get() as { count: number };
   const alertsClosed = db.prepare("SELECT COUNT(*) as count FROM security_alerts WHERE status = 'CLOSED'").get() as { count: number };
   const inspections = db.prepare("SELECT COUNT(*) as count FROM inspection_reports").get() as { count: number };
-  
+
   return {
     warehouse_count: warehouse.count,
     alerts_open: alertsOpen.count,

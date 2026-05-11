@@ -2,7 +2,8 @@ import {
     SlashCommandBuilder, 
     ChatInputCommandInteraction, 
     EmbedBuilder,
-    Colors
+    Colors,
+    MessageFlags
 } from 'discord.js';
 import { 
     saveInspectionReport, 
@@ -38,7 +39,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     if (securityLevel !== 'yes') {
         return interaction.reply({ 
             content: '❌ У вас нет доступа к этой команде!', 
-            ephemeral: true 
+            flags: MessageFlags.Ephemeral
         });
     }
 
@@ -109,7 +110,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         console.error('Ошибка при сохранении отчета:', error);
         await interaction.reply({
             content: '❌ Произошла ошибка при сохранении отчета!',
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
     }
 }

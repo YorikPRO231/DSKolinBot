@@ -39,16 +39,6 @@ export const data = new SlashCommandBuilder()
       .setDescription('Ник игрока в формате "Имя Фамилия"')
       .setRequired(true),
   )
-  .addStringOption((opt) =>
-    opt
-      .setName("засекреченность")
-      .setDescription("Уровень засекреченности нашивки")
-      .setRequired(true)
-      .addChoices(
-        { name: "Обычная", value: "casual" },
-        { name: "Для детективов", value: "detective" },
-      ),
-  );
 
 export async function execute(inter: ChatInputCommandInteraction) {
   const userID = inter.options.getUser("игрок", true);
@@ -91,7 +81,6 @@ export async function execute(inter: ChatInputCommandInteraction) {
 
   const passport = inter.options.getInteger("паспорт", true);
   const position = inter.options.getString("позиция", true).trim();
-  const level = inter.options.getString("засекреченность", true);
 
   const faction = getFaction(inter.guild?.id, inter.guild?.name);
   if (!faction) {
@@ -105,23 +94,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
   const isDetectiveFaction = Object.values(DETECTIVES_INFO).some(
     (info) => info.discord_id === inter.guild?.id,
   );
-
-  if (level === "detective" && !isDetectiveFaction) {
-    return inter.reply({
-      content:
-        "❌ **Ошибка:** Детективные нашивки можно создавать только в Discord-серверах детективных отделов (DD, DB, CID).",
-      flags: MessageFlags.Ephemeral,
-    });
-  }
-
-  if (level === "casual" && isDetectiveFaction) {
-    return inter.reply({
-      content:
-        "❌ **Ошибка:** Обычные нашивки можно создавать только в Discord-серверах фракций.",
-      flags: MessageFlags.Ephemeral,
-    });
-  }
-
+  const level = isDetectiveFaction ? 'detective' : 'casual'
   await inter.deferReply();
 
   const patch = generatePatch(

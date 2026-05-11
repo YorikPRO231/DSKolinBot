@@ -1,11 +1,11 @@
-import { 
-    SlashCommandBuilder, 
-    ChatInputCommandInteraction, 
+import {
+    SlashCommandBuilder,
+    ChatInputCommandInteraction,
     EmbedBuilder,
     ActionRowBuilder,
     ButtonBuilder,
     ButtonStyle,
-    ComponentType
+    ComponentType, MessageFlags
 } from 'discord.js';
 import { getInspectionReportsByPassportPaginated, getSecurityAccess } from '../../../databases/sqlite';
 
@@ -26,7 +26,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     if (securityLevel !== 'yes') {
         return interaction.reply({ 
             content: 'У вас нет доступа к этой команде!', 
-            ephemeral: true 
+            flags: MessageFlags.Ephemeral
         });
     }
     
@@ -40,7 +40,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         if (reports.length === 0) {
             return interaction.reply({
                 content: `Не найдено отчетов для паспорта: ${passport}`,
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         }
         
@@ -99,7 +99,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             if (buttonInteraction.user.id !== interaction.user.id) {
                 return buttonInteraction.reply({
                     content: 'Эти кнопки только для создателя запроса!',
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
             
@@ -178,7 +178,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         console.error('Ошибка при получении отчета:', error);
         await interaction.reply({
             content: 'Произошла ошибка при получении отчетов!',
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
     }
 }

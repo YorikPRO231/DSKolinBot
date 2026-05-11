@@ -1,6 +1,6 @@
 import { 
     ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder, 
-    Colors, ActionRowBuilder, ButtonBuilder, ButtonStyle 
+    Colors, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags
 } from 'discord.js';
 import { getAdminSurname, getSecurityAlerts, getSecurityAccess } from '../../../databases/sqlite';
 
@@ -13,7 +13,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
     if (securityLevel !== 'yes') {
         return inter.reply({ 
             content: '❌ У вас нет доступа к этой команде!', 
-            ephemeral: true 
+            flags: MessageFlags.Ephemeral
         });
     }
 
@@ -86,7 +86,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
         if (!collectorActive) return;
         
         if (i.user.id !== inter.user.id) {
-            return i.reply({ content: "❌ Это не ваше меню", ephemeral: true });
+            return i.reply({ content: "❌ Это не ваше меню", flags: MessageFlags.Ephemeral});
         }
 
         if (i.customId === 'prev_page') currentPage--;
@@ -110,7 +110,6 @@ export async function execute(inter: ChatInputCommandInteraction) {
 
     collector.on('end', async () => {
         collectorActive = false;
-        // Деактивируем кнопки после окончания времени
         const disabledRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
             new ButtonBuilder()
                 .setCustomId('prev_page')

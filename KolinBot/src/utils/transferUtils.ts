@@ -12,6 +12,7 @@ import {
   TextInputStyle,
   Colors,
   Client,
+  MessageFlags,
 } from "discord.js";
 import { TRANSFER_LOG_CHANNEL_ID } from "./config";
 import { TRANSFER_LOGS, FRACTION_INFO, FractionType } from "./constants/fractions";
@@ -370,8 +371,7 @@ export async function showFactionSelectMenu(
   if (factions.length === 0) {
     return await interaction.reply({
       content:
-        "Не удалось определить вашу фракцию по ролям. Обратитесь к администратору.",
-      ephemeral: true,
+        "Не удалось определить вашу фракцию по ролям. Обратитесь к администратору.", flags: MessageFlags.Ephemeral,
     });
   }
 
@@ -407,7 +407,7 @@ export async function showFactionSelectMenu(
   await interaction.reply({
     content: "У вас несколько фракций. Выберите из какой переводитесь:",
     components: [row],
-    ephemeral: true,
+    flags: MessageFlags.Ephemeral,
   });
 }
 
@@ -483,7 +483,7 @@ export async function handleApproveButton(
         `У вас нет прав на одобрение перевода.\n` +
         `Требуется роль лидера ${fromFrac} или ${toFrac}\n` +
         `Ваши роли: ${userRoles || "нет ролей"}`,
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
@@ -510,7 +510,7 @@ export async function handleApproveButton(
       content:
         "Вы лидер/зам. лидера обеих фракций.\n Выберите от какой одобряете:",
       components: [row],
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
@@ -618,7 +618,7 @@ export async function handleDenyButton(interaction: any, member: GuildMember) {
   if (!hasFromFactionPerm && !hasToFactionPerm) {
     return interaction.reply({
       content: `У вас нет прав на отклонение перевода. Требуется роль лидера ${fromFrac} или ${toFrac}`,
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
@@ -634,7 +634,7 @@ export async function handleDenyButton(interaction: any, member: GuildMember) {
     ) {
       return interaction.reply({
         content: "Перевод уже полностью одобрен",
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
   }
@@ -809,7 +809,7 @@ async function processApproval(
     }
     return interaction.reply({
       content: `У вас нет прав лидера фракции ${userFrac}.`,
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
@@ -869,7 +869,7 @@ async function processApproval(
     }
     return interaction.reply({
       content: `Фракция ${alreadyApprovedFrac} уже одобрила перевод (${approverName})`,
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
@@ -1031,11 +1031,16 @@ async function sendResponse(
   ephemeral: boolean,
 ) {
   try {
-    if (interaction.replied || interaction.deferred) {
-      await interaction.editReply({ content: message, components: [] });
+    const options = { 
+      content: message,
+      ...(ephemeral && { flags: MessageFlags.Ephemeral })
+    };
+    
+    if (!interaction.replied && !interaction.deferred) {
+      await interaction.reply(options);
     } else {
-      await interaction.reply({ content: message, ephemeral });
-    }
+      await interaction.followUp(options);
+    }   
   } catch (error) {
     console.error("Ошибка отправки ответа:", error);
   }

@@ -3,30 +3,20 @@ import { Client, ActivityType } from 'discord.js';
 export const name = 'ready';
 export const once = true;
 export function execute(client: Client) {
+  const tags = ['склад', 'переводы', 'персонал', 'GTA5RP'];
+  let step = 0;
 
-  const activities = [
-    { name: 'за складом', type: ActivityType.Watching },
-    { name: 'переводы', type: ActivityType.Watching },
-    { name: 'за администрацией', type: ActivityType.Watching },
-    { name: 'в GTA5RP', type: ActivityType.Playing },
-  ];
-
-  let activityIndex = 0;
-
-  client.user?.setPresence({
-    activities: [activities[0]],
-    status: 'online',
-  });
-
-  setInterval(() => {
-    activityIndex = (activityIndex + 1) % activities.length;
-    const activity = activities[activityIndex];
+  const tick = () => {
+    const isWorkingHours = [6, 7, 8, 9, 10, 18, 19, 20, 21].includes(new Date().getHours());
     
     client.user?.setPresence({
-      activities: [activity],
-      status: 'online',
+      activities: [{ name: tags[step % tags.length], type: ActivityType.Watching }],
+      status: isWorkingHours ? 'dnd' : 'online',
     });
     
-    console.log(`🔄 Status changed to: ${activity.type} ${activity.name}`);
-  }, 1800000); 
+    step++;
+  };
+
+  tick();
+  setInterval(tick, 1800000);
 }

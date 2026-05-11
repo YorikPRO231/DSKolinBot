@@ -11,9 +11,12 @@ import {
   AuditLogEvent,
   Guild,
   PartialMessage,
+  VoiceState,
 } from "discord.js";
 import { factionByDiscordID, FRACTION_INFO } from "./utils/constants/fractions";
-import { getStateFractionRoles, getStateServerIds } from "./utils/config";
+import { getStateFractionRoles, getStateServerIds, getAdminLogServerIds, getAdminLogChannelId } from "./utils/config";
+import * as fs from 'fs';
+import * as path from 'path';
 
 // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
 
@@ -34,6 +37,116 @@ async function getLogChannelInGuild(guild: Guild): Promise<TextChannel | null> {
   }
 
   return logChannel || null;
+}
+
+const ADMIN_LOGS_DIR = path.join(process.cwd(), 'admin-logs');
+
+function getMoscowTime(date?: Date): string {
+  const now = date || new Date();
+  
+  const mskOffset = 3 * 60 * 60 * 1000; 
+  const mskTime = new Date(now.getTime() + mskOffset);
+  
+  const year = mskTime.getUTCFullYear();
+  const month = String(mskTime.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(mskTime.getUTCDate()).padStart(2, '0');
+  const hours = String(mskTime.getUTCHours()).padStart(2, '0');
+  const minutes = String(mskTime.getUTCMinutes()).padStart(2, '0');
+  const seconds = String(mskTime.getUTCSeconds()).padStart(2, '0');
+  const milliseconds = String(mskTime.getUTCMilliseconds()).padStart(3, '0');
+  
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${milliseconds}Z`;
+}
+
+function ensureLogsDirectory(): void {
+  if (!fs.existsSync(ADMIN_LOGS_DIR)) {
+    fs.mkdirSync(ADMIN_LOGS_DIR, { recursive: true });
+  }
+}
+
+function getAdminLogFilePath(category: string): string {
+  const date = new Date();
+  const mskOffset = 3 * 60 * 60 * 1000;
+  const mskDate = new Date(date.getTime() + mskOffset);
+  
+  const year = mskDate.getUTCFullYear();
+  const month = String(mskDate.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(mskDate.getUTCDate()).padStart(2, '0');
+  const dateStr = `${year}-${month}-${day}`;
+  
+  ensureLogsDirectory();
+  return path.join(ADMIN_LOGS_DIR, `admin_${category}_${dateStr}.log`);
+}
+
+function cleanMarkdown(text: string): string {
+  return text
+    .replace(/\*\*/g, '')
+    .replace(/\*/g, '')
+    .replace(/`/g, '')
+    .replace(/<@&?(\d+)>/g, '$1')
+    .replace(/<#(\d+)>/g, '#$1')
+    .replace(/\[(.+?)\]\(.+?\)/g, '$1');
+}
+
+async function saveLogToFile(
+  category: string,
+  embed: EmbedBuilder,
+  attachment?: AttachmentBuilder,
+): Promise<void> {
+  try {
+    ensureLogsDirectory();
+    const filePath = getAdminLogFilePath(category);
+    
+    const currentTime = getMoscowTime();
+    const logEntry: string[] = [];
+    
+    logEntry.push(`[${currentTime}] ===== НАЧАЛО ЗАПИСИ =====`);
+    
+    if (embed.data.title) {
+      logEntry.push(`Событие: ${embed.data.title}`);
+    }
+    
+    if (embed.data.description) {
+      const cleanDescription = cleanMarkdown(embed.data.description);
+      logEntry.push(`Описание: ${cleanDescription}`);
+    }
+    
+    if (embed.data.fields) {
+      for (const field of embed.data.fields) {
+        const cleanName = cleanMarkdown(field.name);
+        const cleanValue = cleanMarkdown(field.value);
+        logEntry.push(`${cleanName}: ${cleanValue}`);
+      }
+    }
+    
+    if (embed.data.footer) {
+      const cleanFooter = cleanMarkdown(embed.data.footer.text);
+      logEntry.push(`Footer: ${cleanFooter}`);
+    }
+    
+    if (embed.data.timestamp) {
+      const mskTimestamp = getMoscowTime(new Date(embed.data.timestamp));
+      logEntry.push(`Время события: ${mskTimestamp}`);
+    }
+    
+    if (attachment) {
+      logEntry.push(`Вложение: ${attachment.name}`);
+      if (attachment.attachment) {
+        const content = attachment.attachment.toString('utf-8');
+        logEntry.push(`Содержимое вложения:\n${content}`);
+      }
+    }
+    
+    logEntry.push(`[${currentTime}] ===== КОНЕЦ ЗАПИСИ =====`);
+    logEntry.push(''); 
+    
+    fs.appendFileSync(filePath, logEntry.join('\n') + '\n', 'utf-8');
+    
+    console.log(`📝 Админский лог сохранен в файл: ${path.basename(filePath)}`);
+    
+  } catch (error) {
+    console.error("Ошибка при сохранении лога в файл:", error);
+  }
 }
 
 async function sendLogToGuild(
@@ -74,6 +187,44 @@ async function sendLogToGuild(
       error instanceof Error ? error.message : String(error),
     );
   }
+}
+
+async function sendLogToAdminChannel(
+  client: Client,
+  guild: Guild,
+  embed: EmbedBuilder,
+  attachment?: AttachmentBuilder,
+  retries = 2,
+): Promise<void> {
+  const adminServerIds = getAdminLogServerIds();
+  if (!adminServerIds.includes(guild.id)) {
+    return;
+  }
+
+  let category = 'general';
+  const title = embed.data.title?.toLowerCase() || '';
+  
+  if (title.includes('голосов')) {
+    category = 'voice';
+  } else if (title.includes('сообщение удалено')) {
+    category = 'message_delete';
+  } else if (title.includes('сообщение отредактировано')) {
+    category = 'message_edit';
+  } else if (title.includes('участник')) {
+    category = 'member';
+  } else if (title.includes('канал')) {
+    category = 'channel';
+  } else if (title.includes('бан') || title.includes('кик')) {
+    category = 'moderation';
+  }
+  
+  embed.addFields({
+    name: 'Сервер',
+    value: `${guild.name} (\`${guild.id}\`)`,
+    inline: false,
+  });
+  
+  await saveLogToFile(category, embed, attachment);
 }
 
 function createTextAttachment(
@@ -179,6 +330,7 @@ export async function logMessageDelete(
     }
 
     await sendLogToGuild(message.guild, embed, attachment);
+    await sendLogToAdminChannel(client, message.guild, embed, attachment);
   } else {
     embed.addFields({
       name: content ? "Содержание" : "Тип сообщения",
@@ -201,8 +353,11 @@ export async function logMessageDelete(
     }
 
     await sendLogToGuild(message.guild, embed);
+    await sendLogToAdminChannel(client, message.guild, embed);
   }
 }
+
+
 
 export async function logMessageUpdate(
   client: Client,
@@ -286,7 +441,9 @@ export async function logMessageUpdate(
       fullContent,
       `edited_message_${oldMessage.id}.txt`,
     );
+    
     await sendLogToGuild(oldMessage.guild, embed, attachment);
+    await sendLogToAdminChannel(client, oldMessage.guild, embed, attachment);
   } else {
     embed.addFields(
       {
@@ -302,6 +459,7 @@ export async function logMessageUpdate(
     );
 
     await sendLogToGuild(oldMessage.guild, embed);
+    await sendLogToAdminChannel(client, oldMessage.guild, embed);
   }
 }
 
@@ -450,6 +608,229 @@ export async function logMemberJoin(client: Client, member: GuildMember) {
   await sendLogToGuild(member.guild, embed);
 }
 
+
+// ========== ЛОГИ ГОЛОСОВЫХ КАНАЛОВ ==========
+
+export async function logVoiceStateUpdate(
+  client: Client,
+  oldState: VoiceState,
+  newState: VoiceState,
+) {
+  if (oldState.channelId === newState.channelId && 
+      oldState.serverMute === newState.serverMute &&
+      oldState.serverDeaf === newState.serverDeaf) {
+    return;
+  }
+
+  const member = newState.member || oldState.member;
+  if (!member || !member.guild) return;
+
+  const adminServerIds = getAdminLogServerIds();
+  if (!adminServerIds.includes(member.guild.id)) {
+    return; 
+  }
+
+  if (!oldState.channelId && newState.channelId) {
+    const channel = newState.channel;
+    if (!channel) return;
+
+    let movedBy = "Самостоятельно";
+    try {
+      const auditLogs = await member.guild.fetchAuditLogs({
+        type: AuditLogEvent.MemberMove,
+        limit: 5,
+      });
+
+      const moveEntry = auditLogs.entries.find(entry => {
+        if (entry.target?.id !== member.id) return false;
+        if (entry.extra?.channel?.id !== newState.channelId) return false;
+        const timeDiff = Date.now() - entry.createdTimestamp;
+        return timeDiff < 5000;
+      });
+
+      if (moveEntry?.executor) {
+        movedBy = `**${moveEntry.executor.displayName || moveEntry.executor.tag}** (<@${moveEntry.executor.id}>)`;
+      }
+    } catch (error) {
+      console.debug("Не удалось проверить аудит перемещения:", error);
+    }
+
+    const membersList = channel.members
+      .filter(m => !m.user.bot)
+      .map(m => `**${m.displayName}** (<@${m.id}>)`)
+      .join("\n") || "Нет участников";
+
+    const embed = new EmbedBuilder()
+      .setColor(0x2ecc71)
+      .setTitle("Присоединился к голосовому каналу")
+      .setDescription(`**Пользователь:** **${member.displayName}** (<@${member.id}>)`)
+      .addFields(
+        {
+          name: "Голосовой канал",
+          value: `${channel.name} (\`${channel.id}\`)`,
+          inline: true,
+        },
+        {
+          name: "Действие",
+          value: "**Присоединился**",
+          inline: true,
+        },
+        {
+          name: "Инициатор",
+          value: movedBy,
+          inline: true,
+        },
+        {
+          name: `Участники в канале (${channel.members.size})`,
+          value: membersList.substring(0, 1024),
+          inline: false,
+        },
+      )
+      .setFooter({ text: `ID: ${member.id}` })
+      .setTimestamp();
+
+    await sendLogToGuild(member.guild, embed);
+    await sendLogToAdminChannel(client, member.guild, embed);
+  }
+
+  if (oldState.channelId && !newState.channelId) {
+    const channel = oldState.channel;
+    if (!channel) return;
+
+    let disconnectedBy = "Самостоятельно";
+    try {
+      const auditLogs = await member.guild.fetchAuditLogs({
+        type: AuditLogEvent.MemberDisconnect,
+        limit: 5,
+      });
+
+      const disconnectEntry = auditLogs.entries.find(entry => {
+        if (entry.target?.id !== member.id) return false;
+        const timeDiff = Date.now() - entry.createdTimestamp;
+        return timeDiff < 5000;
+      });
+
+      if (disconnectEntry?.executor) {
+        disconnectedBy = `**${disconnectEntry.executor.displayName || disconnectEntry.executor.tag}** (<@${disconnectEntry.executor.id}>)`;
+      }
+    } catch (error) {
+      console.debug("Не удалось проверить аудит отключения:", error);
+    }
+
+    const membersList = channel.members
+      .filter(m => !m.user.bot)
+      .map(m => `**${m.displayName}** (<@${m.id}>)`)
+      .join("\n") || "Нет участников";
+
+    const embed = new EmbedBuilder()
+      .setColor(0xe74c3c)
+      .setTitle("Покинул голосовой канал")
+      .setDescription(`**Пользователь:** **${member.displayName}** (<@${member.id}>)`)
+      .addFields(
+        {
+          name: "Голосовой канал",
+          value: `${channel.name} (\`${channel.id}\`)`,
+          inline: true,
+        },
+        {
+          name: "Действие",
+          value: "**Вышел**",
+          inline: true,
+        },
+        {
+          name: "Инициатор",
+          value: disconnectedBy,
+          inline: true,
+        },
+        {
+          name: `Оставшиеся участники (${channel.members.size})`,
+          value: membersList.substring(0, 1024),
+          inline: false,
+        },
+      )
+      .setFooter({ text: `ID: ${member.id}` })
+      .setTimestamp();
+
+    await sendLogToGuild(member.guild, embed);
+    await sendLogToAdminChannel(client, member.guild, embed);
+  }
+
+  if (oldState.channelId && newState.channelId && oldState.channelId !== newState.channelId) {
+    const oldChannel = oldState.channel;
+    const newChannel = newState.channel;
+    if (!oldChannel || !newChannel) return;
+
+    let movedBy = "Самостоятельно";
+    try {
+      const auditLogs = await member.guild.fetchAuditLogs({
+        type: AuditLogEvent.MemberMove,
+        limit: 5,
+      });
+
+      const moveEntry = auditLogs.entries.find(entry => {
+        if (entry.target?.id !== member.id) return false;
+        if (entry.extra?.channel?.id !== newState.channelId) return false;
+        const timeDiff = Date.now() - entry.createdTimestamp;
+        return timeDiff < 5000;
+      });
+
+      if (moveEntry?.executor) {
+        movedBy = `**${moveEntry.executor.displayName || moveEntry.executor.tag}** (<@${moveEntry.executor.id}>)`;
+      }
+    } catch (error) {
+      console.debug("Не удалось проверить аудит перемещения:", error);
+    }
+
+    const oldMembersList = oldChannel.members
+      .filter(m => !m.user.bot)
+      .map(m => `**${m.displayName}** (<@${m.id}>)`)
+      .join("\n") || "Нет участников";
+
+    const newMembersList = newChannel.members
+      .filter(m => !m.user.bot)
+      .map(m => `**${m.displayName}** (<@${m.id}>)`)
+      .join("\n") || "Нет участников";
+
+    const embed = new EmbedBuilder()
+      .setColor(0xf39c12)
+      .setTitle("Переместился в другой голосовой канал")
+      .setDescription(`**Пользователь:** **${member.displayName}** (<@${member.id}>)`)
+      .addFields(
+        {
+          name: "Предыдущий канал",
+          value: `${oldChannel.name} (\`${oldChannel.id}\`)`,
+          inline: true,
+        },
+        {
+          name: "Новый канал",
+          value: `${newChannel.name} (\`${newChannel.id}\`)`,
+          inline: true,
+        },
+        {
+          name: "Кто переместил",
+          value: movedBy,
+          inline: true,
+        },
+        {
+          name: `Оставшиеся в ${oldChannel.name} (${oldChannel.members.size})`,
+          value: oldMembersList.substring(0, 1024),
+          inline: false,
+        },
+        {
+          name: `Участники в ${newChannel.name} (${newChannel.members.size})`,
+          value: newMembersList.substring(0, 1024),
+          inline: false,
+        },
+      )
+      .setFooter({ text: `ID: ${member.id}` })
+      .setTimestamp();
+
+    await sendLogToGuild(member.guild, embed);
+    await sendLogToAdminChannel(client, member.guild, embed);
+  }
+}
+
+
 export async function logMemberLeave(
   client: Client,
   member: GuildMember | PartialGuildMember,
@@ -460,7 +841,6 @@ export async function logMemberLeave(
     try {
       await member.fetch();
     } catch {
-      // Продолжаем с тем что есть
     }
   }
 
@@ -1287,12 +1667,12 @@ export async function logCommand(
 }
 
 export async function logError(client: Client, error: Error, context?: string) {
-  const Yorik = "1429367223373533285";
+  const recipients = [
+    "1429367223373533285", // Yorik
+    "565973511957381161", // Daniel
+  ];
 
   try {
-    const user = await client.users.fetch(Yorik);
-    if (!user) return;
-
     const errorMessage = error.stack || error.message;
     const needsFile = shouldCreateFile(errorMessage);
 
@@ -1310,6 +1690,8 @@ export async function logError(client: Client, error: Error, context?: string) {
       .setFooter({ text: `Произошла: ${formatDate(Date.now())}` })
       .setTimestamp();
 
+    let attachment: AttachmentBuilder | undefined;
+    
     if (needsFile) {
       embed.addFields({
         name: "Дополнительно",
@@ -1317,11 +1699,10 @@ export async function logError(client: Client, error: Error, context?: string) {
         inline: false,
       });
 
-      const attachment = createTextAttachment(
+      attachment = createTextAttachment(
         errorMessage,
         `error_${Date.now()}.txt`,
       );
-      await user.send({ embeds: [embed], files: [attachment] });
     } else {
       if (error.stack) {
         embed.addFields({
@@ -1330,13 +1711,32 @@ export async function logError(client: Client, error: Error, context?: string) {
           inline: false,
         });
       }
+    }
 
-      await user.send({ embeds: [embed] });
+    for (const userId of recipients) {
+      try {
+        const user = await client.users.fetch(userId).catch(() => null);
+        
+        if (!user) {
+          console.warn(`Не удалось найти пользователя с ID ${userId}`);
+          continue; 
+        }
+
+        const messagePayload: any = { embeds: [embed] };
+        if (attachment) {
+          messagePayload.files = [attachment];
+        }
+
+        await user.send(messagePayload);
+        console.log(`✅ Ошибка отправлена пользователю ${user.tag} (${userId})`);
+      } catch (sendError) {
+        console.error(`Не удалось отправить ошибку пользователю ${userId}:`, sendError);
+      }
     }
 
     console.error(`[ERROR] ${context || "No context"}:`, error);
   } catch (err) {
     console.error("Не удалось отправить ошибку в личку:", err);
     console.error("Исходная ошибка:", error);
-  }
+  } 
 }

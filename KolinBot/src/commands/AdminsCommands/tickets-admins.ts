@@ -1,7 +1,8 @@
 import { 
     EmbedBuilder, 
     ChatInputCommandInteraction, 
-    SlashCommandBuilder
+    SlashCommandBuilder,
+    MessageFlags
 } from 'discord.js';
 
 export const data = new SlashCommandBuilder()
@@ -31,11 +32,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const description = interaction.options.getString('суть');
     const image = interaction.options.getAttachment('скриншот');
     
-    const TARGET_CHANNEL_ID = '1496175162629034115';
+    const TARGET_CHANNEL_ID = '1316831634376364055';
     const SENIOR_ROLE_ID = '1316831633554542670'; 
 
     const channel = interaction.guild?.channels.cache.get(TARGET_CHANNEL_ID);
-    if (!channel?.isTextBased()) return interaction.reply({ content: 'Канал не найден.', ephemeral: true });
+    if (!channel?.isTextBased()) return interaction.reply({ content: 'Канал не найден.', flags: MessageFlags.Ephemeral });
 
     const embed = new EmbedBuilder()
         .setColor(0x5865F2)
@@ -59,5 +60,5 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         embeds: [embed] 
     });
 
-    await interaction.reply({ content: '✅ Ваш запрос успешно отправлен старшим.', ephemeral: true });
+    await interaction.reply({ content: '✅ Ваш запрос успешно отправлен старшим.', flags: MessageFlags.Ephemeral });
 }
