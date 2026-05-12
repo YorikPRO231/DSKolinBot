@@ -1,12 +1,13 @@
-import { Client, GatewayIntentBits, REST, Routes, Collection, Partials} from 'discord.js';
+import {Client, Collection, GatewayIntentBits, Partials, REST, Routes} from 'discord.js';
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
-import { getAllFiles } from './utils/fileUtils';
+import {getAllFiles} from './utils/fileUtils';
 import * as config from "./utils/config";
-import { DETECTIVES_INFO, FRACTION_INFO } from './utils/constants/fractions'
-import { logError } from './logger';
-import { startGoogleFormsServer, initializeGoogleFormsServer } from './server';
+import {DETECTIVES_INFO, FRACTION_INFO} from './utils/constants/fractions'
+import {logError} from './logger';
+import {initializeGoogleFormsServer, startGoogleFormsServer} from './server';
+
 dotenv.config();
 
 declare module 'discord.js' {
@@ -67,7 +68,6 @@ function shouldLoadCommandForServer(commandPath: string, serverId?: string): boo
 async function loadCommands() {
     const commands: any[] = [];
     const commandsPath = path.join(__dirname, 'commands');
-    const serverId = process.env.GUILD_ID;
     
     if (!fs.existsSync(commandsPath)) {
         console.log('⚠️ Папка commands не найдена');
@@ -162,7 +162,13 @@ async function registerGuildCommands(commands: any[]) {
             console.log(`✅ Зарегистрировано ${guildCommands.length} команд на сервере ${guildId}`);
             
         } catch (error) {
-            console.error(`❌ Ошибка регистрации на сервере ${guildId}:`, error);
+            const ser = (error + '');
+            if (ser.includes('You are not authorized to perform this action on this application') || ser.includes('Missing access')) {
+                console.error(`Нет доступа к ${guildId}`)
+            } else {
+                console.error(`❌ Ошибка регистрации на сервере ${guildId}:`, error);
+            }
+
         }
     }
 }
