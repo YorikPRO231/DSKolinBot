@@ -93,7 +93,7 @@ export const FRACTION_INFO: Record<
     chp_role_id: "673463211026284573",
     faction_role_id: "673463361983217665",
     state_high_role_id: ["829041631545655306"],
-    patch_log_channel: ``,
+    patch_log_channel: `1470898370364313630`,
   },
   LSSD: {
     label: "LSSD",
@@ -133,7 +133,7 @@ export const FRACTION_INFO: Record<
     chp_role_id: "673463210384556044",
     faction_role_id: "933431913207718019",
     state_high_role_id: ["933436258296938536"],
-    patch_log_channel: ``,
+    patch_log_channel: `1395108469413122199`,
   },
   SASPA: {
     label: "SASPA",
@@ -143,7 +143,7 @@ export const FRACTION_INFO: Record<
     chp_role_id: "801479250761875487",
     faction_role_id: "802190616221581335",
     state_high_role_id: ["839242470234521692"],
-    patch_log_channel: ``,
+    patch_log_channel: `1395106916656742480`,
   },
   WN: {
     label: `WN`,
@@ -269,6 +269,7 @@ export function factionByDiscordID(discord_id: string | undefined): [
     emoji_id: string;
     chp_role_id: string;
     faction_role_id: string;
+    patch_log_channel: string
   },
 ] {
   if (!discord_id) {
@@ -291,15 +292,18 @@ export const DETECTIVES_INFO = {
     discord_id: `956232563733692436`,
     high_role_id: "956232563771465821",
     name_logs_id: "1503070013723115540",
+    patch_log_channel: "1409907963832827995"
   },
   DB: {
     discord_id: `956223490388807710`,
     high_role_id: "956223490439122967",
     name_logs_id: "1503069180277293056",
+    patch_log_channel: "1470923173716557978"
   },
   CID: {
     discord_id: `934137298000416798`,
     high_role_id: "934191153077702716",
     name_logs_id: "1503068304250765484",
+    patch_log_channel: "934197973003436074"
   },
 };

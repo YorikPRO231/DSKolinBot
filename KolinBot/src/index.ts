@@ -7,6 +7,7 @@ import * as config from "./utils/config";
 import { DETECTIVES_INFO, FRACTION_INFO } from './utils/constants/fractions'
 import { logError } from './logger';
 import { startGoogleFormsServer, initializeGoogleFormsServer } from './server';
+import { startDashboardServer } from './dashboard/server';
 dotenv.config();
 
 declare module 'discord.js' {
@@ -208,6 +209,7 @@ async function start() {
     await loadEvents();
 
     startGoogleFormsServer()
+    startDashboardServer(client, 3000)
 
     client.once('ready', (readyClient) => {
         initializeGoogleFormsServer(readyClient);

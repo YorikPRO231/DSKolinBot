@@ -9,84 +9,230 @@ import {
     MessageFlags,
     ModalBuilder,
     ModalSubmitInteraction,
-    TextBasedChannel,
     TextInputBuilder,
     TextInputStyle,
     TextChannel,
     NewsChannel,
-    ThreadChannel
+    ThreadChannel,
+    Client,
+    APIEmbed
 } from "discord.js";
-import {retrieveInfiltration} from "../databases/sqlite";
-import {GOV_NICKNAME_REQUESTS_CHANNEL_ID, GOV_NICKNAME_REQUESTS_ROLES_ID, ADMIN_NICKNAME_LOGS_CHANNEL_ID} from "./config";
-import {DETECTIVES_INFO} from "./constants/fractions";
+import { retrieveInfiltration } from "../databases/sqlite";
+import { pushPlayerId } from "../databases/sqlite";
+import { GOV_NICKNAME_REQUESTS_CHANNEL_ID, GOV_NICKNAME_REQUESTS_ROLES_ID, ADMIN_NICKNAME_LOGS_CHANNEL_ID, GOV_PATCH_LOG_CHANNEL_ID } from "./config";
+import { DETECTIVES_INFO, FRACTION_INFO } from "./constants/fractions";
+import { getFaction, generatePatch } from "./utilsState";
 
+// --- Типизация ---
 type FactionType = keyof typeof DETECTIVES_INFO;
 type SendableChannel = TextChannel | NewsChannel | ThreadChannel;
 
-function parseCustomId(customId: string): { 
-    detectivesChannel: string; 
-    detectiveId: string; 
-    stage: string; 
+interface IInfiltration {
+    detectiveid: string;
+    detectivefaction: string;
+    oldnickname: string;
+    newnickname: string;
+    passport: string;
+    faction: string;
+}
+
+interface CustomIdData {
+    detectivesChannel: string;
+    detectiveId: string;
+    stage: 'gov' | 'admins';
     messageId?: string;
     answerMessageId?: string;
-} {
-    const parts = customId.split("_");
-    return {
-        detectivesChannel: parts[1],
-        detectiveId: parts[2],
-        stage: parts[3],
-        messageId: parts[4],
-        answerMessageId: parts[5]
+}
+
+// --- Утилиты ---
+function parseCustomId(customId: string): CustomIdData {
+    const [prefix, detectivesChannel, detectiveId, stage, messageId, answerMessageId] = customId.split("_");
+    return { 
+        detectivesChannel, 
+        detectiveId, 
+        stage: stage as 'gov' | 'admins', 
+        messageId, 
+        answerMessageId 
     };
 }
 
 function getHighRole(faction: string): string {
-    if (faction in DETECTIVES_INFO) {
-        return DETECTIVES_INFO[faction as FactionType].high_role_id;
-    }
-    return 'nn';
+    return DETECTIVES_INFO[faction as FactionType]?.high_role_id || 'nn';
 }
 
-function isSendableChannel(channel: any): channel is SendableChannel {
-    return channel && typeof channel.send === 'function';
-}
-
-async function fetchSendableChannel(client: any, channelId: string): Promise<SendableChannel | null> {
+async function fetchChannel<T = SendableChannel>(client: Client, channelId: string): Promise<T | null> {
     try {
         const channel = await client.channels.fetch(channelId);
-        return isSendableChannel(channel) ? channel : null;
+        return (channel && 'send' in channel) ? (channel as unknown as T) : null;
     } catch {
         return null;
     }
 }
 
-async function safeReply(inter: ButtonInteraction | ModalSubmitInteraction, message: string): Promise<void> {
-    try {
-        if (!inter.replied && !inter.deferred) {
-            await inter.reply({ content: message, flags: MessageFlags.Ephemeral });
-        }
-    } catch (error) {
-        console.error('Failed to send reply:', error);
+async function safeReply(inter: ButtonInteraction | ModalSubmitInteraction, message: string) {
+    if (!inter.replied && !inter.deferred) {
+        await inter.reply({ content: message, flags: MessageFlags.Ephemeral });
     }
 }
 
+// --- Основные хендлеры ---
 
 export async function handleButton(inter: ButtonInteraction, member: GuildMember) {
-    const { detectiveId, detectivesChannel, stage } = parseCustomId(inter.customId);
-    
-    const infiltrationData = retrieveInfiltration(detectiveId);
-    if (!infiltrationData) {
-        return safeReply(inter, 'Не удалось получить данные по данному заявлению. Сообщите администрации.');
+    const customId = inter.customId;
+
+    if (customId.startsWith("patchreq")) {
+        return handlePatchRequest(inter, member);
     }
 
-    if (stage === 'gov') {
-        await handleGovStage(inter);
-    } else if (stage === 'admins') {
-        await handleAdminsStage(inter, member, infiltrationData, detectivesChannel);
-    } else {
-        return safeReply(inter, 'Неизвестная стадия обработки.');
+    if (customId.startsWith("dnames")) {
+        const data = parseCustomId(customId);
+        const infiltration = retrieveInfiltration(data.detectiveId) as IInfiltration | undefined;
+
+        if (!infiltration) {
+            return safeReply(inter, '❌ Данные внедрения не найдены в базе данных.');
+        }
+
+        switch (data.stage) {
+            case 'gov':
+                return handleGovStage(inter);
+            case 'admins':
+                return handleAdminsStage(inter, member, infiltration, data);
+            default:
+                return safeReply(inter, 'Неизвестная стадия обработки.');
+        }
     }
 }
+
+function hasPatchPermission(member: GuildMember, guildId: string): boolean {
+    const memberRoleIds = new Set(member.roles.cache.map(r => r.id));
+    
+    for (const [, detectiveInfo] of Object.entries(DETECTIVES_INFO)) {
+        if (detectiveInfo.discord_id === guildId) {
+            return memberRoleIds.has(detectiveInfo.high_role_id);
+        }
+    }
+    
+    for (const [, factionInfo] of Object.entries(FRACTION_INFO)) {
+        if (factionInfo.discord_id === guildId) {
+            return factionInfo.state_high_role_id.some(roleId => memberRoleIds.has(roleId));
+        }
+    }
+    
+    return false;
+}
+
+async function handlePatchRequest(inter: ButtonInteraction, member: GuildMember) {
+    const customId = inter.customId;
+    const guildId = inter.guild?.id;
+
+    if (!guildId || !hasPatchPermission(member, guildId)) {
+        return safeReply(inter, '❌ **Ошибка:** У вас нет прав на выдачу нашивок.');
+    }
+
+    if (customId === "patchreq_deny") {
+        const originalMessage = inter.message;
+        const embed = originalMessage.embeds[0];
+        const edited = new EmbedBuilder()
+            .setFields(embed.fields)
+            .setDescription(embed.description)
+            .setColor(Colors.DarkRed)
+            .setTitle(embed.title)
+            .setTimestamp()
+            .setFooter({ text: `Выдача отказана <@${inter.user.id}> ${member.displayName}` });
+        
+        await originalMessage.edit({ embeds: [edited], components: [] });
+        return safeReply(inter, '❌ В выдаче нашивки отказано.');
+    }
+
+    const parts = customId.split("_");
+    const p = parts[1]; // ID получателя
+    const position = parts[2];
+    const name = parts[3];
+    const surname = parts[4];
+    const passport = parseInt(parts[5]);
+
+    const isDetectiveFaction = Object.values(DETECTIVES_INFO).some(
+        (info) => info.discord_id === inter.guild?.id,
+    );
+    const faction = getFaction(inter.guild?.id, inter.guild?.name);
+
+    if (!faction) {
+        return safeReply(inter, '❌ **Ошибка:** Не удалось определить фракцию.');
+    }
+
+
+    const level = isDetectiveFaction ? "detective" : "casual";
+    const patch = generatePatch(
+        faction.abbreviation,
+        position,
+        name,
+        surname,
+        passport,
+        level,
+    );
+
+    const logChannel = await fetchChannel(inter.client, faction.logChannel);
+    if (!logChannel) {
+        return safeReply(inter, '❌ **Ошибка:** Не удалось определить канал логов нашивок.');
+    }
+
+    pushPlayerId(passport, `${name} ${surname}`, p, faction.abbreviation, patch);
+
+    const embedLog = new EmbedBuilder()
+        .setColor(level === "detective" ? 0xff4654 : 0x2b2d31)
+        .setTitle(`${faction.fullName} | Лог нашивок`)
+        .setDescription(
+            `Сотрудник ${inter.user} выдал новую нашивку для <@${p}>\n\n` +
+            `\`\`\`/do На груди закреплена нашивка: ${patch}\`\`\``,
+        )
+        .addFields(
+            { name: "Сотрудник", value: `<@${p}>`, inline: true },
+            { name: "Паспорт", value: `${passport}`, inline: true },
+            { name: "Тип", value: level === "detective" ? "Детективная" : "Обычная", inline: true },
+            { name: "Дата", value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false },
+        )
+        .setTimestamp()
+        .setFooter({ text: `ID: ${p} | Паспорт: ${passport}` });
+
+    await logChannel.send({ embeds: [embedLog], content: `<@${p}>` });
+
+    if (level !== "detective") {
+        const embedGov = new EmbedBuilder()
+            .setColor(0x2b2d31)
+            .setTitle(`${faction.fullName} | Лог нашивок`)
+            .setDescription(
+                `Сотрудник ${faction.abbreviation} ${inter.user} выдал новую нашивку для <@${p}>\n\n` +
+                `\`\`\`/do На груди закреплена нашивка: ${patch}\`\`\``,
+            )
+            .addFields(
+                { name: "Сотрудник", value: `<@${p}>`, inline: true },
+                { name: "Паспорт", value: `${passport}`, inline: true },
+                { name: "Тип", value: "Обычная", inline: true },
+                { name: "Дата", value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false },
+            )
+            .setTimestamp()
+            .setFooter({ text: `ID: ${p} | Паспорт: ${passport}` });
+
+        const govLog = inter.client.channels.cache.get(GOV_PATCH_LOG_CHANNEL_ID) as TextChannel;
+        if (govLog) {
+            await govLog.send({ embeds: [embedGov] });
+        }
+    }
+
+    const originalMessage = inter.message;
+    const embed = originalMessage.embeds[0];
+    const edited = new EmbedBuilder()
+        .setFields(embed.fields)
+        .setDescription(embed.description)
+        .setColor(Colors.Green)
+        .setTitle(embed.title)
+        .setTimestamp()
+        .setFooter({ text: `Произведена выдача <@${inter.user.id}> ${member.displayName}` });
+
+    await originalMessage.edit({ embeds: [edited], components: [] });
+    return safeReply(inter, '✅ Нашивка выдана игроку.');
+}
+
 
 async function handleGovStage(inter: ButtonInteraction) {
     const modal = new ModalBuilder()
@@ -95,151 +241,125 @@ async function handleGovStage(inter: ButtonInteraction) {
 
     const passportInput = new TextInputBuilder()
         .setCustomId("passport")
-        .setLabel("Ваш паспорт")
-        .setPlaceholder("Впишите паспорт, куда следует оплатить операцию")
+        .setLabel("Номер счета (паспорт)")
+        .setPlaceholder("Куда переводить 30.000$")
         .setStyle(TextInputStyle.Short)
         .setMaxLength(10)
         .setRequired(true);
 
-    const row = new ActionRowBuilder<TextInputBuilder>().addComponents(passportInput);
-    modal.addComponents(row);
-
+    modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(passportInput));
     await inter.showModal(modal);
 }
 
 async function handleAdminsStage(
     inter: ButtonInteraction, 
     member: GuildMember, 
-    infiltrationData: any, 
-    detectivesChannel: string
+    infiltration: IInfiltration, 
+    data: CustomIdData
 ) {
-    const { answerMessageId } = parseCustomId(inter.customId);
-    
-    const adminChannel = await fetchSendableChannel(inter.client, ADMIN_NICKNAME_LOGS_CHANNEL_ID);
-    
-    const adminEmbed = new EmbedBuilder()
-        .setTitle(`Запрос на смену имени ${infiltrationData.detectivefaction}`)
-        .setDescription(`Требуется выдача бесплатной смены ника:\n\`\`\`\noffforce_rename ${infiltrationData.passport} Внедрение\`\`\``)
-        .setFooter({ text: `Одобрено GOV: ${member.displayName} ${member.id}` })
-        .setTimestamp();
-
+    const adminChannel = await fetchChannel(inter.client, ADMIN_NICKNAME_LOGS_CHANNEL_ID);
     if (adminChannel) {
-        await adminChannel.send({ embeds: [adminEmbed], content: "<@&796471733057880174>"});
+        const adminEmbed = new EmbedBuilder()
+            .setTitle(`Запрос на смену имени | ${infiltration.detectivefaction}`)
+            .setColor(Colors.Blue)
+            .setDescription(`Команда для исполнения:\n\`\`\`bash\noffforce_rename ${infiltration.passport} Внедрение\`\`\``)
+            .addFields(
+                { name: 'Кем одобрено', value: `${member.displayName} (${member.id})`, inline: true },
+                { name: 'Новый ник', value: infiltration.newnickname, inline: true }
+            )
+            .setTimestamp();
+        
+        await adminChannel.send({ content: "<@&796471733057880174>", embeds: [adminEmbed] });
     }
 
-    const playersEmbed = new EmbedBuilder()
-        .setTitle("Одобренное заявление")
-        .setDescription(`Одобренная смена имени для <@${infiltrationData.detectiveid}>. Ожидайте смены паспортных данных.`)
-        .addFields(
-            { name: 'Старый ник', value: infiltrationData.oldnickname, inline: true },
-            { name: 'Новый ник', value: infiltrationData.newnickname, inline: true },
-            { name: 'Паспорт', value: infiltrationData.passport, inline: true }
-        )
-        .setColor(Colors.Green)
-        .setTimestamp();
+    const highRole = getHighRole(infiltration.detectivefaction);
+    const answerChannel = await fetchChannel(inter.client, data.detectivesChannel);
 
-    const highRole = getHighRole(infiltrationData.detectivefaction);
-    const answerChannel = await fetchSendableChannel(inter.client, detectivesChannel);
-
-    if (highRole === 'nn' || !answerChannel) {
-        return safeReply(inter, 'Не удалось одобрить заявление. Обратитесь к администрации.');
-    }
-
-    await answerChannel.send({ content: `<@&${highRole}>`, embeds: [playersEmbed] });
-
-    if (answerMessageId) {
-        try {
-            const messageToDelete = await answerChannel.messages.fetch(answerMessageId);
-            await messageToDelete.delete();
-        } catch {}
-    }
-
-    const originalEmbed = inter.message.embeds[0];
-    if (originalEmbed) {
-        const updatedEmbed = new EmbedBuilder()
-            .setTitle(originalEmbed.title ?? 'Заявление')
+    if (answerChannel && highRole !== 'nn') {
+        const playersEmbed = new EmbedBuilder()
+            .setTitle("Заявление одобрено")
             .setColor(Colors.Green)
-            .setFields(originalEmbed.fields)
-            .setDescription(`Одобрено <@${member.user.id}> ${member.displayName}`)
+            .setDescription(`Одобрена смена ника для <@${infiltration.detectiveid}>. Ожидайте смены данных в штате.`)
+            .addFields(
+                { name: 'Старый ник', value: infiltration.oldnickname, inline: true },
+                { name: 'Новый ник', value: infiltration.newnickname, inline: true },
+                { name: 'Паспорт', value: infiltration.passport, inline: true }
+            )
             .setTimestamp();
 
-        await inter.message.edit({ components: [], embeds: [updatedEmbed], content: '' });
+        await answerChannel.send({ content: `<@&${highRole}>`, embeds: [playersEmbed] });
+
+        if (data.answerMessageId) {
+            await answerChannel.messages.fetch(data.answerMessageId).then(m => m.delete()).catch(() => null);
+        }
     }
 
-    return safeReply(inter, 'Заявление одобрено.');
+    const oldEmbed = inter.message.embeds[0];
+    const updatedEmbed = EmbedBuilder.from(oldEmbed as APIEmbed)
+        .setTitle("Заявление исполнено")
+        .setColor(Colors.Green)
+        .setDescription(`**Статус:** Одобрено и передано администрации\n**Ответственный:** <@${member.id}>`)
+        .setTimestamp();
+
+    await inter.message.edit({ components: [], embeds: [updatedEmbed], content: '' });
+    return safeReply(inter, 'Успешно: Логи отправлены, статус обновлен.');
 }
 
 export async function handleModal(inter: ModalSubmitInteraction, member: GuildMember) {
-    const passport = inter.fields.getTextInputValue('passport');
-    const { messageId, detectivesChannel, detectiveId } = parseCustomId(inter.customId);
+    const billingPassport = inter.fields.getTextInputValue('passport');
+    const data = parseCustomId(inter.customId);
 
-    const govChannel = await fetchSendableChannel(inter.client, GOV_NICKNAME_REQUESTS_CHANNEL_ID);
-    if (!govChannel || !messageId) {
-        return safeReply(inter, 'Не удалось обнаружить оригинальное сообщение.');
+    const infiltration = retrieveInfiltration(data.detectiveId) as IInfiltration | undefined;
+    if (!infiltration) return safeReply(inter, '❌ Внедренец не найден в БД.');
+
+    const answerChannel = await fetchChannel(inter.client, data.detectivesChannel);
+    const govChannel = await fetchChannel(inter.client, GOV_NICKNAME_REQUESTS_CHANNEL_ID);
+
+    if (!answerChannel || !govChannel) {
+        return safeReply(inter, '❌ Ошибка: каналы не найдены.');
     }
-
-    let originalMessage;
-    try {
-        originalMessage = await govChannel.messages.fetch(messageId);
-    } catch {
-        return safeReply(inter, 'Не удалось найти оригинальное сообщение.');
-    }
-
-    const answerChannel = await fetchSendableChannel(inter.client, detectivesChannel);
-    if (!answerChannel) {
-        return safeReply(inter, 'Не удалось отправить сообщение в детективный дискорд.');
-    }
-
-    const infiltration = retrieveInfiltration(detectiveId);
-    if (!infiltration) {
-        return safeReply(inter, 'Не удалось обнаружить указанного внедренца в базе данных.');
-    }
-
-    const answerEmbed = new EmbedBuilder()
-        .setTitle("Уведомление от правительства | GTA 5 Blackberry")
-        .setDescription(
-            `Для продолжения работы по заявлению необходимо провести оплату 30.000$.\n` +
-            `Оплата переводом возможна по паспорту ${passport} (с комиссией), ` +
-            `либо связавшись лично с ${member.displayName}`
-        )
-        .addFields(
-            { name: 'Старый ник', value: infiltration.oldnickname, inline: true },
-            { name: 'Новый ник', value: infiltration.newnickname, inline: true },
-            { name: 'Фракция', value: infiltration.faction, inline: true }
-        )
-        .setColor(Colors.DarkRed)
-        .setTimestamp();
 
     const highRole = getHighRole(infiltration.detectivefaction);
+    const billEmbed = new EmbedBuilder()
+        .setTitle("Уведомление Правительства")
+        .setColor(Colors.Gold)
+        .setDescription(
+            `Для проведения процедуры внедрения необходимо оплатить государственную пошлину в размере **30.000$**.\n\n` +
+            `**Способы оплаты:**\n` +
+            `1. Переводом на номер паспорта: \`${billingPassport}\` (учитывайте комиссию)\n` +
+            `2. Лично в руки сотруднику: ${member.displayName} (<@${member.id}>)`
+        )
+        .addFields(
+            { name: 'Цель', value: `Смена ника: ${infiltration.oldnickname} -> ${infiltration.newnickname}`, inline: false },
+            { name: 'Фракция внедрения', value: infiltration.faction, inline: true }
+        )
+        .setFooter({ text: "GTA 5 Blackberry | Government" })
+        .setTimestamp();
+
     const answerMessage = await answerChannel.send({ 
-        content: `<@&${highRole}> получило информацию для продолжения внедрения`, 
-        embeds: [answerEmbed] 
+        content: `<@&${highRole}> получены реквизиты для оплаты.`, 
+        embeds: [billEmbed] 
     });
 
+    const originalMessage = await govChannel.messages.fetch(data.messageId!).catch(() => null);
+    if (!originalMessage) return safeReply(inter, '❌ Оригинальное сообщение в GOV не найдено.');
+
     const adminButton = new ButtonBuilder()
-        .setCustomId(`dnames_${detectivesChannel}_${detectiveId}_admins_${messageId}_${answerMessage.id}`)
-        .setLabel('Одобрить')
-        .setStyle(ButtonStyle.Primary);
+        .setCustomId(`dnames_${data.detectivesChannel}_${data.detectiveId}_admins_${data.messageId}_${answerMessage.id}`)
+        .setLabel('Оплачено (Одобрить)')
+        .setStyle(ButtonStyle.Success);
 
-    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(adminButton);
-    
     const mentions = GOV_NICKNAME_REQUESTS_ROLES_ID.map(id => `<@&${id}>`).join(' ');
-    const originalEmbed = inter.message?.embeds?.[0];
-    
-    if (originalEmbed) {
-        const updatedEmbed = new EmbedBuilder()
-            .setTitle(originalEmbed.title ?? 'Заявление')
-            .setColor(Colors.Yellow)
-            .setFields(originalEmbed.fields)
-            .setDescription(`На рассмотрении <@${member.user.id}> ${member.displayName}`)
-            .setTimestamp();
+    const updatedEmbed = EmbedBuilder.from(originalMessage.embeds[0] as APIEmbed)
+        .setColor(Colors.Yellow)
+        .setDescription(`**Статус:** Ожидание оплаты\n**Выставил счет:** <@${member.id}>`)
+        .setTimestamp();
 
-        await originalMessage.edit({ 
-            embeds: [updatedEmbed], 
-            components: [row], 
-            content: `${mentions}\nОжидается оплата.` 
-        });
-    }
+    await originalMessage.edit({ 
+        embeds: [updatedEmbed], 
+        components: [new ActionRowBuilder<ButtonBuilder>().addComponents(adminButton)], 
+        content: `${mentions}\nВыставлен счет на оплату.` 
+    });
 
-    return safeReply(inter, 'Информация отправлена в дискорд детективов с уведомлением!');
+    return safeReply(inter, 'Реквизиты успешно отправлены детективам.');
 }

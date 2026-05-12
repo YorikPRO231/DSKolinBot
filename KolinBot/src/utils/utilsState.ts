@@ -1,0 +1,68 @@
+import { DETECTIVES_INFO } from "./constants/fractions";
+import { generateUniqueDigits } from "../databases/sqlite";
+import { factionByDiscordID } from "./constants/fractions";
+
+export function generatePatch(
+  faction: string,
+  position: string,
+  name: string,
+  surname: string,
+  passport: number,
+  level: string,
+): string {
+  const randomDigits = generateUniqueDigits(passport, faction);
+
+  const detectiveDepartmentToFaction: Record<string, string> = {
+    CID: "FIB",
+    DB: "LSPD",
+    DD: "LSSD",
+  };
+
+  if (level === "detective") {
+    return `[${detectiveDepartmentToFaction[faction]} | ${faction} | ${randomDigits}].`;
+  }
+
+  return `[${faction} | ${position} | ${name[0].toUpperCase()}${surname[0].toUpperCase()}${randomDigits}].`;
+}
+
+export function getFaction(
+  guildId: string | undefined,
+  guildName: string | undefined,
+): { abbreviation: string; fullName: string, logChannel: string } | undefined {
+  if (!guildId) return undefined;
+
+  for (const [abbr, info] of Object.entries(DETECTIVES_INFO)) {
+    if (info.discord_id === guildId) {
+      return {
+        abbreviation: abbr,
+        fullName: `${abbr} | Blackberry`,
+        logChannel: `${info.patch_log_channel}`
+      };
+    }
+  }
+
+  if (guildName) {
+    let factionAbbr = guildName.replace(/^GTA 5 RP\s*\|\s*/, "").trim();
+    const info = factionByDiscordID(guildId)
+    if (info[0] === 'TEST_SERVER') {
+      return undefined;
+    }
+    const factionMapping: Record<string, string> = {
+      Government: "USSS",
+    };
+
+    if (factionMapping[factionAbbr]) {
+      factionAbbr = factionMapping[factionAbbr];
+    }
+
+    if (factionAbbr) {
+      return {
+        abbreviation: factionAbbr,
+        fullName: `GTA 5 RP | ${factionAbbr}`,
+        logChannel: `${info[1].patch_log_channel}`
+      };
+    }
+  }
+
+  return undefined;
+}

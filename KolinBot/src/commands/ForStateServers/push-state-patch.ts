@@ -5,7 +5,8 @@ import {
   SlashCommandBuilder,
   TextChannel,
 } from "discord.js";
-import { generateUniqueDigits, pushPlayerId } from "../../databases/sqlite";
+import { pushPlayerId } from "../../databases/sqlite";
+import { generatePatch, getFaction } from "../../utils/utilsState";
 import {
   GOV_PATCH_LOG_CHANNEL_ID,
   getStateHighRoles,
@@ -100,11 +101,10 @@ export async function execute(inter: ChatInputCommandInteraction) {
   const patch = generatePatch(
     faction.abbreviation,
     position,
-    nickname,
     name,
     surname,
     passport,
-    level,
+    level
   );
 
   try {
@@ -176,63 +176,3 @@ export async function execute(inter: ChatInputCommandInteraction) {
   }
 }
 
-function generatePatch(
-  faction: string,
-  position: string,
-  fullNickname: string,
-  name: string,
-  surname: string,
-  passport: number,
-  level: string,
-): string {
-  const randomDigits = generateUniqueDigits(passport, faction);
-
-  const detectiveDepartmentToFaction: Record<string, string> = {
-    CID: "FIB",
-    DB: "LSPD",
-    DD: "LSSD",
-  };
-
-  if (level === "detective") {
-    return `[${detectiveDepartmentToFaction[faction]} | ${faction} | ${randomDigits}].`;
-  }
-
-  return `[${faction} | ${position} | ${name[0].toUpperCase()}${surname[0].toUpperCase()}${randomDigits}].`;
-}
-
-function getFaction(
-  guildId: string | undefined,
-  guildName: string | undefined,
-): { abbreviation: string; fullName: string } | undefined {
-  if (!guildId) return undefined;
-
-  for (const [abbr, info] of Object.entries(DETECTIVES_INFO)) {
-    if (info.discord_id === guildId) {
-      return {
-        abbreviation: abbr,
-        fullName: `${abbr} | Blackberry`,
-      };
-    }
-  }
-
-  if (guildName) {
-    let factionAbbr = guildName.replace(/^GTA 5 RP\s*\|\s*/, "").trim();
-
-    const factionMapping: Record<string, string> = {
-      Government: "USSS",
-    };
-
-    if (factionMapping[factionAbbr]) {
-      factionAbbr = factionMapping[factionAbbr];
-    }
-
-    if (factionAbbr) {
-      return {
-        abbreviation: factionAbbr,
-        fullName: `GTA 5 RP | ${factionAbbr}`,
-      };
-    }
-  }
-
-  return undefined;
-}
