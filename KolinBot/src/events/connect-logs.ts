@@ -1,6 +1,6 @@
-import { Client, Events, GuildChannel, AuditLogEvent, User } from "discord.js";
+import {AuditLogEvent, Client, Events, GuildChannel, User} from "discord.js";
 import * as logger from "../logger";
-import { punishChecker } from "./messages";
+import {punishChecker} from "./messages";
 
 export const name = "ready";
 export const once = true;
@@ -15,6 +15,7 @@ export function execute(client: Client) {
 
   client.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
     if (oldMessage.partial || newMessage.partial) return;
+    await punishChecker(client, newMessage);
     await logger.logMessageUpdate(client, oldMessage as any, newMessage as any);
   });
 

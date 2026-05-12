@@ -1,5 +1,5 @@
-import { Client, EmbedBuilder, Message } from "discord.js";
-import { PUNISHMENT_ADMINS_CHANNEL_ID } from "../utils/config";
+import {Client, EmbedBuilder, Message} from "discord.js";
+import {ADMINS_SERVER_ID, PUNISHMENT_ADMINS_CHANNEL_ID} from "../utils/config";
 
 const COMMAND_PATTERNS = {
     TIME_COMMANDS:  ['offprison', 'offban', 'offmute', 'offvehicle_ban', 'offweapon_ban', 'sban', 'offsban'],
@@ -10,6 +10,10 @@ const COMMAND_PATTERNS = {
 const TIME_PATTERN = new RegExp(`^(${COMMAND_PATTERNS.TIME_COMMANDS.join('|')}) (\\d+) (\\d+) (.+)$`);
 const SIMPLE_PATTERN = new RegExp(`^(${COMMAND_PATTERNS.SIMPLE_COMMANDS.join('|')}) (\\d+) (.+)$`);
 const ONLINE_ONLY_PATTERN = new RegExp(`^(${COMMAND_PATTERNS.ONLINE_ONLY.join('|')})\\b`);
+const URL_PATTERN = /^(https?:\/\/)[^\s$.?#].[^\s]*$/i;
+
+
+const SENIOR_ROLES_ID = ['1316831633554542672', '1316831633554542670', '1316831633554542669']
 
 interface ValidationResult {
     isValid: boolean;
@@ -29,10 +33,13 @@ export async function punishChecker(client: Client, message: Message): Promise<v
         message.author.bot) {
         return;
     }
-
+    const gm = client.guilds.cache.get(ADMINS_SERVER_ID[0])?.members.cache.get(message.author.id)
+    if (gm && gm.roles.cache.some(r => SENIOR_ROLES_ID.includes(r.id))) {
+        return;
+    }
     const commands = message.content.split('\n').map(cmd => cmd.trim()).filter(Boolean);
-    
-    if (commands.length === 0) {
+
+    if (commands.length === 0 || message.reference) {
         return;
     }
 
@@ -41,13 +48,17 @@ export async function punishChecker(client: Client, message: Message): Promise<v
 
     if (invalidCommands.length > 0 || onlineOnlyCommands.length > 0) {
         await sendErrorEmbed(message, invalidCommands, onlineOnlyCommands);
+    } else {
+        for (let mr of message.reactions.cache.filter(mr => mr.me).values()) {
+            await mr.remove()
+        }
     }
 }
 
 function validateCommands(commands: string[]): ValidationResult[] {
     return commands
         .map((cmd, index) => ({
-            isValid: TIME_PATTERN.test(cmd) || SIMPLE_PATTERN.test(cmd),
+            isValid: TIME_PATTERN.test(cmd) || SIMPLE_PATTERN.test(cmd) || URL_PATTERN.test(cmd) || ['после', 'потом', 'далее'].includes(cmd.toLowerCase()),
             index: index + 1, 
             command: cmd
         }))
