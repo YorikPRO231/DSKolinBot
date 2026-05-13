@@ -4,17 +4,13 @@ import path from 'path';
 import dotenv from 'dotenv';
 import {getAllFiles} from './utils/fileUtils';
 import * as config from "./utils/config";
-<<<<<<< HEAD
-import { DETECTIVES_INFO, FRACTION_INFO } from './utils/constants/fractions'
-import { logError } from './logger';
-import { startGoogleFormsServer, initializeGoogleFormsServer } from './server';
-import { startDashboardServer } from './dashboard/server';
-=======
+
+
 import {DETECTIVES_INFO, FRACTION_INFO} from './utils/constants/fractions'
 import {logError} from './logger';
 import {initializeGoogleFormsServer, startGoogleFormsServer} from './server';
 
->>>>>>> 631c97d27cb7ec1943aedcf4d3127d69d9fe7aba
+
 dotenv.config();
 
 declare module 'discord.js' {
@@ -171,7 +167,7 @@ async function registerGuildCommands(commands: any[]) {
         } catch (error) {
             const ser = (error + '');
             if (ser.includes('You are not authorized to perform this action on this application') || ser.includes('Missing access')) {
-                console.error(`Нет доступа к ${guildId}`)
+                console.error(`Нет доступа к ${guildId} ${ser}`)
             } else {
                 console.error(`❌ Ошибка регистрации на сервере ${guildId}:`, error);
             }
@@ -221,7 +217,7 @@ async function start() {
     await loadEvents();
 
     startGoogleFormsServer()
-    startDashboardServer(client, 3000)
+
 
     client.once('ready', (readyClient) => {
         initializeGoogleFormsServer(readyClient);

@@ -22,18 +22,18 @@ export const FRACTION_TYPES = {
 } as const;
 
 export type FractionType = keyof typeof FRACTION_TYPES;
+export type FractionInfo = {
+  label: string;
+  discord_id: string;
+  state: boolean;
+  emoji_id: string;
+  chp_role_id: string;
+  faction_role_id: string;
+  state_high_role_id: string[];
+  patch_log_channel: string;
+}
 export const FRACTION_INFO: Record<
-  FractionType,
-  {
-    label: string;
-    discord_id: string;
-    state: boolean;
-    emoji_id: string;
-    chp_role_id: string;
-    faction_role_id: string;
-    state_high_role_id: string[];
-    patch_log_channel: string;
-  }
+    FractionType, FractionInfo
 > = {
   MM: {
     label: "Мексиканская мафия",
@@ -117,7 +117,7 @@ export const FRACTION_INFO: Record<
   },
   GOV: {
     label: "Government",
-    discord_id: `673455835481112599`,
+    discord_id: `673455835481112599`, 
     state: true,
     emoji_id: "<:GOV:1499073847318544394>",
     chp_role_id: "673463209050505247",
@@ -262,15 +262,7 @@ export const TRANSFER_LOGS: Record<string, [string, string]> = {
 
 export function factionByDiscordID(discord_id: string | undefined): [
   FractionType,
-  {
-    label: string;
-    discord_id: string;
-    state: boolean;
-    emoji_id: string;
-    chp_role_id: string;
-    faction_role_id: string;
-    patch_log_channel: string
-  },
+  FractionInfo,
 ] {
   if (!discord_id) {
     return ["TEST_SERVER", FRACTION_INFO["TEST_SERVER"]];
