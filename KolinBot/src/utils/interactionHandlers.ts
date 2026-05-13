@@ -32,7 +32,7 @@ export async function handleButtonInteraction(interaction: any) {
   if (customId.startsWith("check_")) return handleCheckSystem(interaction);
   if (customId.startsWith("dnames")) return handleButton(interaction, member);
   if (customId.startsWith("patchreq")) return handleButton(interaction, member);
-  if (customId.startsWith('')) return handleNickKick(interaction, member);
+  if (customId.startsWith('nicknames')) return handleNickKick(interaction, member);
 }
 
 export async function handleSelectMenuInteraction(interaction: any) {
