@@ -24,6 +24,7 @@ export const data = new SlashCommandBuilder()
             .setName("позиция")
             .setDescription("Ваш отдел или должность (Пример: FPB, D. Head FPB)")
             .setRequired(true),
+            
     )
     .addStringOption((opt) =>
         opt

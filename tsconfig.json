@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "commonjs",
-    "rootDir": "./src",
+    "rootDir": "./KolinBot/src",
     "outDir": "./dist",
     "strict": true,
     "esModuleInterop": true,
@@ -11,6 +11,6 @@
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"],
+  "include": ["KolinBot/src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }

@@ -1,17 +1,8 @@
-import {
-  ChatInputCommandInteraction,
-  EmbedBuilder,
-  MessageFlags,
-  SlashCommandBuilder,
-  TextChannel,
-} from "discord.js";
-import { pushPlayerId } from "../../databases/sqlite";
-import { generatePatch, getFaction } from "../../utils/utilsState";
-import {
-  GOV_PATCH_LOG_CHANNEL_ID,
-  getStateHighRoles,
-} from "../../utils/config";
-import { DETECTIVES_INFO } from "../../utils/constants/fractions";
+import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder, TextChannel,} from "discord.js";
+import {pushPlayerId} from "../../databases/sqlite";
+import {generatePatch, getFaction} from "../../utils/utilsState";
+import {DETECTIVES_HIGH_ROLES_ID, getStateHighRoles, GOV_PATCH_LOG_CHANNEL_ID,} from "../../utils/config";
+import {DETECTIVES_INFO} from "../../utils/constants/fractions";
 
 export const data = new SlashCommandBuilder()
   .setName("новая-нашивка")
@@ -46,8 +37,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
   const nickname = inter.options.getString("ник", true).trim();
   const member = inter.member as any;
   const stateHighRoles = getStateHighRoles();
-  const additionalRoles = ["934191153077702716", "956223490439122967", "956232563771465821"];
-  const allAllowedRoles = [...stateHighRoles, ...additionalRoles];
+  const allAllowedRoles = [...stateHighRoles, ...(DETECTIVES_HIGH_ROLES_ID)];
 
   const hasRole = member?.roles?.cache?.some((r: any) =>
     allAllowedRoles.includes(r.id),
@@ -175,4 +165,3 @@ export async function execute(inter: ChatInputCommandInteraction) {
     });
   }
 }
-

@@ -1,0 +1,274 @@
+<%
+  title = 'Главная';
+  currentPage = 'dashboard';
+%>
+
+<%- include('layout', { part: 'header', title: title, currentPage: currentPage, user: user }) %>
+
+<style>
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+    .status-online {
+        background: rgba(46, 204, 113, 0.15);
+        color: #2ecc71;
+        border: 1px solid rgba(46, 204, 113, 0.3);
+    }
+    .status-offline {
+        background: rgba(230, 57, 70, 0.15);
+        color: #e63946;
+        border: 1px solid rgba(230, 57, 70, 0.3);
+    }
+    .system-info-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1rem;
+    }
+    .system-info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--border);
+        font-size: 0.85rem;
+    }
+    .system-info-row:last-child {
+        border-bottom: none;
+    }
+    .system-info-label {
+        color: var(--text-dim);
+    }
+    .system-info-value {
+        font-weight: 500;
+        font-family: monospace;
+    }
+    .refresh-btn {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text-dim);
+        padding: 4px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.7rem;
+        transition: all 0.2s;
+    }
+    .refresh-btn:hover {
+        background: var(--bg-main);
+        border-color: var(--accent);
+        color: var(--accent);
+    }
+    .env-production {
+        background: rgba(46, 204, 113, 0.15);
+        color: #2ecc71;
+    }
+    .env-development {
+        background: rgba(241, 196, 15, 0.15);
+        color: #f1c40f;
+    }
+</style>
+
+<div style="margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h1 style="font-size: 1.8rem; letter-spacing: -0.5px;">Панель управления</h1>
+            <p style="color: var(--text-dim); margin-top: 0.5rem;">Добро пожаловать, <strong><%= user ? user.username : 'Администратор' %></strong>! Вот сводка активности системы.</p>
+        </div>
+        <button class="refresh-btn" onclick="refreshHealthData()">
+            <i class="fas fa-sync-alt"></i> Обновить
+        </button>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+    <div class="stat-card">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="color: var(--text-dim); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">Google Формы</div>
+            <i class="fas fa-google" style="color: var(--accent); font-size: 1.2rem;"></i>
+        </div>
+        <div style="font-size: 2.2rem; font-weight: 800; margin-top: 0.5rem;"><%= stats.totalForms %></div>
+        <div style="color: var(--text-dim); font-size: 0.7rem; margin-top: 0.5rem;">активных интеграций</div>
+    </div>
+    
+    <div class="stat-card" style="border-left: 4px solid var(--danger);">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="color: var(--danger); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">Активные алярты</div>
+            <i class="fas fa-bell" style="color: var(--danger); font-size: 1.2rem;"></i>
+        </div>
+        <div style="font-size: 2.2rem; font-weight: 800; margin-top: 0.5rem;"><%= stats.activeAlerts %></div>
+        <div style="color: var(--text-dim); font-size: 0.7rem; margin-top: 0.5rem;">требуют внимания</div>
+    </div>
+    
+    <div class="stat-card" style="border-left: 4px solid var(--success);">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="color: var(--success); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">Закрыто аляртов</div>
+            <i class="fas fa-check-circle" style="color: var(--success); font-size: 1.2rem;"></i>
+        </div>
+        <div style="font-size: 2.2rem; font-weight: 800; margin-top: 0.5rem;"><%= stats.closedAlerts %></div>
+        <div style="color: var(--text-dim); font-size: 0.7rem; margin-top: 0.5rem;">успешно решено</div>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+    <div class="stat-card">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="color: var(--text-dim); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">Всего проверок</div>
+            <i class="fas fa-clipboard-list" style="color: var(--accent); font-size: 1.2rem;"></i>
+        </div>
+        <div style="font-size: 2.2rem; font-weight: 800; margin-top: 0.5rem;"><%= stats.inspections || 0 %></div>
+        <div style="color: var(--text-dim); font-size: 0.7rem; margin-top: 0.5rem;">выполнено за всё время</div>
+    </div>
+    
+    <div class="stat-card">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="color: var(--text-dim); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">Сливов склада</div>
+            <i class="fas fa-boxes" style="color: var(--accent); font-size: 1.2rem;"></i>
+        </div>
+        <div style="font-size: 2.2rem; font-weight: 800; margin-top: 0.5rem;"><%= stats.warehouseItems || 0 %></div>
+        <div style="color: var(--text-dim); font-size: 0.7rem; margin-top: 0.5rem;">в системе</div>
+    </div>
+    
+    <div class="stat-card">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="color: var(--text-dim); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">Эффективность</div>
+            <i class="fas fa-chart-line" style="color: var(--accent); font-size: 1.2rem;"></i>
+        </div>
+        <div style="font-size: 2.2rem; font-weight: 800; margin-top: 0.5rem;">
+            <% 
+                const total = stats.closedAlerts + stats.activeAlerts;
+                const efficiency = total > 0 ? Math.round((stats.closedAlerts / total) * 100) : 0;
+            %>
+            <%= efficiency %>%
+        </div>
+        <div style="color: var(--text-dim); font-size: 0.7rem; margin-top: 0.5rem;">закрытых алартов</div>
+    </div>
+</div>
+
+<div class="system-info-card" style="margin-bottom: 2rem;">
+    <h3 style="margin-bottom: 1rem; font-size: 1rem;">
+        <i class="fas fa-server" style="color: var(--accent); margin-right: 8px;"></i> 
+        Статус системы
+    </h3>
+    <div id="healthData">
+        <div style="text-align: center; padding: 1rem;">
+            <i class="fas fa-spinner fa-spin"></i> Загрузка данных...
+        </div>
+    </div>
+</div>
+
+<div class="card" style="margin-bottom: 2rem;">
+    <h3 style="margin-bottom: 1rem; font-size: 1rem;">
+        <i class="fas fa-bolt" style="color: var(--accent); margin-right: 8px;"></i> 
+        Быстрые действия
+    </h3>
+    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+        <a href="/dashboard/forms" class="btn btn-primary" style="text-decoration: none;">
+            <i class="fas fa-plus"></i> Добавить форму
+        </a>
+        <a href="/dashboard/security" class="btn" style="background: rgba(255,107,0,0.1); color: var(--accent); text-decoration: none;">
+            <i class="fas fa-shield-alt"></i> Проверить аларты
+        </a>
+        <a href="/dashboard/inspections" class="btn" style="background: rgba(255,255,255,0.05); text-decoration: none;">
+            <i class="fas fa-search"></i> Найти проверку
+        </a>
+    </div>
+</div>
+
+<% if (stats.activeAlerts > 0) { %>
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3 style="font-size: 1rem;">
+            <i class="fas fa-exclamation-triangle" style="color: var(--danger); margin-right: 8px;"></i> 
+            Последние активные аларты
+        </h3>
+        <a href="/dashboard/security" style="color: var(--accent); font-size: 0.8rem; text-decoration: none;">Все аларты →</a>
+    </div>
+    <div style="color: var(--text-dim); font-size: 0.85rem; text-align: center; padding: 2rem;">
+        <i class="fas fa-bell" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
+        Есть <%= stats.activeAlerts %> активных алартов, требующих внимания
+    </div>
+</div>
+<% } %>
+
+<script>
+async function refreshHealthData() {
+    const container = document.getElementById('healthData');
+    if (!container) return;
+    
+    container.innerHTML = '<div style="text-align: center; padding: 1rem;"><i class="fas fa-spinner fa-spin"></i> Загрузка данных...</div>';
+    
+    try {
+        const response = await fetch('/health');
+        const data = await response.json();
+        
+        const formatUptime = (seconds) => {
+            const days = Math.floor(seconds / 86400);
+            const hours = Math.floor((seconds % 86400) / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = Math.floor(seconds % 60);
+            
+            const parts = [];
+            if (days > 0) parts.push(`${days}д`);
+            if (hours > 0) parts.push(`${hours}ч`);
+            if (minutes > 0) parts.push(`${minutes}м`);
+            parts.push(`${secs}с`);
+            return parts.join(' ');
+        };
+        
+        const discordStatus = data.discordReady ? 'online' : 'offline';
+        const discordStatusText = data.discordReady ? 'Подключен' : 'Отключен';
+        const discordStatusClass = data.discordReady ? 'status-online' : 'status-offline';
+        
+        const envClass = data.environment === 'production' ? 'env-production' : 'env-development';
+        const envText = data.environment === 'production' ? 'Production' : 'Development';
+        
+        const healthHtml = `
+            <div class="system-info-row">
+                <span class="system-info-label"><i class="fas fa-microchip"></i> Статус сервера</span>
+                <span class="system-info-value"><span class="status-badge status-online"><i class="fas fa-circle" style="font-size: 0.5rem;"></i> Работает</span></span>
+            </div>
+            <div class="system-info-row">
+                <span class="system-info-label"><i class="fab fa-discord"></i> Discord бот</span>
+                <span class="system-info-value"><span class="status-badge ${discordStatusClass}"><i class="fas fa-circle" style="font-size: 0.5rem;"></i> ${discordStatusText}</span></span>
+            </div>
+            <div class="system-info-row">
+                <span class="system-info-label"><i class="fas fa-link"></i> Активных форм</span>
+                <span class="system-info-value"><strong>${data.bindings || 0}</strong></span>
+            </div>
+            <div class="system-info-row">
+                <span class="system-info-label"><i class="fas fa-clock"></i> Аптайм</span>
+                <span class="system-info-value">${formatUptime(data.uptime || 0)}</span>
+            </div>
+            <div class="system-info-row">
+                <span class="system-info-label"><i class="fas fa-tag"></i> Окружение</span>
+                <span class="system-info-value"><span class="status-badge ${envClass}">${envText}</span></span>
+            </div>
+        `;
+        
+        container.innerHTML = healthHtml;
+    } catch (error) {
+        console.error('Ошибка загрузки health:', error);
+        container.innerHTML = `
+            <div class="system-info-row">
+                <span class="system-info-label">Статус</span>
+                <span class="system-info-value"><span class="status-badge status-offline"><i class="fas fa-exclamation-triangle"></i> Ошибка загрузки</span></span>
+            </div>
+            <div class="system-info-row">
+                <span class="system-info-label">Discord бот</span>
+                <span class="system-info-value"><span class="status-badge status-offline"><i class="fas fa-circle" style="font-size: 0.5rem;"></i> Неизвестно</span></span>
+            </div>
+        `;
+    }
+}
+
+refreshHealthData();
+
+setInterval(refreshHealthData, 30000);
+</script>
+
+<%- include('layout', { part: 'footer' }) %>

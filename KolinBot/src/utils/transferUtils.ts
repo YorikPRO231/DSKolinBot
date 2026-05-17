@@ -212,9 +212,7 @@ async function processApproval(
   if (!statusField) return;
 
   const statusValue = statusField.value;
-  const isFrom = userFrac === fromFrac;
 
-  // Проверка на повторное одобрение
   const fromApproved = statusValue.includes(`${fromFrac}: одобрено`);
   const toApproved = statusValue.includes(`${toFrac}: одобрено`);
 
@@ -262,7 +260,6 @@ async function processApproval(
     });
   }
 
-  // Формирование нового статуса
   const newFromApproved = userFrac === fromFrac ? true : fromApproved;
   const newToApproved = userFrac === toFrac ? true : toApproved;
 
@@ -280,7 +277,6 @@ async function processApproval(
     value: newStatusValue,
   });
 
-  // Полное одобрение
   if (isFullyApproved) {
     newEmbed.setColor("#2ecc71").setTitle("Заявление на перевод (Одобрено)");
 
@@ -293,7 +289,6 @@ async function processApproval(
       await originalMessage.edit({ embeds: [newEmbed], components: [] });
     }
 
-    // Отправка уведомления автору заявки
     const description = oldEmbed.description || "";
     const mentionMatch = description.match(/<@(\d+)>/);
 
@@ -311,7 +306,6 @@ async function processApproval(
       try {
         const author = await interaction.client.users.fetch(authorId);
 
-        // Уведомление автору
         const notifyEmbed = new EmbedBuilder()
           .setColor(Colors.Orange)
           .setTitle("Перевод одобрен")
@@ -330,7 +324,6 @@ async function processApproval(
           console.warn(`Не удалось отправить ЛС пользователю ${author.tag}:`, error);
         });
 
-        // Уведомление в канал фракции
         const passportMatch = description.match(
           /\*\*Сотрудник:\*\* <@([0-9]+)> \[([0-9]+)\]/,
         );
@@ -383,7 +376,6 @@ async function processApproval(
       await interaction.update({ embeds: [newEmbed], components: [] });
     }
   } else {
-    // Частичное одобрение
     const channel = interaction.client.channels.cache.get(interaction.channelId);
     const originalMessage = await channel?.messages.fetch(
       interaction.message?.reference?.messageId || interaction.message?.id,
@@ -453,7 +445,6 @@ export async function createTransferRequest(
   currentFrac: string,
   member: GuildMember,
 ) {
-  // Блокировка перевода с 6 ранга из определенных фракций
   if (["LSSD", "FIB", "LSPD"].includes(currentFrac) && currentRank === 6) {
     return await sendResponse(interaction, `Перевод с 6 ранга из ${currentFrac} запрещен.`, true);
   }
@@ -552,7 +543,6 @@ export async function handleApproveSelect(interaction: any, member: GuildMember)
   const selectedFrac = interaction.values[0];
   const [, , fromFrac, toFrac] = originalCustomId.split("_");
 
-  // Проверка прав на выбранную фракцию
   if (!(await userHasFactionPermission(member, selectedFrac, interaction.client))) {
     const disabledMenu = new StringSelectMenuBuilder()
       .setCustomId("disabled")

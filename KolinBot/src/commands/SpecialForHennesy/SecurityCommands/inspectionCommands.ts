@@ -3,7 +3,8 @@ import {
     ChatInputCommandInteraction, 
     EmbedBuilder,
     Colors,
-    MessageFlags
+    MessageFlags,
+    GuildMember
 } from 'discord.js';
 import { 
     saveInspectionReport, 
@@ -49,8 +50,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const comment = interaction.options.getString('комментарий') || '';
     
     const adminId = interaction.user.id;
-    const adminName = interaction.user.displayName;
-    const fullAdminName = adminName;
+    const adminName = (interaction.member as GuildMember)?.displayName || interaction.user.username;
     const fullResult = comment ? `${result}\nКомментарий: ${comment}` : result;
     
     try {
@@ -61,7 +61,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             closedCount = closeAlertsBySuspectIfExists(passport, adminId);
         }
         
-        const reportId = saveInspectionReport(passport, fullResult, adminId, fullAdminName, discordId);
+        const reportId = saveInspectionReport(passport, fullResult, adminId, adminName, discordId);
         const { total } = getInspectionReportsByPassportPaginated(passport, 1, 0);
         
         const embed = new EmbedBuilder()
@@ -71,7 +71,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             .addFields(
                 { name: 'Паспорт (статик)', value: passport, inline: true },
                 { name: 'Итог', value: result.length > 50 ? result.slice(0, 47) + '...' : result, inline: true },
-                { name: 'Администратор', value: fullAdminName, inline: true },
+                { name: 'Администратор', value: adminName, inline: true },
                 { name: 'Дата', value: new Date().toLocaleString('ru-RU'), inline: true },
                 { name: 'Всего проверок', value: total.toString(), inline: true }
             )

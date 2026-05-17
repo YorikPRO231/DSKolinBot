@@ -2,7 +2,8 @@ import {
     EmbedBuilder, 
     ChatInputCommandInteraction, 
     SlashCommandBuilder,
-    MessageFlags
+    MessageFlags,
+    GuildMember
 } from 'discord.js';
 
 export const data = new SlashCommandBuilder()
@@ -46,7 +47,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                         iconURL: interaction.user.displayAvatarURL() 
                     })
         .addFields(
-            { name: 'Отправитель', value: `${interaction.user} (ID: ${interaction.user.id})`, inline: false },
+            { name: 'Отправитель', value: `${(interaction.member as GuildMember)?.displayName} (ID: ${interaction.user.id})`, inline: false },
             { name: 'Тип запроса', value: type!, inline: false },
             { name: 'Описание', value: description! }
         )

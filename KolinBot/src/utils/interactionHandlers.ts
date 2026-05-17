@@ -1,7 +1,13 @@
-import { Interaction, GuildMember, MessageFlags } from "discord.js";
-import { handleTransferSelect, handleApproveButton, handleApproveSelect, handleDenyButton, handleDenyModal } from "./transferUtils";
-import { handleButton, handleModal } from "./detectiveUtils";
-import { handleTwinkKick, handleAdminRegistration, handleCheckSystem } from "./adminUtils";
+import {GuildMember, MessageFlags} from "discord.js";
+import {
+  handleApproveButton,
+  handleApproveSelect,
+  handleDenyButton,
+  handleDenyModal,
+  handleTransferSelect
+} from "./transferUtils";
+import {handleButton, handleModal} from "./detectiveUtils";
+import {handleAdminRegistration, handleNickKick, handleTwinkKick} from "./adminUtils";
 
 export async function handleSlashCommand(interaction: any) {
   const command = interaction.client.commands.get(interaction.commandName);
@@ -23,9 +29,9 @@ export async function handleButtonInteraction(interaction: any) {
   if (customId.startsWith("twink_")) return handleTwinkKick(interaction);
   if (customId.startsWith("tr_approve_")) return handleApproveButton(interaction, member);
   if (customId.startsWith("tr_deny_")) return handleDenyButton(interaction, member);
-  if (customId.startsWith("check_")) return handleCheckSystem(interaction);
   if (customId.startsWith("dnames")) return handleButton(interaction, member);
   if (customId.startsWith("patchreq")) return handleButton(interaction, member);
+  if (customId.startsWith('nicknames')) return handleNickKick(interaction, member);
 }
 
 export async function handleSelectMenuInteraction(interaction: any) {

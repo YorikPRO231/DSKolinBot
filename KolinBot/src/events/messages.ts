@@ -3,7 +3,7 @@ import {ADMINS_SERVER_ID, PUNISHMENT_ADMINS_CHANNEL_ID} from "../utils/config";
 
 const COMMAND_PATTERNS = {
     TIME_COMMANDS:  ['offprison', 'offban', 'offmute', 'offvehicle_ban', 'offweapon_ban', 'sban', 'offsban'],
-    SIMPLE_COMMANDS: ['offwarn', 'iban', 'unban', 'unwarn', 'offunjail', 'offforce_rename', 'offforce_gender', 'offuninvite', 'offiban', 'offsiban', 'hardban', 'uninvite'],
+    SIMPLE_COMMANDS: ['offwarn', 'iban', 'unban', 'unwarn', 'offunjail', 'offforce_rename', 'offforce_gender', 'offuninvite', 'offiban', 'offsiban', 'hardban', 'uninvite', 'offunwarn'],
     ONLINE_ONLY: ['hardban', 'ban', 'kick', 'prison', 'mute', 'unmute', 'unjail', 'mute_report', 'unmute_report', 'iban', 'vehicle_ban', 'weapon_ban', 'uninvite', 'sban']
 } as const;
 
@@ -58,7 +58,7 @@ export async function punishChecker(client: Client, message: Message): Promise<v
 function validateCommands(commands: string[]): ValidationResult[] {
     return commands
         .map((cmd, index) => ({
-            isValid: TIME_PATTERN.test(cmd) || SIMPLE_PATTERN.test(cmd) || URL_PATTERN.test(cmd) || ['после', 'потом', 'далее'].includes(cmd.toLowerCase()),
+            isValid: TIME_PATTERN.test(cmd) || SIMPLE_PATTERN.test(cmd) || URL_PATTERN.test(cmd) || ['после', 'потом', 'далее'].includes(cmd.toLowerCase()) || cmd.includes('<@&1316831633554542670>'),
             index: index + 1, 
             command: cmd
         }))

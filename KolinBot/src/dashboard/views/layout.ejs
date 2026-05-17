@@ -1,0 +1,89 @@
+<% if (part === 'header') { %>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <title><%= title %> — Blackberry Admin</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-main: #0b0d0e;
+            --bg-card: #15181b;
+            --accent: #FF6B00;
+            --text-main: #e1e1e1;
+            --text-dim: #9ba1a6;
+            --border: #2d3238;
+            --danger: #ff4d4d;
+            --success: #00c853;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg-main); color: var(--text-main); line-height: 1.6; }
+        .navbar { background: rgba(21,24,27,0.8); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 0.75rem 2rem; position: sticky; top: 0; z-index: 1000; }
+        .nav-container { max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+        .nav-brand { font-weight: 900; font-size: 1.3rem; color: #fff; text-decoration: none; }
+        .nav-brand span { color: var(--accent); }
+        .nav-links { display: flex; gap: 0.5rem; }
+        .nav-link { color: var(--text-dim); text-decoration: none; padding: 0.6rem 1rem; border-radius: 8px; font-size: 0.9rem; transition: 0.2s; }
+        .nav-link:hover, .nav-link.active { color: #fff; background: rgba(255,107,0,0.1); }
+        .nav-link.active { color: var(--accent); }
+        .container { max-width: 1400px; margin: 2rem auto; padding: 0 1.5rem; }
+        .card, .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; }
+        .btn { padding: 0.7rem 1.4rem; border-radius: 10px; font-weight: 600; cursor: pointer; transition: 0.2s; border: none; display: inline-flex; align-items: center; gap: 8px; color: #fff; text-decoration: none; font-size: 0.85rem; }
+        .btn-primary { background: var(--accent); }
+        .btn-primary:hover { background: #e66000; transform: translateY(-1px); }
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        .data-table th { text-align: left; color: var(--text-dim); padding: 1rem; border-bottom: 1px solid var(--border); font-size: 0.75rem; text-transform: uppercase; }
+        .data-table td { padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 2000; backdrop-filter: blur(8px); }
+        .modal.active { display: flex; }
+        .search-input { background: var(--bg-main); border: 1px solid var(--border); color: var(--text-main); padding: 0.7rem 1rem; border-radius: 10px; font-size: 0.9rem; }
+        .search-input:focus { outline: none; border-color: var(--accent); }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/dashboard" class="nav-brand"><span>BLACK</span>BERRY</a>
+            <div class="nav-links">
+                <a href="/dashboard" class="nav-link <%= currentPage === 'dashboard' ? 'active' : '' %>">Дашборд</a>
+                <a href="/dashboard/forms" class="nav-link <%= currentPage === 'forms' ? 'active' : '' %>">Формы</a>
+                <a href="/dashboard/security" class="nav-link <%= currentPage === 'security' ? 'active' : '' %>">Security</a>
+                <a href="/dashboard/inspections" class="nav-link <%= currentPage === 'inspections' ? 'active' : '' %>">Проверки</a>
+                <a href="/dashboard/admin-logs" class="nav-link <%= currentPage === 'admin-logs' ? 'active' : '' %>">Админ-логи</a>
+            </div>
+            <div style="display:flex; align-items:center; gap:15px;">
+                <span style="font-size:0.85rem; font-weight:600;"><%= user ? user.username : 'Admin' %></span>
+                <a href="/logout" style="color:var(--danger);"><i class="fas fa-power-off"></i></a>
+            </div>
+        </div>
+    </nav>
+    <main class="container">
+<% } else if (part === 'footer') { %>
+    </main>
+    <script>
+        function showModal(id) { 
+            const modal = document.getElementById(id);
+            if(modal) modal.classList.add('active');
+        }
+        function closeModal(id) { 
+            const modal = document.getElementById(id);
+            if(modal) modal.classList.remove('active');
+        }
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+    </script>
+</body>
+</html>
+<% } %>

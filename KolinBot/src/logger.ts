@@ -1,20 +1,20 @@
 import {
-  EmbedBuilder,
-  TextChannel,
-  GuildMember,
-  User,
-  Message,
-  GuildChannel,
-  Client,
-  PartialGuildMember,
   AttachmentBuilder,
   AuditLogEvent,
+  Client,
+  EmbedBuilder,
   Guild,
+  GuildChannel,
+  GuildMember,
+  Message,
+  PartialGuildMember,
   PartialMessage,
+  TextChannel,
+  User,
   VoiceState,
 } from "discord.js";
-import { factionByDiscordID, FRACTION_INFO } from "./utils/constants/fractions";
-import { getStateFractionRoles, getStateServerIds, getAdminLogServerIds, getAdminLogChannelId } from "./utils/config";
+import {factionByDiscordID, FRACTION_INFO} from "./utils/constants/fractions";
+import {getAdminLogServerIds, getStateFractionRoles, getStateServerIds} from "./utils/config";
 import * as fs from 'fs';
 import * as path from 'path';
 

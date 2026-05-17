@@ -79,21 +79,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             .setTimestamp()
             .setFooter({ text: `User ID: ${interaction.user.id} | Blackberry Security` });
 
-        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-            new ButtonBuilder()
-                .setCustomId('check_approve')
-                .setLabel('Нарушение обнаружено')
-                .setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder()
-                .setCustomId('check_deny')
-                .setLabel('Чист')
-                .setStyle(ButtonStyle.Danger)
-        );
 
         await channel.send({ 
             content: `<@&${selected.roleId}>`, 
-            embeds: [embed],
-            components: [row]
+            embeds: [embed]
         });
 
         await interaction.editReply({ content: '✅ Запрос отправлен и занесен в базу данных.' });
