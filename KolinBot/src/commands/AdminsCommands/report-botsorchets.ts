@@ -1,12 +1,5 @@
-import { 
-    EmbedBuilder, 
-    ChatInputCommandInteraction, 
-    SlashCommandBuilder,
-    ActionRowBuilder,
-    ButtonBuilder,
-    ButtonStyle
-} from 'discord.js';
-import { addSecurityRequest } from '../../databases/sqlite'
+import {ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder} from 'discord.js';
+import {addSecurityRequest} from '../../databases/sqlite'
 
 export const data = new SlashCommandBuilder()
     .setName("запрос-проверки")
@@ -79,9 +72,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             .setTimestamp()
             .setFooter({ text: `User ID: ${interaction.user.id} | Blackberry Security` });
 
+<<<<<<< HEAD
 
         await channel.send({ 
             content: `<@&${selected.roleId}>`, 
+=======
+        await channel.send({ 
+            content: `<@&${selected.roleId}>`,
+>>>>>>> bc3f4f14821daa3e240a045a6405d74d1b0933d4
             embeds: [embed]
         });
 

@@ -1,3 +1,5 @@
+// noinspection SqlResolve
+
 import Database from 'better-sqlite3';
 import path from 'path';
 
@@ -199,7 +201,8 @@ export interface Infiltration {
 // ============================================
 
 export function pushInfiltration(rank: number, faction: string, detectivefaction: string, detectiveid: string, newnickname: string, oldnickname: string, passport: string) {
-  db.prepare(`INSERT OR REPLACE INTO infiltrations (rank, faction, detectivefaction, detectiveid, newnickname, oldnickname, passport)
+    // language=SQL format=false
+    db.prepare(`INSERT OR REPLACE INTO infiltrations (rank, faction, detectivefaction, detectiveid, newnickname, oldnickname, passport)
     VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run(rank, faction, detectivefaction, detectiveid, newnickname, oldnickname, passport)
 }
