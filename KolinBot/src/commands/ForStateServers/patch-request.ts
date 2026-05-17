@@ -2,13 +2,15 @@ import {
     ActionRowBuilder,
     ButtonBuilder,
     ButtonStyle,
-    ChatInputCommandInteraction, Colors,
+    ChatInputCommandInteraction,
+    Colors,
     EmbedBuilder,
     MessageFlags,
     SlashCommandBuilder,
 } from "discord.js";
 import {DETECTIVES_INFO} from "../../utils/constants/fractions";
-import { getFaction } from "../../utils/utilsState";
+import {getFaction} from "../../utils/utilsState";
+import {POSITIONS_STATE_INFO} from "../../utils/config";
 
 export const data = new SlashCommandBuilder()
     .setName("запрос-нашивки")
@@ -21,7 +23,7 @@ export const data = new SlashCommandBuilder()
     )
     .addStringOption((opt) =>
         opt
-            .setName("позиция")
+            .setName("отдел")
             .setDescription("Ваш отдел или должность (Пример: FPB, D. Head FPB)")
             .setRequired(true),
     )
@@ -55,7 +57,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
     }
 
     const passport = inter.options.getInteger("паспорт", true);
-    const position = inter.options.getString("позиция", true).trim();
+    const position = inter.options.getString("отдел", true).trim();
 
     const faction = getFaction(inter.guild?.id, inter.guild?.name);
     if (!faction) {
@@ -65,7 +67,17 @@ export async function execute(inter: ChatInputCommandInteraction) {
             flags: MessageFlags.Ephemeral,
         });
     }
+    const factionState = POSITIONS_STATE_INFO[faction.abbreviation];
 
+    if (!['DD', 'DB', 'CID'].includes(faction.abbreviation)) {
+        // FIXME: ПРОВЕРЬ, НЕ ТЕСТИЛ
+        if (!factionState || !factionState.compiled_positions?.includes(position)) {
+            return inter.reply({
+                content: `❌ **Ошибка:** Неверно указан отдел. Доступные Вам отделы: ${factionState?.positions || 'Список пуст'}`,
+                flags: MessageFlags.Ephemeral
+            });
+        }
+    }
     const isDetectiveFaction = Object.values(DETECTIVES_INFO).some(
         (info) => info.discord_id === inter.guild?.id,
     );

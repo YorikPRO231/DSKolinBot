@@ -4,6 +4,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 import {getAllFiles} from './utils/fileUtils';
 import * as config from "./utils/config";
+import {POSITIONS_STATE_INFO} from "./utils/config";
 
 
 import {DETECTIVES_INFO, FRACTION_INFO} from './utils/constants/fractions'
@@ -133,10 +134,17 @@ async function registerGuildCommands(commands: any[]) {
     }
     
     const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
-    
-    const guildIds = new Set<string>();
-    config.getAllServerIds().forEach(id => guildIds.add(id));
-    
+
+    let guildIds = new Set<string>();
+    // TODO: Хочешь убери, хочешь оставь
+    const devServers = ['1467227742037741846', '1498687307593683174']
+
+    if (process.env.ENVIRONMENT === 'dev') {
+        console.warn('Загрузка девелоп серверов....')
+        devServers.forEach(id => guildIds.add(id));
+    } else {
+        config.getAllServerIds().forEach(id => guildIds.add(id));
+    }
     console.log(`🎯 Серверы для регистрации: ${Array.from(guildIds).join(', ')}`);
     
     for (const guildId of guildIds) {
@@ -217,6 +225,14 @@ async function start() {
     await loadEvents();
 
     startGoogleFormsServer()
+    console.log('Начинаю формат должностей гос..')
+    for (const p of Object.values(POSITIONS_STATE_INFO)) {
+        for (const position of p.positions) {
+            for (const branch of p.branches) {
+                p.compiled_positions.push(`${position} ${branch}`)
+            }
+        }
+    }
 
 
     client.once('ready', (readyClient) => {

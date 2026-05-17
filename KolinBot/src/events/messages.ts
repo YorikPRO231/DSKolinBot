@@ -57,6 +57,8 @@ export async function punishChecker(client: Client, message: Message): Promise<v
 
 function validateCommands(commands: string[]): ValidationResult[] {
     return commands
+        .map(cmd => cmd.replace('`', ''))
+        .filter(cmd => cmd.length > 0)
         .map((cmd, index) => ({
             isValid: TIME_PATTERN.test(cmd) || SIMPLE_PATTERN.test(cmd) || URL_PATTERN.test(cmd) || ['после', 'потом', 'далее'].includes(cmd.toLowerCase()) || cmd.includes('<@&1316831633554542670>'),
             index: index + 1, 

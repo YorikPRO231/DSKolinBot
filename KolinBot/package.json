@@ -12,7 +12,7 @@
     "watch": "tsc --watch"
   },
   "keywords": [],
-  "author": "YorikPRO231",
+  "author": "YorikPRO231 & SorestForest",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
@@ -25,7 +25,6 @@
     "discord-api-types": "^0.38.45",
     "discord.js": "^14.26.2",
     "dotenv": "^17.4.1",
-<<<<<<< HEAD
     "express": "^5.2.1",
     "express-session": "^1.19.0"
   },
@@ -34,16 +33,10 @@
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
     "@types/express-session": "^1.19.0",
-=======
-    "express": "^5.2.1"
-  },
-  "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13",
-    "@types/express": "^5.0.6",
->>>>>>> 631c97d27cb7ec1943aedcf4d3127d69d9fe7aba
     "@types/node": "^25.6.0",
+    "express": "^5.2.1",
+    "typescript": "^6.0.2",
     "nodemon": "^3.1.14",
-    "ts-node": "^10.9.2",
-    "typescript": "^6.0.2"
+    "ts-node": "^10.9.2"
   }
 }

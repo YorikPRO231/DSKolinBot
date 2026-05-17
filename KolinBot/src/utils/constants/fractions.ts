@@ -117,7 +117,7 @@ export const FRACTION_INFO: Record<
   },
   GOV: {
     label: "Government",
-    discord_id: `673455835481112599`, 
+    discord_id: `1498687307593683174`, // TODO:" ACTUAL ID
     state: true,
     emoji_id: "<:GOV:1499073847318544394>",
     chp_role_id: "673463209050505247",

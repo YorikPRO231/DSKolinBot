@@ -21,7 +21,7 @@ export const data = new SlashCommandBuilder()
   )
   .addStringOption((opt) =>
     opt
-      .setName("позиция")
+        .setName("отдел")
       .setDescription("Отдел или должность игрока (Пример: FPB, D. Head FPB)")
       .setRequired(true),
   )
@@ -71,7 +71,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
   }
 
   const passport = inter.options.getInteger("паспорт", true);
-  const position = inter.options.getString("позиция", true).trim();
+    const position = inter.options.getString("отдел", true).trim();
 
   const faction = getFaction(inter.guild?.id, inter.guild?.name);
   if (!faction) {
