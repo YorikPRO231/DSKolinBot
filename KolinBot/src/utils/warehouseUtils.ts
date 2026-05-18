@@ -133,7 +133,7 @@ export function analyzeLogData(logData: string): WarehouseData {
         let actionQuantity = 0;
         if (crimeMatch || factionMatch) {
             actionQuantity = 1;
-        } else if (stackableMatch) {
+        } else if (stackableMatch) {    
             if (['Фракционный транспорт', 'Транспорт', 'Фракционный бот', 'Фракционный крафт',
                 'Квартира', 'Дом', 'Фракционный склад', 'Арендованный склад', 'Посылка', 'Шкаф кемпера', 'DarkVito'].includes(line.type)) {
                 const m = line.action.match(count_patterns[0])

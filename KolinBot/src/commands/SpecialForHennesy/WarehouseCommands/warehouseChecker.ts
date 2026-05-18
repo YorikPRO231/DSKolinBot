@@ -336,7 +336,7 @@ async function processPunishment(
         return logError(inter.client, new Error('Warehouse channel ID not found'), 'Обработка склада V2')
     }
 
-    const embed = new EmbedBuilder().setColor(Colors.Gold).setDescription(`\`\`\`\n${formReportData(report)[1]}\`\`\``)
+    const embed = new EmbedBuilder().setColor(Colors.Gold).setDescription(`Админ: ${adminDisplayName}, проверяемый: ${passport}\n\`\`\`\n${formReportData(report)[1]}\`\`\``)
     await channel.send({embeds: [embed]})
 
     if ('editReply' in inter && typeof inter.editReply === 'function') {
