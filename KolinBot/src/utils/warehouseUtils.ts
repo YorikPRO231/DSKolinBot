@@ -12,7 +12,8 @@ export interface ItemData {
     location: string,
     totalLeak: number,
     customWarehouse: number,
-    traded: number
+    traded: number,
+    camper: number,
 }
 
 export interface LogLine {
@@ -93,6 +94,7 @@ export function analyzeLogData(logData: string): WarehouseData {
             house: 0,
             sold: 0,
             inventory: 0,
+            camper: 0,
             location: 'Unknown',
             status: 'Processing',
             name: name,
@@ -133,7 +135,7 @@ export function analyzeLogData(logData: string): WarehouseData {
             actionQuantity = 1;
         } else if (stackableMatch) {
             if (['Фракционный транспорт', 'Транспорт', 'Фракционный бот', 'Фракционный крафт',
-                'Квартира', 'Дом', 'Фракционный склад', 'Арендованный склад', 'Посылка'].includes(line.type)) {
+                'Квартира', 'Дом', 'Фракционный склад', 'Арендованный склад', 'Посылка', 'Шкаф кемпера', 'DarkVito'].includes(line.type)) {
                 const m = line.action.match(count_patterns[0])
                 if (m) {
                     actionQuantity = parseInt(m[1])
@@ -198,6 +200,9 @@ export function analyzeLogData(logData: string): WarehouseData {
                 break;
             case 'Трейд':
                 item.traded += sign * actionQuantity
+                break;
+            case 'Шкаф кемпера':
+                item.camper += sign * actionQuantity
                 break;
         }
         item.location = line.type;
