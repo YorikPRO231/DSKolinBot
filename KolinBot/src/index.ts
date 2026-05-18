@@ -4,10 +4,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 import {getAllFiles} from './utils/fileUtils';
 import * as config from "./utils/config";
-<<<<<<< HEAD
-=======
 import {POSITIONS_STATE_INFO} from "./utils/config";
->>>>>>> bc3f4f14821daa3e240a045a6405d74d1b0933d4
 
 
 import {DETECTIVES_INFO, FRACTION_INFO} from './utils/constants/fractions'
@@ -15,7 +12,7 @@ import {logError} from './logger';
 import {initializeGoogleFormsServer, startGoogleFormsServer} from './server';
 
 
-dotenv.config();
+dotenv.config({path: '.env'});
 
 declare module 'discord.js' {
   interface Client {
@@ -228,8 +225,6 @@ async function start() {
     await loadEvents();
 
     startGoogleFormsServer()
-<<<<<<< HEAD
-=======
     console.log('Начинаю формат должностей гос..')
     for (const p of Object.values(POSITIONS_STATE_INFO)) {
         for (const position of p.positions) {
@@ -238,7 +233,6 @@ async function start() {
             }
         }
     }
->>>>>>> bc3f4f14821daa3e240a045a6405d74d1b0933d4
 
 
     client.once('ready', (readyClient) => {

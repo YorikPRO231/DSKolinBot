@@ -1,17 +1,28 @@
 import {
+    ActionRowBuilder,
     AttachmentBuilder,
+    ButtonBuilder,
+    ButtonInteraction,
     ChatInputCommandInteraction,
     Colors,
     EmbedBuilder,
     MessageFlags,
+    ModalBuilder,
+    ModalSubmitInteraction,
     PermissionFlagsBits,
-    SlashCommandBuilder
+    SlashCommandBuilder,
+    StringSelectMenuBuilder,
+    StringSelectMenuInteraction,
+    TextInputBuilder,
+    TextInputStyle
 } from 'discord.js';
-import {getAdminSurname} from '../../../databases/sqlite';
-import {FRACTION_TYPES, FractionType} from "../../../utils/constants/fractions";
+import {getAdminSurname, registerDrain} from '../../../databases/sqlite';
+import {FRACTION_INFO, FRACTION_TYPES, FractionType} from "../../../utils/constants/fractions";
 import axios from "axios";
-import {analyzeLogData, WarehouseData} from "../../../utils/warehouseUtils";
+import {analyzeLogData, formReportData, WarehouseData} from "../../../utils/warehouseUtils";
 import {logError} from "../../../logger";
+import {ButtonStyle, ComponentType} from "discord-api-types/v10";
+import {PUNISHMENT_TYPES} from "../../../utils/constants/punishments";
 
 export const data = new SlashCommandBuilder()
     .setName("warehouse-check")
@@ -40,151 +51,288 @@ export const data = new SlashCommandBuilder()
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
 
+function getAdminDisplayName(inter: ChatInputCommandInteraction): string {
+    const member = inter.guild?.members.cache.get(inter.user.id);
+    return member?.nickname || inter.user.globalName || inter.user.displayName || inter.user.username;
+}
 
 export async function execute(inter: ChatInputCommandInteraction) {
     const adminSurname = getAdminSurname(inter.user.id);
-
+    const adminDisplayName = getAdminDisplayName(inter);
     if (!adminSurname) {
         return inter.reply({content: "Вы не зарегистрированы!", flags: [MessageFlags.Ephemeral]});
     }
     await inter.deferReply();
-    const fraction = inter.options.getString("фракция") as FractionType;
+    const faction = inter.options.getString("фракция") as FractionType;
     const attachment = inter.options.getAttachment("лог-файл", true);
     try {
         const response = await axios.get(attachment.url, {responseType: 'text'});
         const fileContent = response.data;
         const report = analyzeLogData(fileContent)
-        if (report.status != 'LEAKS' && report.status != 'CLEAN') {
+        if (report.status != 'LEAKS' && report.status != 'CLEAN' || !report.passport) {
             return inter.editReply({content: `Не удалось проверить файл: ${report.status}.`})
         }
         const parsed = formReportData(report);
         const files = [new AttachmentBuilder(Buffer.from(parsed[0], 'utf-8'), {name: `report_${report.passport}.txt`})];
-        const embed = new EmbedBuilder().setTitle(`Проверка склада ${fraction} | Blackberry`)
+        const embed = new EmbedBuilder().setTitle(`Проверка склада ${faction} | Blackberry`)
             .setDescription(`\`\`\`${parsed[1]}\`\`\``).setColor(Colors.Purple)
-        return inter.editReply({content: `<@${inter.user.id}>`, embeds: [embed], files});
+        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder()
+                .setCustomId(`warehouse_deny`)
+                .setLabel('Нет нарушений')
+                .setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder()
+                .setCustomId('warehouse_accept')
+                .setLabel('Зафиксировать нарушение')
+                .setStyle(ButtonStyle.Danger)
+        );
+        const message = await inter.editReply({
+            content: `<@${inter.user.id}>`,
+            embeds: [embed],
+            files,
+            components: [row]
+        });
+        if (report.status === 'CLEAN') {
+            return;
+        }
+        await handleWarehouseButtons(message, report.passport, inter.user.id, faction, adminSurname, adminDisplayName, report)
     } catch (e) {
         return logError(inter.client, e as Error, 'Обработка склада v2')
     }
 }
 
 
-export function formReportData(report: WarehouseData): [string, string] {
-    let data = `${report.name}_${report.surname} ${report.passport}\nStatus: ${report.status}\nИнформация о нарушениях:\n`
-    let footer = `Итоговая сводка по нарушению: \n`
-    const vehicle = []
-    const family = []
-    const apartment = []
-    const house = []
-    const customWarehouse = []
-    const sold = []
-    const traded = []
-    data += '----------------------------\n'
-    for (const item of report.items) {
-        let cur = '';
-        cur += `${item.name}` + (item.serial ? `(${item.serial})` : '') + ` ${item.location}\n`
-        cur += `Всего потеряно: ${item.totalLeak}, взято с фракции ${-item.faction}\n`
-        if (item.inventory) {
-            cur += `Инвентарь: ${item.inventory}, `
+const PUNISHMENT_CONFIG = {
+    iban: {type: PUNISHMENT_TYPES.IBAN, name: "IBAN", needsDuration: false},
+    warnban: {type: PUNISHMENT_TYPES.WARN_BAN, name: "Бан + Варн", needsDuration: true, durationUnit: "дн."},
+    ban: {type: PUNISHMENT_TYPES.BAN, name: "Бан", needsDuration: true, durationUnit: "дн."},
+    warn: {type: PUNISHMENT_TYPES.WARN, name: "Варн", needsDuration: false},
+    jail: {type: PUNISHMENT_TYPES.AJAIL, name: "Деморган", needsDuration: true, durationUnit: "мин."},
+    curator: {type: PUNISHMENT_TYPES.WARN, name: "Выговор от куратора", needsDuration: false, isCuratorReprimand: true}
+};
+
+const FRACTION_GROUPS = {
+    MAFIA: [FRACTION_TYPES.MM, FRACTION_TYPES.RM, FRACTION_TYPES.LCN, FRACTION_TYPES.YAK, FRACTION_TYPES.AM] as FractionType[],
+    GANG: [FRACTION_TYPES.FAM, FRACTION_TYPES.LSV, FRACTION_TYPES.ESB, FRACTION_TYPES.MG, FRACTION_TYPES.BSG] as FractionType[],
+    STATE: [FRACTION_TYPES.LSPD, FRACTION_TYPES.LSSD, FRACTION_TYPES.FIB, FRACTION_TYPES.GOV, FRACTION_TYPES.ARMY, FRACTION_TYPES.SASPA] as FractionType[]
+};
+
+export async function handleWarehouseButtons(
+    message: any,
+    passport: string,
+    userid: string,
+    faction: FractionType,
+    adminSurname: string,
+    adminDisplayName: string,
+    report: WarehouseData) {
+    let finished = false;
+    const collector = message.createMessageComponentCollector({componentType: ComponentType.Button, time: 600000});
+    collector.on('collect', async (btnInter: ButtonInteraction) => {
+        if (btnInter.user.id !== userid) {
+            return btnInter.reply({content: "Недостаточно доступа!", flags: [MessageFlags.Ephemeral]});
         }
-        if (item.vehicle) {
-            cur += `Машина: ${item.vehicle}, `;
+
+        if (finished) {
+            return btnInter.reply({
+                content: "Срок использования истек, либо взаимодействие уже было произведено!",
+                flags: [MessageFlags.Ephemeral]
+            });
         }
-        if (item.location === 'Транспорт') {
-            vehicle.push(`${item.name}` + (item.serial ? `(${item.serial})` : '') + `, ${item.totalLeak} шт\n`)
+
+        if (btnInter.customId === 'warehouse_deny') {
+            finished = true;
+            collector.stop();
+            await btnInter.update({content: "✅ Проверка завершена: Нарушений не обнаружено.", components: []});
+            return;
         }
-        if (item.family) {
-            cur += `Семья: ${item.family}, `;
+
+        if (btnInter.customId === 'warehouse_accept') {
+            finished = true;
+            collector.stop();
+            await btnInter.update({components: []});
+            await preparePunishment(btnInter, passport, faction, adminSurname, adminDisplayName, report);
         }
-        if (item.location === 'Семья') {
-            family.push(`${item.name}` + (item.serial ? `(${item.serial})` : '') + `, ${item.totalLeak} шт\n`)
-        }
-        if (item.apartment) {
-            cur += `Квартира: ${item.apartment}, `;
-        }
-        if (item.location === 'Квартира') {
-            apartment.push(`${item.name}` + (item.serial ? `(${item.serial})` : '') + `, ${item.totalLeak} шт\n`)
-        }
-        if (item.house) {
-            cur += `Дом: ${item.house}, `;
-        }
-        if (item.location === 'Дом') {
-            house.push(`${item.name}` + (item.serial ? `(${item.serial})` : '') + `, ${item.totalLeak} шт\n`)
-        }
-        if (item.customWarehouse) {
-            cur += `Арендованный склад: ${item.customWarehouse}`;
-        }
-        if (item.location === 'Арендованный склад') {
-            customWarehouse.push(`${item.name}` + (item.serial ? `(${item.serial})` : '') + `, ${item.totalLeak} шт\n`)
-        }
-        if (item.sold) {
-            cur += `Продано: ${item.sold}, `;
-        }
-        if (item.location === 'DarkVito') {
-            sold.push(`${item.name}` + (item.serial ? `(${item.serial})` : '') + `, ${item.totalLeak} шт\n`)
-        }
-        if (item.traded) {
-            cur += `Передано: ${item.traded}, `;
-        }
-        if (item.traded > 0) {
-            customWarehouse.push(`${item.name}` + (item.serial ? `(${item.serial})` : '') + `, ${item.totalLeak} шт\n`)
-        }
-        if (item.location === 'Передано') {
-            traded.push(`${item.name}` + (item.serial ? `(${item.serial})` : '') + `, ${item.totalLeak} шт\n`)
-        }
-        cur += '\n----------------------------\n'
-        data += cur
-        footer += `${item.name}` + (item.serial ? `(${item.serial})` : '') + `, ${item.totalLeak} шт, ${item.location}\n`
+    });
+}
+
+
+async function preparePunishment(
+    btnInter: ButtonInteraction,
+    passport: string,
+    faction: FractionType,
+    adminSurname: string,
+    adminDisplayName: string,
+    report: WarehouseData) {
+    const isStateFraction = FRACTION_GROUPS.STATE.includes(faction);
+
+    const selectOptions = [
+        {label: 'Бан', description: 'Обычный бан аккаунта', value: 'ban'},
+        {label: 'IBAN', description: 'Перманентный бан', value: 'iban'},
+        {label: 'Варн', description: 'Предупреждение', value: 'warn'},
+        {label: 'Бан + Варн', description: 'Бан и предупреждение одновременно', value: 'warnban'},
+        {label: 'Деморган', description: 'Деморган', value: 'jail'},
+        {label: 'Деморган + Варн', description: "Деморган и варн одновременно", value: 'jailwarn'}
+    ];
+
+    if (isStateFraction) {
+        selectOptions.push({
+            label: 'Выговор от куратора',
+            description: 'Предупреждение с требованием вернуть имущество',
+            value: 'curator'
+        });
     }
-    data += footer
-    let second = ''
-    if (vehicle.length > 0) {
-        second += 'В личном Т/С:\n'
-        for (const item of vehicle) {
-            second += item;
+
+    const punishmentSelect = new StringSelectMenuBuilder()
+        .setCustomId('punish_type_select')
+        .setPlaceholder('Выберите тип наказания')
+        .addOptions(selectOptions);
+    const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(punishmentSelect);
+    const selectMsg = await btnInter.followUp({
+        content: `**Выберите тип наказания для #${passport}**\nФракция: ${FRACTION_INFO[faction]?.label || faction}`,
+        components: [row],
+        flags: [MessageFlags.Ephemeral]
+    });
+    const collector = selectMsg.createMessageComponentCollector({
+        componentType: ComponentType.StringSelect,
+        time: 60000
+    });
+    collector.on('collect', async (selectInter: StringSelectMenuInteraction) => {
+        if (selectInter.user.id !== btnInter.user.id) {
+            return btnInter.reply({content: "Недостаточно доступа!", flags: [MessageFlags.Ephemeral]});
         }
-        second += '\n'
-    }
-    if (family.length > 0) {
-        second += 'В организации:\n'
-        for (const item of family) {
-            second += item;
+        const punishmentType = selectInter.values[0];
+        const config = PUNISHMENT_CONFIG[punishmentType as keyof typeof PUNISHMENT_CONFIG];
+        if (!config.needsDuration) {
+            await selectInter.update({components: []});
+            await processPunishment(selectInter, passport, faction, adminSurname, adminDisplayName, punishmentType, null, report);
+            return;
         }
-        second += '\n'
-    }
-    if (apartment.length > 0) {
-        second += 'В квартире:\n'
-        for (const item of apartment) {
-            second += item;
+        const modal = new ModalBuilder()
+            .setCustomId(`duration_modal_${passport}_${punishmentType}`)
+            .setTitle(`Срок наказания`);
+        const durationInput = new TextInputBuilder()
+            .setCustomId('duration')
+            .setLabel(punishmentType === 'jail' ? 'Срок в минутах' : 'Срок в днях')
+            .setPlaceholder(punishmentType === 'jail' ? '100' : '30')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMinLength(1)
+            .setMaxLength(3);
+        modal.addComponents(
+            new ActionRowBuilder<TextInputBuilder>().addComponents(durationInput),
+        );
+        await selectInter.showModal(modal);
+        const submitted = await selectInter.awaitModalSubmit({time: 60000}).catch(() => null);
+        if (submitted) {
+            const duration = submitted.fields.getTextInputValue('duration');
+            await submitted.reply({content: "⏳ Обработка...", flags: [MessageFlags.Ephemeral]});
+            await processPunishment(submitted, passport, faction, adminSurname, adminDisplayName, punishmentType, duration, report);
+            await selectMsg.delete().catch(() => {
+            });
         }
-        second += '\n'
-    }
-    if (house.length > 0) {
-        second += 'В доме:\n'
-        for (const item of house) {
-            second += item;
+    })
+}
+
+async function processPunishment(
+    inter: StringSelectMenuInteraction | ModalSubmitInteraction,
+    passport: string,
+    faction: FractionType,
+    adminSurname: string,
+    adminDisplayName: string,
+    punishmentType: string,
+    duration: string | null,
+    report: WarehouseData) {
+    const config = PUNISHMENT_CONFIG[punishmentType as keyof typeof PUNISHMENT_CONFIG];
+    if (punishmentType === 'curator') {
+        let curatorText = `discord ${passport}\n`
+        let storage = ''
+        let footer = ''
+        for (const item of report.items) {
+            if (item.totalLeak <= 0) {
+                await logError(inter.client, new Error(`item.totalLeak <= 0 ${item.totalLeak}`), 'Warehouse v2')
+                continue
+            }
+            if (item.vehicle && !storage.includes('машине')) {
+                storage += 'машине, '
+            }
+            if (item.family && !storage.includes('семье')) {
+                storage += 'семье, '
+            }
+            if (item.apartment && !storage.includes('квартире')) {
+                storage += 'квартире, '
+            }
+            if (item.house && !storage.includes('доме')) {
+                storage += 'доме, '
+            }
+            if (item.customWarehouse && !storage.includes('арендованном складе')) {
+                storage += 'арендованном складе, '
+            }
+            if (item.sold && !storage.includes('DarkVito')) {
+                storage += 'DarkVito, '
+            }
+            if (item.traded && !storage.includes('передано')) {
+                storage += 'передано, '
+            }
+            footer += `${item.name}` + (item.serial ? `(${item.serial})` : '') + `, ${item.totalLeak} шт, ${item.location}\n`
         }
-        second += '\n'
-    }
-    if (customWarehouse.length > 0) {
-        second += 'В своем складе:\n'
-        for (const item of customWarehouse) {
-            second += item;
+        curatorText += `Хранение гос. имущества в ${storage.trim().slice(0, -1)}\n`
+        curatorText += `\\\`\\\`\\\`\n${footer}\n\\\`\\\`\\\`\n`
+        curatorText += '24 часа на возврат указанных предметов фракции (игрокам/склад)\n\\*\\*1/1 - next warn\\*\\*\n'
+        const curatorEmbed = new EmbedBuilder()
+            .setColor(0xFFA500)
+            .setDescription(curatorText);
+        registerDrain(inter.user.id, passport, config.type, report, '-');
+        if ('editReply' in inter && typeof inter.editReply === 'function') {
+            return inter.editReply({
+                content: 'Ниже приведен готовый выговор куратора',
+                embeds: [curatorEmbed]
+            });
+        } else {
+            return inter.reply({embeds: [curatorEmbed]});
         }
-        second += '\n'
     }
-    if (sold.length > 0) {
-        second += 'Продано DarkVito:\n'
-        for (const item of sold) {
-            second += item;
-        }
-        second += '\n'
+    let commandText: string, durationText: string;
+    switch (punishmentType) {
+        case 'iban':
+            commandText = `offiban ${passport} Слив склада ${faction} // by ${adminSurname}`;
+            durationText = `Перманентно`;
+            break;
+        case 'warnban':
+            const days = duration || "30";
+            commandText = `offban ${passport} ${days} Слив склада ${faction} // by ${adminSurname}\noffwarn ${passport} Слив склада ${faction} // by ${adminSurname}`;
+            durationText = `${days} дн. + варн`;
+            break;
+        case 'ban':
+            const banDays = duration || "30";
+            commandText = `offban ${passport} ${banDays} Слив склада ${faction} // by ${adminSurname}`;
+            durationText = `${banDays} дн.`;
+            break;
+        case 'warn':
+            commandText = `offwarn ${passport} Слив склада ${faction} // by ${adminSurname}`;
+            durationText = "1 варн";
+            break;
+        case 'jail':
+            const mins = duration || "100";
+            commandText = `offprison ${passport} ${mins} Слив склада ${faction} // by ${adminSurname}`;
+            durationText = `${mins} мин.`;
+            break;
+        case 'jailwarn':
+            const minutes = duration || "100";
+            commandText = `offprison ${passport} ${minutes} Слив склада ${faction} // by ${adminSurname}\noffwarn ${passport} Слив склада ${faction} // by ${adminSurname}`;
+            durationText = `${minutes} мин. + варн`;
+            break;
+        default:
+            commandText = `offban ${passport} 30 Слив склада ${faction} // by ${adminSurname}`;
+            durationText = `30 дн.`;
     }
-    if (traded.length > 0) {
-        second += 'Передано:\n'
-        for (const item of traded) {
-            second += item;
-        }
-        second += '\n'
+    const responseContent = `✅ Нарушение зарегистрировано: **${adminDisplayName}**\nНаказание: ${config.name} ${durationText}\n\n**Команда:**\n\`${commandText}\``;
+
+    registerDrain(inter.user.id, passport, config.type, report, durationText);
+    // TODO: если хочешь, верни sendReport, я в нем смысла не вижу и мои кураторы гос жалуются. У гос не возращай точно, либо пусть в другой канал приходит.
+
+    if ('editReply' in inter && typeof inter.editReply === 'function') {
+        await inter.editReply({content: responseContent});
+    } else {
+        await inter.followUp({content: responseContent, flags: [MessageFlags.Ephemeral]});
     }
-    return [data, second];
 }

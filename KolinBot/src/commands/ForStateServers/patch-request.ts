@@ -71,7 +71,6 @@ export async function execute(inter: ChatInputCommandInteraction) {
     const factionState = POSITIONS_STATE_INFO[faction.abbreviation];
 
     if (!['DD', 'DB', 'CID'].includes(faction.abbreviation)) {
-        // FIXME: ПРОВЕРЬ, НЕ ТЕСТИЛ
         if (!factionState || !factionState.compiled_positions?.includes(position)) {
             return inter.reply({
                 content: `❌ **Ошибка:** Неверно указан отдел. Доступные Вам отделы: ${factionState?.positions || 'Список пуст'}`,

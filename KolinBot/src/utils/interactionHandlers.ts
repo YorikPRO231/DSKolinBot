@@ -7,11 +7,10 @@ import {
   handleTransferSelect
 } from "./transferUtils";
 import {handleButton, handleModal} from "./detectiveUtils";
-<<<<<<< HEAD
+
+
 import {handleAdminRegistration, handleNickKick, handleTwinkKick} from "./adminUtils";
-=======
-import {handleAdminRegistration, handleCheckSystem, handleNickKick, handleTwinkKick} from "./adminUtils";
->>>>>>> bc3f4f14821daa3e240a045a6405d74d1b0933d4
+
 
 export async function handleSlashCommand(interaction: any) {
   const command = interaction.client.commands.get(interaction.commandName);

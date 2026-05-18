@@ -150,7 +150,9 @@ export function analyzeLogData(logData: string): WarehouseData {
             }
         }
         let sign = 0;
-        if (line.action.toLowerCase().match('берет|забрал|получил') || line.type === 'Фракционный крафт') {
+        if (line.type === 'Посылка') {
+            sign = -1
+        } else if (line.action.toLowerCase().match('берет|забрал|получил') || line.type === 'Фракционный крафт') {
             sign = -1
         } else if (line.action.toLowerCase().match('положил|кладет|передал')) {
             sign = 1
@@ -165,6 +167,7 @@ export function analyzeLogData(logData: string): WarehouseData {
         } else {
             return errorWarehouse(`Couldnt read operation for ${line.type} ${line.action}`)
         }
+
         item.inventory -= sign * actionQuantity
         switch (line.type) {
             case 'Квартира':
@@ -192,39 +195,62 @@ export function analyzeLogData(logData: string): WarehouseData {
                 item.customWarehouse += sign * actionQuantity
                 break;
             case 'Посылка':
-                item.inventory += sign * actionQuantity
                 break;
             case 'Трейд':
-                if (sign == 1) { // ignoring income
-                    item.traded += sign * actionQuantity
-                    item.location = 'Передано'
-                }
+                item.traded += sign * actionQuantity
                 break;
         }
         item.location = line.type;
     }
     for (const [_, item] of data.entries()) {
         let itemsLost = 0;
+        let mx = 0;
         if (item.vehicle > 0) {
             itemsLost += item.vehicle;
+            mx = item.vehicle;
+            item.location = 'Машина'
         }
         if (item.family > 0) {
             itemsLost += item.family
+            if (item.family > mx) {
+                mx = item.family
+                item.location = 'Семья'
+            }
         }
         if (item.apartment > 0) {
             itemsLost += item.apartment
+            if (item.apartment > mx) {
+                mx = item.apartment
+                item.location = 'Квартира'
+            }
         }
         if (item.house > 0) {
             itemsLost += item.house;
+            if (item.house > mx) {
+                mx = item.house
+                item.location = 'Дом'
+            }
         }
         if (item.sold > 0) {
             itemsLost += item.sold
+            if (item.sold > mx) {
+                mx = item.sold
+                item.location = 'Продано'
+            }
         }
         if (item.customWarehouse > 0) {
             itemsLost += item.customWarehouse
+            if (item.customWarehouse > mx) {
+                mx = item.customWarehouse;
+                item.location = 'Арендованный склад'
+            }
         }
         if (item.traded > 0) {
             itemsLost += item.traded
+            if (item.traded > mx) {
+                mx = item.traded
+                item.location = 'Передано'
+            }
         }
         if (item.sold > 0 || (item.faction < 0 && itemsLost > 0)) {
             item.status = 'LEAK'
@@ -243,4 +269,119 @@ export function analyzeLogData(logData: string): WarehouseData {
         report.status = 'CLEAN'
     }
     return report;
+}
+
+export function formReportData(report: WarehouseData): [string, string] {
+    let data = `${report.name}_${report.surname} ${report.passport}\nStatus: ${report.status}\nИнформация о нарушениях:\n`
+    let footer = `Итоговая сводка по нарушению: \n`
+    const vehicle = []
+    const family = []
+    const apartment = []
+    const house = []
+    const customWarehouse = []
+    const sold = []
+    const traded = []
+    data += '----------------------------\n'
+    for (const item of report.items) {
+        let cur = '';
+        cur += `${item.name}` + (item.serial ? `(${item.serial})` : '') + `, Скопление обнаружено в: ${item.location}\n`
+        cur += `    Взято с фракции предметов: ${-item.faction}\n    `
+        if (item.inventory) {
+            cur += `Инвентарь: ${item.inventory}, `
+        }
+        if (item.vehicle) {
+            cur += `Машина: ${item.vehicle}, `;
+            if (item.vehicle > 0) {
+                vehicle.push(`${item.name}` + (item.serial ? `(${item.serial})` : '') + `, ${item.vehicle} шт\n`)
+            }
+        }
+        if (item.family) {
+            cur += `Семья: ${item.family}, `;
+            if (item.family > 0) {
+                family.push(`${item.name}` + (item.serial ? `(${item.serial})` : '') + `, ${item.family} шт\n`)
+            }
+        }
+        if (item.apartment) {
+            cur += `Квартира: ${item.apartment}, `;
+            if (item.apartment > 0) {
+                apartment.push(`${item.name}` + (item.serial ? `(${item.serial})` : '') + `, ${item.apartment} шт\n`)
+            }
+        }
+        if (item.house) {
+            cur += `Дом: ${item.house}, `;
+            if (item.house > 0) {
+                house.push(`${item.name}` + (item.serial ? `(${item.serial})` : '') + `, ${item.house} шт\n`)
+            }
+        }
+        if (item.customWarehouse) {
+            cur += `Арендованный склад: ${item.customWarehouse}, `;
+            if (item.customWarehouse > 0) {
+                customWarehouse.push(`${item.name}` + (item.serial ? `(${item.serial})` : '') + `, ${item.customWarehouse} шт\n`)
+            }
+        }
+        if (item.sold) {
+            cur += `Продано: ${item.sold}, `;
+            sold.push(`${item.name}` + (item.serial ? `(${item.serial})` : '') + `, ${item.sold} шт\n`)
+        }
+        if (item.traded) {
+            const st = item.traded > 0 ? 'Передано' : 'Получено'
+            cur += `${st}: ${Math.abs(item.traded)}, `;
+            traded.push(`${item.name}` + (item.serial ? `(${item.serial})` : '') + `, ${item.traded} шт\n`)
+        }
+        cur += '\n----------------------------\n'
+        data += cur
+        footer += ` ${item.name}` + (item.serial ? `(${item.serial})` : '') + `, ${item.totalLeak} шт, ${item.location}\n`
+    }
+    data += footer
+    let second = ''
+    if (vehicle.length > 0) {
+        second += 'В личном Т/С:\n'
+        for (const item of vehicle) {
+            second += '     ' + item;
+        }
+        second += '\n'
+    }
+    if (family.length > 0) {
+        second += 'В организации:\n'
+        for (const item of family) {
+            second += '     ' + item;
+        }
+        second += '\n'
+    }
+    if (apartment.length > 0) {
+        second += 'В квартире:\n'
+        for (const item of apartment) {
+            second += '     ' + item;
+        }
+        second += '\n'
+    }
+    if (house.length > 0) {
+        second += 'В доме:\n'
+        for (const item of house) {
+            second += '     ' + item;
+        }
+        second += '\n'
+    }
+    if (customWarehouse.length > 0) {
+        second += 'В своем складе:\n'
+        for (const item of customWarehouse) {
+            second += '     ' + item;
+        }
+        second += '\n'
+    }
+    if (sold.length > 0) {
+        second += 'Продано DarkVito:\n'
+        for (const item of sold) {
+            second += '     ' + item;
+        }
+        second += '\n'
+    }
+    if (traded.length > 0) {
+        second += 'Получено(-)/Передано(+):\n'
+        for (const item of traded) {
+            second += '     ' + item;
+        }
+        second += '\n'
+    }
+    return [data, second];
 }
