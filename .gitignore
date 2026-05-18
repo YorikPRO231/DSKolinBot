@@ -22,7 +22,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 venv/
-.env
 
 # --- Node.js (BetterDiscord / Discord.js) ---
 node_modules/
@@ -32,7 +31,7 @@ dist/
 # --- Конфиденциальные данные ---
 *.token
 *.config
-.env
+KolinBot/.env
 
 # --- Базы данных ---
 *.sqlite
@@ -40,3 +39,4 @@ dist/
 *.sqlite-shm
 
 data/
+/.idea/

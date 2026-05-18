@@ -2,6 +2,7 @@
 
 import Database from 'better-sqlite3';
 import path from 'path';
+import {WarehouseData} from "../utils/warehouseUtils";
 
 const db = new Database(path.join(__dirname, '../data.sqlite'));
 
@@ -19,6 +20,16 @@ db.exec(`
     punishment TEXT NOT NULL,
     items TEXT NOT NULL,
     log_file BLOB NOT NULL,
+    duration TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  
+  CREATE TABLE IF NOT EXISTS warehouse_drain_v2 (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    passport TEXT NOT NULL,
+    adminId TEXT NOT NULL,
+    punishment TEXT NOT NULL,
+    report_data TEXT NOT NULL,
     duration TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
@@ -238,6 +249,37 @@ export function getSecurityAccess(discordId: string): string | null {
   const row = db.prepare("SELECT security FROM admins WHERE discord_id = ?").get(discordId) as { security: string } | undefined;
   return row ? row.security : null;
 }
+
+/*
+* Warehouse V2
+* */
+
+export function registerDrain(adminId: string, passport: string, punishment: string, report: WarehouseData, durationText: string) {
+  const data = JSON.stringify(report);
+  db.prepare(`
+    INSERT INTO warehouse_drain_v2 (adminId, passport, punishment, report_data, duration, created_at)
+    VALUES (?, ?, ?, ?, ?, datetime('now', 'localtime'))
+  `).run(adminId, passport, punishment, data, durationText)
+}
+
+export interface WarehouseLine {
+  adminId: string;
+  passport: string;
+  punishment: string;
+  report_data: string;
+  duration: string;
+  created_at: string;
+}
+
+export function retrieveDrain(passport: string): WarehouseLine | undefined {
+  return db.prepare(`
+    SELECT * FROM warehouse_drain_v2
+    WHERE passport = ?
+    ORDER BY id DESC
+      LIMIT 1
+  `).get(passport) as WarehouseLine | undefined;
+}
+
 
 // ============================================
 // СКЛАД 

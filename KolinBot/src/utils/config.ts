@@ -1,7 +1,7 @@
 import {DETECTIVES_INFO, FRACTION_INFO} from "./constants/fractions";
 
 export const CHECK_SERVER_ID = ['1467227742037741846']
-export const ADMINS_SERVER_ID = [`1316831633466458192`]
+export const ADMINS_SERVER_ID = [`1467227742037741846`]
 
 
 export function getStateServerIds()  {
@@ -44,7 +44,7 @@ export function getAdminLogServerIds(): string[] {
 export const GOV_PATCH_LOG_CHANNEL_ID = '1380141440944046140'
 export const TRANSFER_LOG_CHANNEL_ID = '1499391643076530278'
 
-export const PUNISHMENT_ADMINS_CHANNEL_ID = '1316831634376364056'
+export const PUNISHMENT_ADMINS_CHANNEL_ID = '1467227742625071298'
 
 
 export const GOV_ACCESS_PATCH_REQUEST = ['871764495884763177', '674318969116819487', '835224536794267690']
@@ -95,3 +95,7 @@ export const POSITIONS_STATE_INFO: Record<string, {
         compiled_positions: ['']
     },
 }
+<<<<<<< HEAD
+=======
+
+>>>>>>> dd425c6dae134013772a334dd7dbc861047be186

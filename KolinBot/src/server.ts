@@ -1,17 +1,17 @@
-import express, { Request, Response, NextFunction } from "express";
+import express, {NextFunction, Request, Response} from "express";
 import session from "express-session";
 import passport from "passport";
-import { Strategy as DiscordStrategy } from "passport-discord";
+import {Profile as DiscordProfile, Strategy as DiscordStrategy} from "passport-discord";
 import path from "path";
-import { Client, TextChannel, EmbedBuilder } from "discord.js";
-import { bindingsManager } from "./utils/bindingsManager";
+import {Client, EmbedBuilder, TextChannel} from "discord.js";
+import {bindingsManager} from "./utils/bindingsManager";
 import * as sqlite from "./databases/sqlite";
+import db from "./databases/sqlite";
 import dotenv from "dotenv";
 import fs from "fs";
-import { StatusCodes, ReasonPhrases } from "http-status-codes";
+import {ReasonPhrases, StatusCodes} from "http-status-codes";
+
 dotenv.config();
-import { Profile as DiscordProfile } from "passport-discord";
-import db from './databases/sqlite';
 
 declare module "express-session" {
   interface SessionData {
@@ -152,7 +152,7 @@ app.use(passport.session() as any);
 passport.use(
   new DiscordStrategy(
     {
-      clientID: process.env.DISCORD_CLIENT_ID || "",
+      clientID: process.env.CLIENT_ID || "",
       clientSecret: process.env.DISCORD_CLIENT_SECRET || "",
       callbackURL: `${process.env.DASHBOARD_URL}/auth/discord/callback`,
       scope: ["identify", "guilds", "guilds.members.read"],

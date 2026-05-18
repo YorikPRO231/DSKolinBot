@@ -117,7 +117,11 @@ export const FRACTION_INFO: Record<
   },
   GOV: {
     label: "Government",
+<<<<<<< HEAD
     discord_id: `673455835481112599`, 
+=======
+      discord_id: `673455835481112599`,
+>>>>>>> dd425c6dae134013772a334dd7dbc861047be186
     state: true,
     emoji_id: "<:GOV:1499073847318544394>",
     chp_role_id: "673463209050505247",
@@ -276,8 +280,6 @@ export function factionByDiscordID(discord_id: string | undefined): [
 
   return ["TEST_SERVER", FRACTION_INFO["TEST_SERVER"]];
 }
-
-export const EMERGENCY_SERVER_ID = FRACTION_INFO.CHP_SERVER.discord_id;
 
 export const DETECTIVES_INFO = {
   DD: {

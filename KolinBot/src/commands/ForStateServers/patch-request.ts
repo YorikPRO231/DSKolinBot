@@ -180,6 +180,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
 
   const faction = getFactionFromName(inter.guild?.name);
 
+<<<<<<< HEAD
   if (!faction) {
     return inter.reply({
       content:
@@ -195,6 +196,18 @@ export async function execute(inter: ChatInputCommandInteraction) {
       (p) =>
         p.toLowerCase() === position.toLowerCase() ||
         p.toLowerCase().includes(position.toLowerCase()),
+=======
+    if (!['DD', 'DB', 'CID'].includes(faction.abbreviation)) {
+        if (!factionState || !factionState.compiled_positions?.includes(position)) {
+            return inter.reply({
+                content: `❌ **Ошибка:** Неверно указан отдел. Доступные Вам отделы: ${factionState?.positions || 'Список пуст'}`,
+                flags: MessageFlags.Ephemeral
+            });
+        }
+    }
+    const isDetectiveFaction = Object.values(DETECTIVES_INFO).some(
+        (info) => info.discord_id === inter.guild?.id,
+>>>>>>> dd425c6dae134013772a334dd7dbc861047be186
     );
 
     if (possibleMatch) {
