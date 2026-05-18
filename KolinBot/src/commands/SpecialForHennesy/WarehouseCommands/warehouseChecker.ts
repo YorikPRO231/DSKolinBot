@@ -13,6 +13,7 @@ import {
     SlashCommandBuilder,
     StringSelectMenuBuilder,
     StringSelectMenuInteraction,
+    TextChannel,
     TextInputBuilder,
     TextInputStyle
 } from 'discord.js';
@@ -25,8 +26,8 @@ import {ButtonStyle, ComponentType} from "discord-api-types/v10";
 import {PUNISHMENT_TYPES} from "../../../utils/constants/punishments";
 
 export const data = new SlashCommandBuilder()
-    .setName("warehouse-check")
-    .setDescription("Проверить склад [test]")
+    .setName("проверить-склад")
+    .setDescription("Проверить склад")
     .setDescription("Анализ логов и фиксация нарушения")
     .addAttachmentOption(option => option.setName("лог-файл").setDescription("Файл логов").setRequired(true))
     .addStringOption(option => option.setName("фракция").setDescription("Фракция игрока").setRequired(true)
@@ -330,11 +331,36 @@ async function processPunishment(
     const responseContent = `✅ Нарушение зарегистрировано: **${adminDisplayName}**\nНаказание: ${config.name} ${durationText}\n\n**Команда:**\n\`${commandText}\``;
 
     registerDrain(inter.user.id, passport, config.type, report, durationText);
-    // TODO: если хочешь, верни sendReport, я в нем смысла не вижу и мои кураторы гос жалуются. У гос не возращай точно, либо пусть в другой канал приходит.
+    const group = getFractionGroup(faction);
+    const channelId = LOG_CHANNEL_IDS[group]
+    const channel = inter.client.channels.cache.get(channelId) as TextChannel | undefined
+    if (channelId === 'NS' || !channel) {
+        return logError(inter.client, new Error('Warehouse channel ID not found'), 'Обработка склада V2')
+    }
+
+    const embed = new EmbedBuilder().setColor(Colors.Gold).setDescription(`\`\`\`\n${formReportData(report)[1]}\`\`\``)
+    await channel.send({embeds: [embed]})
 
     if ('editReply' in inter && typeof inter.editReply === 'function') {
         await inter.editReply({content: responseContent});
     } else {
         await inter.followUp({content: responseContent, flags: [MessageFlags.Ephemeral]});
     }
+}
+
+const LOG_CHANNEL_IDS = {
+    MAFIA: "1316831636532232300",
+    GANG: "1316848781529972778",
+    STATE: "1316831637379743830",
+    DEFAULT: "NS"
+};
+
+
+function getFractionGroup(fraction: FractionType): keyof typeof FRACTION_GROUPS | 'DEFAULT' {
+    for (const [group, fractions] of Object.entries(FRACTION_GROUPS)) {
+        if (fractions.includes(fraction)) {
+            return group as keyof typeof FRACTION_GROUPS;
+        }
+    }
+    return 'DEFAULT';
 }
