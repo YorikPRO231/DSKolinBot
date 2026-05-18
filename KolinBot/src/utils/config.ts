@@ -57,10 +57,7 @@ export const GOV_NICKNAME_REQUESTS_ROLES_ID = ['673463287215816704', '6743137544
 export const ADMIN_NICKNAME_LOGS_CHANNEL_ID = '1503330726643236874'
 export const DETECTIVES_HIGH_ROLES_ID = ["934191153077702716", "956223490439122967", "956232563771465821"]
 
-<<<<<<< HEAD
 export const CAPTERS_ROLES_ID = ['1061625450717257728', '751047567705505878', '1074648817560981575', '1079018759366381568', '873270313905979462', '914547951563591720', '971118463114424390', '673463953917214740', '673463528283439134', '1009455578713686056']
-=======
-export const CAPTERS_ROLES_ID = ['1503849569513898264']
 
 export const POSITIONS_STATE_INFO: Record<string, {
     branches: string[],
@@ -73,7 +70,7 @@ export const POSITIONS_STATE_INFO: Record<string, {
         compiled_positions: ['']
     },
     LSSD: {
-        branches: ['IAG', 'RU', 'SR', 'SPD', 'CRU', 'DD'],
+        branches: ['IAG', 'RU', 'SR', 'SPD', 'CRU', 'SA'],
         positions: ['D. Head', 'Head', 'Inst.', 'Deputy Sheriff', 'Sheriff'],
         compiled_positions: ['']
     },
@@ -82,9 +79,9 @@ export const POSITIONS_STATE_INFO: Record<string, {
         positions: ['St', 'Inst', 'D. Head', 'Head', 'Deputy Chief', 'Chief'],
         compiled_positions: ['']
     },
-    USSS: {
+    Government: {
         branches: ['CSD', 'ATD', 'SRT'],
-        positions: ['D. Head', 'Head', 'D. Dir.', 'Deputy Director', 'Director', 'Dir.', 'Inst.'],
+        positions: ['D. Head', 'Head', 'Deputy Director', 'Director', 'Inst.'],
         compiled_positions: ['']
     },
     ARMY: {
@@ -98,4 +95,3 @@ export const POSITIONS_STATE_INFO: Record<string, {
         compiled_positions: ['']
     },
 }
->>>>>>> bc3f4f14821daa3e240a045a6405d74d1b0933d4

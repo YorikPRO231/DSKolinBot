@@ -4,10 +4,6 @@ import path from 'path';
 import dotenv from 'dotenv';
 import {getAllFiles} from './utils/fileUtils';
 import * as config from "./utils/config";
-<<<<<<< HEAD
-=======
-import {POSITIONS_STATE_INFO} from "./utils/config";
->>>>>>> bc3f4f14821daa3e240a045a6405d74d1b0933d4
 
 
 import {DETECTIVES_INFO, FRACTION_INFO} from './utils/constants/fractions'
@@ -228,18 +224,6 @@ async function start() {
     await loadEvents();
 
     startGoogleFormsServer()
-<<<<<<< HEAD
-=======
-    console.log('Начинаю формат должностей гос..')
-    for (const p of Object.values(POSITIONS_STATE_INFO)) {
-        for (const position of p.positions) {
-            for (const branch of p.branches) {
-                p.compiled_positions.push(`${position} ${branch}`)
-            }
-        }
-    }
->>>>>>> bc3f4f14821daa3e240a045a6405d74d1b0933d4
-
 
     client.once('ready', (readyClient) => {
         initializeGoogleFormsServer(readyClient);

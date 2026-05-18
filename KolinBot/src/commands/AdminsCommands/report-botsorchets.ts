@@ -72,14 +72,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             .setTimestamp()
             .setFooter({ text: `User ID: ${interaction.user.id} | Blackberry Security` });
 
-<<<<<<< HEAD
 
         await channel.send({ 
             content: `<@&${selected.roleId}>`, 
-=======
-        await channel.send({ 
-            content: `<@&${selected.roleId}>`,
->>>>>>> bc3f4f14821daa3e240a045a6405d74d1b0933d4
             embeds: [embed]
         });
 
