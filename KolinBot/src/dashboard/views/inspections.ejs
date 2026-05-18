@@ -82,7 +82,10 @@
 <style>
     .action-menu {
         position: relative;
-        display: inline-block;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%; 
     }
     
     .dots-btn {
@@ -142,7 +145,7 @@
     }
     
     .data-table td {
-        vertical-align: top;
+        vertical-align: middle;
         padding: 12px;
     }
     
@@ -151,6 +154,7 @@
         top: 0;
         background: var(--bg-card);
         z-index: 10;
+        vertical-align: middle;
     }
     
     .table-wrapper {

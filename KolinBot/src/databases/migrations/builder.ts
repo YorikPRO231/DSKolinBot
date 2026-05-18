@@ -26,7 +26,7 @@ export class TableBuilder {
         this.statements.push(sql);
         return this;
     }
-
+    
     dropColumn(name: string): this {
         this.statements.push(`-- Требуется пересоздание таблицы для удаления колонки ${name}`);
         return this;

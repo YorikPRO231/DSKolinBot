@@ -95,7 +95,3 @@ export const POSITIONS_STATE_INFO: Record<string, {
         compiled_positions: ['']
     },
 }
-<<<<<<< HEAD
-=======
-
->>>>>>> dd425c6dae134013772a334dd7dbc861047be186
