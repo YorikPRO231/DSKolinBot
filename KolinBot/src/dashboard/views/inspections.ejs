@@ -22,27 +22,37 @@
         </div>
     </div>
     
-    <div class="card" style="padding:0;">
-        <table class="data-table">
+    <div class="table-wrapper" style="overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-card); position: relative;">
+        <table class="data-table" style="min-width: 900px; width: 100%;">
             <thead>
                 <tr>
-                    <th>Документ</th>
-                    <th>Discord ID</th>
-                    <th>Результат проверки</th>
-                    <th>Администратор</th>
-                    <th>Дата и время</th>
-                    <th>Действия</th>
+                    <th style="width: 80px;">Документ</th>
+                    <th style="width: 150px;">Discord ID</th>
+                    <th style="min-width: 300px;">Результат проверки</th>
+                    <th style="width: 180px;">Администратор</th>
+                    <th style="width: 180px;">Дата и время</th>
+                    <th style="width: 50px;">Действия</th>
                 </tr>
             </thead>
             <tbody id="reportsList">
-                <tr><td colspan="6" style="text-align:center; padding:3rem; color:var(--text-dim);">Введите данные для поиска</td><td style="display:none;"></td><td style="display:none;"></td><td style="display:none;"></td><td style="display:none;"></td><td style="display:none;"></td></tr>
+                <tr><td colspan="6" style="text-align:center; padding:3rem; color:var(--text-dim);">Введите данные для поиска</td></tr>
             </tbody>
         </table>
     </div>
 </div>
 
-<div id="editModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; justify-content:center; align-items:center;">
-    <div class="modal-content" style="background:var(--bg-card); border-radius:12px; padding:2rem; max-width:500px; width:90%; border:1px solid var(--border);">
+<div id="toast" style="position: fixed; bottom: 20px; right: 20px; background: rgba(46, 204, 113, 0.95); color: white; padding: 12px 24px; border-radius: 8px; font-size: 14px; z-index: 9999; display: none; align-items: center; gap: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 10000;">
+    <i class="fas fa-check-circle"></i>
+    <span id="toastMessage"></span>
+</div>
+
+<div id="toastError" style="position: fixed; bottom: 20px; right: 20px; background: rgba(231, 76, 60, 0.95); color: white; padding: 12px 24px; border-radius: 8px; font-size: 14px; z-index: 9999; display: none; align-items: center; gap: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 10000;">
+    <i class="fas fa-exclamation-triangle"></i>
+    <span id="toastErrorMsg"></span>
+</div>
+
+<div id="editModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:10001; justify-content:center; align-items:center;">
+    <div class="modal-content" style="background:var(--bg-card); border-radius:12px; padding:2rem; max-width:600px; width:90%; border:1px solid var(--border);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
             <h3 style="margin:0;"><i class="fas fa-edit"></i> Редактирование проверки</h3>
             <button onclick="closeEditModal()" style="background:none; border:none; color:var(--text-dim); font-size:1.5rem; cursor:pointer;">&times;</button>
@@ -59,7 +69,7 @@
             </div>
             <div style="margin-bottom:1rem;">
                 <label style="display:block; margin-bottom:0.5rem; font-weight:600;">Результат проверки</label>
-                <textarea id="editResult" class="search-input" rows="4" style="width:100%; resize:vertical;"></textarea>
+                <textarea id="editResult" class="search-input" rows="6" style="width:100%; resize:vertical; font-family: monospace;"></textarea>
             </div>
             <div style="display:flex; gap:1rem; justify-content:flex-end;">
                 <button type="button" class="btn" onclick="closeEditModal()" style="background: var(--bg-hover);">Отмена</button>
@@ -70,19 +80,112 @@
 </div>
 
 <style>
-    .edit-btn {
-        background: rgba(52, 152, 219, 0.1);
-        color: var(--accent);
-        border: 1px solid var(--accent);
-        padding: 5px 12px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 0.85rem;
-        transition: all 0.2s;
+    .action-menu {
+        position: relative;
+        display: inline-block;
     }
-    .edit-btn:hover {
+    
+    .dots-btn {
+        background: transparent;
+        border: none;
+        color: #e67e22;
+        font-size: 1.5rem;
+        font-weight: bold;
+        cursor: pointer;
+        padding: 5px 8px;
+        transition: all 0.2s;
+        line-height: 1;
+    }
+    
+    .dots-btn:hover {
+        color: #f39c12;
+        transform: scale(1.1);
+    }
+    
+    .dropdown-content {
+        display: none;
+        position: fixed;
+        background: var(--bg-card);
+        min-width: 160px;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        z-index: 10002;
+        overflow: hidden;
+    }
+    
+    .dropdown-content button {
+        width: 100%;
+        padding: 10px 15px;
+        text-align: left;
+        background: none;
+        border: none;
+        color: var(--text);
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.9rem;
+    }
+    
+    .dropdown-content button:hover {
+        background: var(--bg-hover);
+        color: var(--accent);
+    }
+    
+    .data-table td:nth-child(3) {
+        max-width: 400px;
+        word-wrap: break-word;
+        white-space: normal;
+        line-height: 1.4;
+    }
+    
+    .data-table td {
+        vertical-align: top;
+        padding: 12px;
+    }
+    
+    .data-table th {
+        position: sticky;
+        top: 0;
+        background: var(--bg-card);
+        z-index: 10;
+    }
+    
+    .table-wrapper {
+        overflow-x: auto;
+        position: relative;
+    }
+    
+    .table-wrapper::-webkit-scrollbar {
+        height: 8px;
+        width: 8px;
+    }
+    
+    .table-wrapper::-webkit-scrollbar-track {
+        background: var(--bg-hover);
+        border-radius: 4px;
+    }
+    
+    .table-wrapper::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 4px;
+    }
+    
+    .table-wrapper::-webkit-scrollbar-thumb:hover {
         background: var(--accent);
-        color: white;
+    }
+    
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
     }
 </style>
 
@@ -103,10 +206,60 @@
         });
     }
 
+    function showToast(message, isError = false) {
+        if (isError) {
+            const toast = document.getElementById('toastError');
+            const toastMessage = document.getElementById('toastErrorMsg');
+            toastMessage.innerText = message;
+            toast.style.display = 'flex';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        } else {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            toastMessage.innerText = message;
+            toast.style.display = 'flex';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+    }
+
+    function toggleDropdown(event, id) {
+    event.stopPropagation();
+    const dropdown = document.getElementById('dropdown-' + id);
+    const button = event.target;
+    const rect = button.getBoundingClientRect();
+    
+    document.querySelectorAll('.dropdown-content').forEach(el => {
+        if (el.id !== 'dropdown-' + id) {
+            el.style.display = 'none';
+        }
+    });
+    
+    if (dropdown.style.display === 'block') {
+        dropdown.style.display = 'none';
+    } else {
+        dropdown.style.position = 'fixed';
+        dropdown.style.top = (rect.bottom + 5) + 'px';
+        dropdown.style.left = (rect.left - 100) + 'px';
+        dropdown.style.display = 'block';
+    }
+}
+
+    document.addEventListener('click', function(event) {
+        if (!event.target.closest('.action-menu')) {
+            document.querySelectorAll('.dropdown-content').forEach(el => {
+                el.style.display = 'none';
+            });
+        }
+    });
+
     function searchRecords() {
         const query = document.getElementById('searchInput').value.trim();
         if (!query) {
-            alert('Введите номер паспорта или Discord ID');
+            showToast('Введите паспорт или Discord ID', true);
             return;
         }
         
@@ -126,8 +279,6 @@
         loadReports();
     }
 
-    
-
     async function loadReports() {
         try {
             let url;
@@ -143,20 +294,42 @@
             
             if (data.success) {
                 totalPages = Math.ceil(data.total / limit);
-                document.getElementById('resultsTitle').innerText = 'Найдено записей: ' + data.total + ' (поиск по ' + (currentSearchType === 'passport' ? 'паспорту' : 'Discord ID') + ')';
+                document.getElementById('resultsTitle').innerText = 'Найдено записей: ' + data.total;
                 
                 if (data.reports && data.reports.length) {
-                    list.innerHTML = data.reports.map(function(r) {
-                        return '<tr>' +
-                            '<td><strong style="color:#fff;">' + escapeHtml(r.passport) + '</strong></td>' +
-                            '<td><code style="background:rgba(255,255,255,0.05); padding:3px 8px; border-radius:5px; font-size:0.8rem;">' + (r.discord_id || '—') + '</code></td>' +
-                            '<td>' + escapeHtml(r.result) + '</td>' +
-                            '<td>' + escapeHtml(r.admin_name) + '</td>' +
-                            '<td style="color:var(--text-dim); font-size:0.85rem;">' + new Date(r.created_at).toLocaleString() + '</td>' +
-                            '<td><button class="edit-btn" onclick="openEditModal(' + r.id + ', \'' + escapeHtml(r.passport) + '\', \'' + escapeHtml(r.discord_id || '') + '\', \'' + escapeHtml(r.result.replace(/'/g, "\\'")) + '\')"><i class="fas fa-pencil-alt"></i> Редактировать</button></td>' +
-                            '</tr>';
-                    }).join('');
-                } else {
+    list.innerHTML = data.reports.map(function(r) {
+        let escapedResult = escapeHtml(r.result);
+        let displayResult = escapedResult;
+        if (escapedResult.length > 150) {
+            displayResult = escapedResult.substring(0, 150) + '...';
+        }
+        
+        let jsSafeResult = r.result
+            .replace(/\\/g, '\\\\')   
+            .replace(/'/g, "\\'")  
+            .replace(/"/g, '\\"')     
+            .replace(/\n/g, '\\n')   
+            .replace(/\r/g, '\\r');   
+        
+        return '<tr>' +
+            '<td><strong style="color:#fff;">' + escapeHtml(r.passport) + '</strong></td>' +
+            '<td><code style="background:rgba(255,255,255,0.05); padding:3px 8px; border-radius:5px; font-size:0.8rem;">' + (r.discord_id || '—') + '</code></td>' +
+            '<td title="' + escapedResult.replace(/"/g, '&quot;') + '">' + displayResult + '</td>' +
+            '<td>' + escapeHtml(r.admin_name) + '</td>' +
+            '<td style="color:var(--text-dim); font-size:0.85rem;">' + new Date(r.created_at).toLocaleString() + '</td>' +
+            '<td>' +
+                '<div class="action-menu">' +
+                    '<button class="dots-btn" onclick="toggleDropdown(event, ' + r.id + ')">...</button>' +
+                    '<div id="dropdown-' + r.id + '" class="dropdown-content">' +
+                        '<button onclick="window.openEditModal(' + r.id + ', \'' + escapeHtml(r.passport) + '\', \'' + escapeHtml(r.discord_id || '') + '\', \'' + jsSafeResult + '\')">' +
+                            '<i class="fas fa-pencil-alt"></i> Редактировать' +
+                        '</button>' +
+                    '</div>' +
+                '</div>' +
+            '</td>' +
+            '</tr>';
+    }).join('');
+} else {
                     list.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:3rem; color:var(--text-dim);">Записи не найдены</td></tr>';
                 }
                 updatePaginationUI();
@@ -189,13 +362,24 @@
         }
     }
 
-    function openEditModal(id, passport, discordId, result) {
-        document.getElementById('editId').value = id;
-        document.getElementById('editPassport').value = passport;
-        document.getElementById('editDiscordId').value = discordId === '—' ? '' : discordId;
-        document.getElementById('editResult').value = result;
-        document.getElementById('editModal').style.display = 'flex';
-    }
+function openEditModal(id, passport, discordId, result) {
+    document.getElementById('editId').value = id;
+    document.getElementById('editPassport').value = passport;
+    document.getElementById('editDiscordId').value = discordId === '—' ? '' : discordId;
+    let decodedResult = result
+        .replace(/\\n/g, '\n')
+        .replace(/\\r/g, '\r')
+        .replace(/\\\\/g, '\\');
+    document.getElementById('editResult').value = decodedResult;
+    document.getElementById('editModal').style.display = 'flex';
+    
+    document.querySelectorAll('.dropdown-content').forEach(el => {
+        el.style.display = 'none';
+    });
+}
+
+window.openEditModal = openEditModal;
+
 
     function closeEditModal() {
         document.getElementById('editModal').style.display = 'none';
@@ -223,15 +407,15 @@
             const data = await res.json();
             
             if (data.success) {
-                alert('Запись успешно обновлена');
+                showToast('Запись успешно обновлена');
                 closeEditModal();
-                loadReports(); 
+                loadReports();
             } else {
-                alert('Ошибка при обновлении: ' + (data.error || 'Неизвестная ошибка'));
+                showToast('Ошибка при обновлении', true);
             }
         } catch(e) {
             console.error(e);
-            alert('Ошибка при сохранении изменений');
+            showToast('Ошибка при сохранении изменений', true);
         }
     }
 </script>

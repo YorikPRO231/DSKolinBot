@@ -70,7 +70,7 @@ export const POSITIONS_STATE_INFO: Record<string, {
         compiled_positions: ['']
     },
     LSSD: {
-        branches: ['IAG', 'RU', 'SR', 'SPD', 'CRU', 'DD'],
+        branches: ['IAG', 'RU', 'SR', 'SPD', 'CRU', 'SA'],
         positions: ['D. Head', 'Head', 'Inst.', 'Deputy Sheriff', 'Sheriff'],
         compiled_positions: ['']
     },
@@ -79,9 +79,9 @@ export const POSITIONS_STATE_INFO: Record<string, {
         positions: ['St', 'Inst', 'D. Head', 'Head', 'Deputy Chief', 'Chief'],
         compiled_positions: ['']
     },
-    USSS: {
+    Government: {
         branches: ['CSD', 'ATD', 'SRT'],
-        positions: ['D. Head', 'Head', 'D. Dir.', 'Deputy Director', 'Director', 'Dir.', 'Inst.'],
+        positions: ['D. Head', 'Head', 'Deputy Director', 'Director', 'Inst.'],
         compiled_positions: ['']
     },
     ARMY: {
@@ -95,4 +95,7 @@ export const POSITIONS_STATE_INFO: Record<string, {
         compiled_positions: ['']
     },
 }
+<<<<<<< HEAD
+=======
 
+>>>>>>> dd425c6dae134013772a334dd7dbc861047be186

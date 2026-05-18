@@ -144,12 +144,26 @@ async function handlePatchRequest(inter: ButtonInteraction, member: GuildMember)
         return safeReply(inter, '❌ В выдаче нашивки отказано.');
     }
 
-    const parts = customId.split("_");
-    const p = parts[1]; // ID получателя
-    const position = parts[2];
-    const name = parts[3];
-    const surname = parts[4];
-    const passport = parseInt(parts[5]);
+    let requestData;
+    try {
+        const jsonString = customId.replace('patchreq_approve_', '');
+        requestData = JSON.parse(jsonString);
+    } catch (error) {
+        console.error("Ошибка парсинга данных запроса:", error);
+        return safeReply(inter, '❌ **Ошибка:** Некорректные данные запроса.');
+    }
+
+    const { 
+        u: requesterId, 
+        p: position, 
+        n: name, 
+        s: surname, 
+        pp: passport 
+    } = requestData;
+
+    if (!requesterId || !position || !name || !surname || !passport) {
+        return safeReply(inter, '❌ **Ошибка:** Неполные данные запроса.');
+    }
 
     const isDetectiveFaction = Object.values(DETECTIVES_INFO).some(
         (info) => info.discord_id === inter.guild?.id,
@@ -159,7 +173,6 @@ async function handlePatchRequest(inter: ButtonInteraction, member: GuildMember)
     if (!faction) {
         return safeReply(inter, '❌ **Ошибка:** Не удалось определить фракцию.');
     }
-
 
     const level = isDetectiveFaction ? "detective" : "casual";
     const patch = generatePatch(
@@ -176,42 +189,42 @@ async function handlePatchRequest(inter: ButtonInteraction, member: GuildMember)
         return safeReply(inter, '❌ **Ошибка:** Не удалось определить канал логов нашивок.');
     }
 
-    pushPlayerId(passport, `${name} ${surname}`, p, faction.abbreviation, patch);
+    pushPlayerId(passport, `${name} ${surname}`, requesterId, faction.abbreviation, patch);
 
     const embedLog = new EmbedBuilder()
         .setColor(level === "detective" ? 0xff4654 : 0x2b2d31)
         .setTitle(`${faction.fullName} | Лог нашивок`)
         .setDescription(
-            `Сотрудник ${inter.user} выдал новую нашивку для <@${p}>\n\n` +
+            `Сотрудник ${inter.user} выдал новую нашивку для <@${requesterId}>\n\n` +
             `\`\`\`/do На груди закреплена нашивка: ${patch}\`\`\``,
         )
         .addFields(
-            { name: "Сотрудник", value: `<@${p}>`, inline: true },
+            { name: "Сотрудник", value: `<@${requesterId}>`, inline: true },
             { name: "Паспорт", value: `${passport}`, inline: true },
             { name: "Тип", value: level === "detective" ? "Детективная" : "Обычная", inline: true },
             { name: "Дата", value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false },
         )
         .setTimestamp()
-        .setFooter({ text: `ID: ${p} | Паспорт: ${passport}` });
+        .setFooter({ text: `ID: ${requesterId} | Паспорт: ${passport}` });
 
-    await logChannel.send({ embeds: [embedLog], content: `<@${p}>` });
+    await logChannel.send({ embeds: [embedLog], content: `<@${requesterId}>` });
 
     if (level !== "detective") {
         const embedGov = new EmbedBuilder()
             .setColor(0x2b2d31)
             .setTitle(`${faction.fullName} | Лог нашивок`)
             .setDescription(
-                `Сотрудник ${faction.abbreviation} ${inter.user} выдал новую нашивку для <@${p}>\n\n` +
+                `Сотрудник ${faction.abbreviation} ${inter.user} выдал новую нашивку для <@${requesterId}>\n\n` +
                 `\`\`\`/do На груди закреплена нашивка: ${patch}\`\`\``,
             )
             .addFields(
-                { name: "Сотрудник", value: `<@${p}>`, inline: true },
+                { name: "Сотрудник", value: `<@${requesterId}>`, inline: true },
                 { name: "Паспорт", value: `${passport}`, inline: true },
                 { name: "Тип", value: "Обычная", inline: true },
                 { name: "Дата", value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false },
             )
             .setTimestamp()
-            .setFooter({ text: `ID: ${p} | Паспорт: ${passport}` });
+            .setFooter({ text: `ID: ${requesterId} | Паспорт: ${passport}` });
 
         const govLog = inter.client.channels.cache.get(GOV_PATCH_LOG_CHANNEL_ID) as TextChannel;
         if (govLog) {
