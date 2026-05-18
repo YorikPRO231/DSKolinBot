@@ -1,26 +1,26 @@
-import { 
-    ChatInputCommandInteraction, 
-    EmbedBuilder, 
-    SlashCommandBuilder, 
-    AttachmentBuilder, 
-    ActionRowBuilder, 
-    ButtonBuilder, 
+import {
+    ActionRowBuilder,
+    AttachmentBuilder,
+    ButtonBuilder,
+    ButtonInteraction,
     ButtonStyle,
+    ChatInputCommandInteraction,
     ComponentType,
+    EmbedBuilder,
     MessageFlags,
     ModalBuilder,
-    TextInputBuilder,
-    TextInputStyle,
+    ModalSubmitInteraction,
+    SlashCommandBuilder,
     StringSelectMenuBuilder,
     StringSelectMenuInteraction,
-    ModalSubmitInteraction,
-    ButtonInteraction,
-    TextChannel
+    TextChannel,
+    TextInputBuilder,
+    TextInputStyle
 } from 'discord.js';
 import axios from 'axios';
-import { addLog, getAdminSurname } from '../../../databases/sqlite';
-import { PUNISHMENT_TYPES, PunishmentType } from '../../../utils/constants/punishments';
-import { FRACTION_TYPES, FRACTION_INFO, FractionType } from '../../../utils/constants/fractions';
+import {addLog, getAdminSurname} from '../../../databases/sqlite';
+import {PUNISHMENT_TYPES} from '../../../utils/constants/punishments';
+import {FRACTION_INFO, FRACTION_TYPES, FractionType} from '../../../utils/constants/fractions';
 
 const FRACTION_GROUPS = {
     MAFIA: [FRACTION_TYPES.MM, FRACTION_TYPES.RM, FRACTION_TYPES.LCN, FRACTION_TYPES.YAK, FRACTION_TYPES.AM] as FractionType[],
@@ -31,12 +31,6 @@ const FRACTION_GROUPS = {
 // Префиксы государственного оружия
 const GOVERNMENT_WEAPON_PREFIXES = ['LSPD', 'LSSD', 'FIB', 'GOV', 'SASPA', 'ARMY'];
 
-const LOG_CHANNEL_IDS = {
-    MAFIA: "1316831636532232300",
-    GANG: "1316848781529972778",
-    STATE: "1316831637379743830",
-    DEFAULT: ""
-};
 
 
 const LOCATION_NAMES: Record<string, string> = {
@@ -244,14 +238,7 @@ async function handlePunishmentFlow(
     });
 }
 
-function getFractionGroup(fraction: FractionType): keyof typeof FRACTION_GROUPS | 'DEFAULT' {
-    for (const [group, fractions] of Object.entries(FRACTION_GROUPS)) {
-        if (fractions.includes(fraction)) {
-            return group as keyof typeof FRACTION_GROUPS;
-        }
-    }
-    return 'DEFAULT';
-}
+
 
 function isGovernmentWeapon(weaponNumber?: string): boolean {
     if (!weaponNumber) return false;
@@ -906,8 +893,8 @@ async function sendReportToChannel(
     punishmentDuration: string,
     analysis: AnalysisResult
 ): Promise<void> {
-    const group = getFractionGroup(fraction);
-    const channelId = LOG_CHANNEL_IDS[group] || LOG_CHANNEL_IDS.DEFAULT;
+    const group = ''
+    const channelId = ''
     
     if (!channelId) {
         console.error(`Не указан канал для логов группы ${group}`);
