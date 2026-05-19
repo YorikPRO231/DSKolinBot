@@ -322,7 +322,6 @@ export class AdminLogsController {
           const cleanEntry = rawEntry.split('===== КОНЕЦ ЗАПИСИ =====')[0].trim();
           if (!cleanEntry) continue;
 
-          // Используем внешнюю функцию parseLogEntry
           const parsedEntry = parseLogEntry(cleanEntry, file);
           
           if (query && !matchesSearchQuery(parsedEntry, query)) continue;
