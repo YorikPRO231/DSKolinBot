@@ -1,0 +1,8 @@
+{
+  "name": "Admin Dashboard",
+  "short_name": "Dashboard",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
+}

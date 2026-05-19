@@ -3,12 +3,15 @@ import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 import {getAllFiles} from './utils/fileUtils';
+
 import * as config from "./utils/config";
 
 
 import {DETECTIVES_INFO, FRACTION_INFO} from './utils/constants/fractions'
 import {logError} from './logger';
-import {initializeGoogleFormsServer, startGoogleFormsServer} from './server';
+import { createDashboardApp } from './dashboard/app';
+import { setDiscordClient as setAuthDiscordClient } from './dashboard/middleware/auth.middleware';
+import { setDiscordClient as setServiceDiscordClient } from './dashboard/services/discord.service';
 
 
 dotenv.config({path: '.env'});
@@ -223,10 +226,24 @@ async function start() {
     const commands = await loadCommands();
     await loadEvents();
 
-    startGoogleFormsServer()
+    const PORT = parseInt(process.env.PORT || '8080', 10);
 
     client.once('ready', (readyClient) => {
-        initializeGoogleFormsServer(readyClient);
+        console.log(`✅ Бот запущен как ${readyClient.user?.tag}`);
+        
+        setAuthDiscordClient(readyClient);
+        setServiceDiscordClient(readyClient);
+        
+        const app = createDashboardApp(readyClient);
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log(`Dashboard сервер запущен на порту ${PORT}`);
+            
+            const ALLOWED_ROLES = (process.env.ALLOWED_ROLES || "").split(",").filter(r => r.trim());
+            if (ALLOWED_ROLES.length > 0) {
+                console.log(`Role protection enabled: ${ALLOWED_ROLES.join(", ")}`);
+            }
+        });
+        
         console.log('✅ Google Forms интеграция активирована');
     });
 

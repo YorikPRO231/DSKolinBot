@@ -1,28 +1,36 @@
 <%- include('layout', { part: 'header', title: 'Проверки', currentPage: 'inspections' }) %>
 
+<link rel="stylesheet" href="/css/inspections.css">
+
 <div class="page-header">
     <h1>Реестр проверок</h1>
 </div>
 
-<div class="card" style="padding: 2rem; margin-bottom: 2rem; background: linear-gradient(135deg, var(--bg-card) 0%, #1a1e22 100%);">
-    <h3 style="margin-bottom: 1.2rem; font-size: 1.1rem;"><i class="fas fa-magnifying-glass" style="color: var(--accent); margin-right: 10px;"></i> Поиск по базе данных</h3>
-    <div style="display: flex; gap: 1rem;">
-        <input type="text" id="searchInput" class="search-input" style="flex: 1; border: 1px solid var(--border);" placeholder="Введите номер паспорта или Discord ID игрока..." onkeypress="if(event.key==='Enter')searchRecords()">
-        <button class="btn btn-primary" onclick="searchRecords()"><i class="fas fa-search"></i> Найти записи</button>
+<div class="search-card">
+    <h3><i class="fas fa-magnifying-glass"></i> Поиск по базе данных</h3>
+    <div class="search-container">
+        <input type="text" id="searchInput" placeholder="Введите номер паспорта или Discord ID игрока...">
+        <button class="btn btn-primary" onclick="InspectionsModule.searchRecords()">
+            <i class="fas fa-search"></i> Найти записи
+        </button>
     </div>
 </div>
 
 <div id="resultsSection" style="display:none">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding: 0 0.5rem;">
-        <h3 id="resultsTitle" style="font-size: 1rem; color: var(--accent);"></h3>
-        <div style="display: flex; align-items: center; gap: 1rem; background: var(--bg-card); padding: 5px 15px; border-radius: 10px; border: 1px solid var(--border);">
-            <button class="btn" id="prevBtn" onclick="previousPage()" style="padding: 0.3rem; background: transparent;"><i class="fas fa-chevron-left"></i></button>
-            <span id="pageInfo" style="font-size: 0.85rem; font-weight: 600; min-width: 60px; text-align: center;"></span>
-            <button class="btn" id="nextBtn" onclick="nextPage()" style="padding: 0.3rem; background: transparent;"><i class="fas fa-chevron-right"></i></button>
+    <div class="results-header">
+        <h3 id="resultsTitle" class="results-title"></h3>
+        <div class="pagination-controls">
+            <button class="pagination-btn" id="prevBtn" onclick="InspectionsModule.previousPage()">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <span id="pageInfo" class="page-info"></span>
+            <button class="pagination-btn" id="nextBtn" onclick="InspectionsModule.nextPage()">
+                <i class="fas fa-chevron-right"></i>
+            </button>
         </div>
     </div>
     
-    <div class="table-wrapper" style="overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-card); position: relative;">
+    <div class="table-wrapper">
         <table class="data-table" style="min-width: 900px; width: 100%;">
             <thead>
                 <tr>
@@ -41,387 +49,44 @@
     </div>
 </div>
 
-<div id="toast" style="position: fixed; bottom: 20px; right: 20px; background: rgba(46, 204, 113, 0.95); color: white; padding: 12px 24px; border-radius: 8px; font-size: 14px; z-index: 9999; display: none; align-items: center; gap: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 10000;">
+<div id="toast" class="toast toast-success">
     <i class="fas fa-check-circle"></i>
     <span id="toastMessage"></span>
 </div>
 
-<div id="toastError" style="position: fixed; bottom: 20px; right: 20px; background: rgba(231, 76, 60, 0.95); color: white; padding: 12px 24px; border-radius: 8px; font-size: 14px; z-index: 9999; display: none; align-items: center; gap: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 10000;">
+<div id="toastError" class="toast toast-error">
     <i class="fas fa-exclamation-triangle"></i>
     <span id="toastErrorMsg"></span>
 </div>
 
-<div id="editModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:10001; justify-content:center; align-items:center;">
-    <div class="modal-content" style="background:var(--bg-card); border-radius:12px; padding:2rem; max-width:600px; width:90%; border:1px solid var(--border);">
+<div id="editModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:10001; justify-content:center; align-items:center;">
+    <div class="modal-content">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
             <h3 style="margin:0;"><i class="fas fa-edit"></i> Редактирование проверки</h3>
-            <button onclick="closeEditModal()" style="background:none; border:none; color:var(--text-dim); font-size:1.5rem; cursor:pointer;">&times;</button>
+            <button onclick="InspectionsModule.closeEditModal()" style="background:none; border:none; color:var(--text-dim); font-size:1.5rem; cursor:pointer;">&times;</button>
         </div>
-        <form id="editForm" onsubmit="saveEdit(event)">
+        <form id="editForm" onsubmit="InspectionsModule.saveEdit(event)">
             <input type="hidden" id="editId">
             <div style="margin-bottom:1rem;">
-                <label style="display:block; margin-bottom:0.5rem; font-weight:600;">Паспорт</label>
-                <input type="text" id="editPassport" class="search-input" style="width:100%;" readonly>
+                <label>Паспорт</label>
+                <input type="text" id="editPassport" readonly>
             </div>
             <div style="margin-bottom:1rem;">
-                <label style="display:block; margin-bottom:0.5rem; font-weight:600;">Discord ID</label>
-                <input type="text" id="editDiscordId" class="search-input" style="width:100%;">
+                <label>Discord ID</label>
+                <input type="text" id="editDiscordId">
             </div>
             <div style="margin-bottom:1rem;">
-                <label style="display:block; margin-bottom:0.5rem; font-weight:600;">Результат проверки</label>
-                <textarea id="editResult" class="search-input" rows="6" style="width:100%; resize:vertical; font-family: monospace;"></textarea>
+                <label>Результат проверки</label>
+                <textarea id="editResult" rows="6"></textarea>
             </div>
             <div style="display:flex; gap:1rem; justify-content:flex-end;">
-                <button type="button" class="btn" onclick="closeEditModal()" style="background: var(--bg-hover);">Отмена</button>
+                <button type="button" onclick="InspectionsModule.closeEditModal()">Отмена</button>
                 <button type="submit" class="btn btn-primary">Сохранить изменения</button>
             </div>
         </form>
     </div>
 </div>
 
-<style>
-    .action-menu {
-        position: relative;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 100%; 
-    }
-    
-    .dots-btn {
-        background: transparent;
-        border: none;
-        color: #e67e22;
-        font-size: 1.5rem;
-        font-weight: bold;
-        cursor: pointer;
-        padding: 5px 8px;
-        transition: all 0.2s;
-        line-height: 1;
-    }
-    
-    .dots-btn:hover {
-        color: #f39c12;
-        transform: scale(1.1);
-    }
-    
-    .dropdown-content {
-        display: none;
-        position: fixed;
-        background: var(--bg-card);
-        min-width: 160px;
-        box-shadow: 0 8px 16px rgba(0,0,0,0.3);
-        border-radius: 8px;
-        border: 1px solid var(--border);
-        z-index: 10002;
-        overflow: hidden;
-    }
-    
-    .dropdown-content button {
-        width: 100%;
-        padding: 10px 15px;
-        text-align: left;
-        background: none;
-        border: none;
-        color: var(--text);
-        cursor: pointer;
-        transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 0.9rem;
-    }
-    
-    .dropdown-content button:hover {
-        background: var(--bg-hover);
-        color: var(--accent);
-    }
-    
-    .data-table td:nth-child(3) {
-        max-width: 400px;
-        word-wrap: break-word;
-        white-space: normal;
-        line-height: 1.4;
-    }
-    
-    .data-table td {
-        vertical-align: middle;
-        padding: 12px;
-    }
-    
-    .data-table th {
-        position: sticky;
-        top: 0;
-        background: var(--bg-card);
-        z-index: 10;
-        vertical-align: middle;
-    }
-    
-    .table-wrapper {
-        overflow-x: auto;
-        position: relative;
-    }
-    
-    .table-wrapper::-webkit-scrollbar {
-        height: 8px;
-        width: 8px;
-    }
-    
-    .table-wrapper::-webkit-scrollbar-track {
-        background: var(--bg-hover);
-        border-radius: 4px;
-    }
-    
-    .table-wrapper::-webkit-scrollbar-thumb {
-        background: var(--border);
-        border-radius: 4px;
-    }
-    
-    .table-wrapper::-webkit-scrollbar-thumb:hover {
-        background: var(--accent);
-    }
-    
-    @keyframes slideIn {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-</style>
-
-<script>
-    let currentPage = 0;
-    let totalPages = 0;
-    let currentSearchQuery = '';
-    let currentSearchType = 'passport';
-    const limit = 10;
-
-    function escapeHtml(str) {
-        if (!str) return '';
-        return str.replace(/[&<>]/g, function(m) {
-            if (m === '&') return '&amp;';
-            if (m === '<') return '&lt;';
-            if (m === '>') return '&gt;';
-            return m;
-        });
-    }
-
-    function showToast(message, isError = false) {
-        if (isError) {
-            const toast = document.getElementById('toastError');
-            const toastMessage = document.getElementById('toastErrorMsg');
-            toastMessage.innerText = message;
-            toast.style.display = 'flex';
-            setTimeout(() => {
-                toast.style.display = 'none';
-            }, 3000);
-        } else {
-            const toast = document.getElementById('toast');
-            const toastMessage = document.getElementById('toastMessage');
-            toastMessage.innerText = message;
-            toast.style.display = 'flex';
-            setTimeout(() => {
-                toast.style.display = 'none';
-            }, 3000);
-        }
-    }
-
-    function toggleDropdown(event, id) {
-    event.stopPropagation();
-    const dropdown = document.getElementById('dropdown-' + id);
-    const button = event.target;
-    const rect = button.getBoundingClientRect();
-    
-    document.querySelectorAll('.dropdown-content').forEach(el => {
-        if (el.id !== 'dropdown-' + id) {
-            el.style.display = 'none';
-        }
-    });
-    
-    if (dropdown.style.display === 'block') {
-        dropdown.style.display = 'none';
-    } else {
-        dropdown.style.position = 'fixed';
-        dropdown.style.top = (rect.bottom + 5) + 'px';
-        dropdown.style.left = (rect.left - 100) + 'px';
-        dropdown.style.display = 'block';
-    }
-}
-
-    document.addEventListener('click', function(event) {
-        if (!event.target.closest('.action-menu')) {
-            document.querySelectorAll('.dropdown-content').forEach(el => {
-                el.style.display = 'none';
-            });
-        }
-    });
-
-    function searchRecords() {
-        const query = document.getElementById('searchInput').value.trim();
-        if (!query) {
-            showToast('Введите паспорт или Discord ID', true);
-            return;
-        }
-        
-        if (/^\d+$/.test(query)) {
-            if (query.length > 15) {
-                currentSearchType = 'discord';
-            } else {
-                currentSearchType = 'passport';
-            }
-        } else {
-            currentSearchType = 'discord';
-        }
-        
-        currentSearchQuery = query;
-        currentPage = 0;
-        document.getElementById('resultsSection').style.display = 'block';
-        loadReports();
-    }
-
-    async function loadReports() {
-        try {
-            let url;
-            if (currentSearchType === 'passport') {
-                url = '/api/inspections/passport/' + encodeURIComponent(currentSearchQuery) + '?limit=' + limit + '&offset=' + (currentPage * limit);
-            } else {
-                url = '/api/inspections/discord/' + encodeURIComponent(currentSearchQuery) + '?limit=' + limit + '&offset=' + (currentPage * limit);
-            }
-            
-            const res = await fetch(url);
-            const data = await res.json();
-            const list = document.getElementById('reportsList');
-            
-            if (data.success) {
-                totalPages = Math.ceil(data.total / limit);
-                document.getElementById('resultsTitle').innerText = 'Найдено записей: ' + data.total;
-                
-                if (data.reports && data.reports.length) {
-    list.innerHTML = data.reports.map(function(r) {
-        let escapedResult = escapeHtml(r.result);
-        let displayResult = escapedResult;
-        if (escapedResult.length > 150) {
-            displayResult = escapedResult.substring(0, 150) + '...';
-        }
-        
-        let jsSafeResult = r.result
-            .replace(/\\/g, '\\\\')   
-            .replace(/'/g, "\\'")  
-            .replace(/"/g, '\\"')     
-            .replace(/\n/g, '\\n')   
-            .replace(/\r/g, '\\r');   
-        
-        return '<tr>' +
-            '<td><strong style="color:#fff;">' + escapeHtml(r.passport) + '</strong></td>' +
-            '<td><code style="background:rgba(255,255,255,0.05); padding:3px 8px; border-radius:5px; font-size:0.8rem;">' + (r.discord_id || '—') + '</code></td>' +
-            '<td title="' + escapedResult.replace(/"/g, '&quot;') + '">' + displayResult + '</td>' +
-            '<td>' + escapeHtml(r.admin_name) + '</td>' +
-            '<td style="color:var(--text-dim); font-size:0.85rem;">' + new Date(r.created_at).toLocaleString() + '</td>' +
-            '<td>' +
-                '<div class="action-menu">' +
-                    '<button class="dots-btn" onclick="toggleDropdown(event, ' + r.id + ')">...</button>' +
-                    '<div id="dropdown-' + r.id + '" class="dropdown-content">' +
-                        '<button onclick="window.openEditModal(' + r.id + ', \'' + escapeHtml(r.passport) + '\', \'' + escapeHtml(r.discord_id || '') + '\', \'' + jsSafeResult + '\')">' +
-                            '<i class="fas fa-pencil-alt"></i> Редактировать' +
-                        '</button>' +
-                    '</div>' +
-                '</div>' +
-            '</td>' +
-            '</tr>';
-    }).join('');
-} else {
-                    list.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:3rem; color:var(--text-dim);">Записи не найдены</td></tr>';
-                }
-                updatePaginationUI();
-            } else {
-                list.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:3rem; color:var(--danger);">Ошибка загрузки данных</td></tr>';
-            }
-        } catch(e) {
-            console.error(e);
-            document.getElementById('reportsList').innerHTML = '<tr><td colspan="6" style="text-align:center; padding:3rem; color:var(--danger);">Сбой при запросе к базе</td></tr>';
-        }
-    }
-
-    function updatePaginationUI() {
-        document.getElementById('prevBtn').disabled = currentPage === 0;
-        document.getElementById('nextBtn').disabled = (totalPages === 0 || currentPage >= totalPages - 1);
-        document.getElementById('pageInfo').innerText = (totalPages > 0 ? currentPage + 1 : 0) + ' из ' + totalPages;
-    }
-
-    function previousPage() {
-        if (currentPage > 0) {
-            currentPage--;
-            loadReports();
-        }
-    }
-
-    function nextPage() {
-        if (currentPage < totalPages - 1) {
-            currentPage++;
-            loadReports();
-        }
-    }
-
-function openEditModal(id, passport, discordId, result) {
-    document.getElementById('editId').value = id;
-    document.getElementById('editPassport').value = passport;
-    document.getElementById('editDiscordId').value = discordId === '—' ? '' : discordId;
-    let decodedResult = result
-        .replace(/\\n/g, '\n')
-        .replace(/\\r/g, '\r')
-        .replace(/\\\\/g, '\\');
-    document.getElementById('editResult').value = decodedResult;
-    document.getElementById('editModal').style.display = 'flex';
-    
-    document.querySelectorAll('.dropdown-content').forEach(el => {
-        el.style.display = 'none';
-    });
-}
-
-window.openEditModal = openEditModal;
-
-
-    function closeEditModal() {
-        document.getElementById('editModal').style.display = 'none';
-    }
-
-    async function saveEdit(event) {
-        event.preventDefault();
-        
-        const id = document.getElementById('editId').value;
-        const discordId = document.getElementById('editDiscordId').value;
-        const result = document.getElementById('editResult').value;
-        
-        try {
-            const res = await fetch('/api/inspections/update/' + id, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    discord_id: discordId,
-                    result: result
-                })
-            });
-            
-            const data = await res.json();
-            
-            if (data.success) {
-                showToast('Запись успешно обновлена');
-                closeEditModal();
-                loadReports();
-            } else {
-                showToast('Ошибка при обновлении', true);
-            }
-        } catch(e) {
-            console.error(e);
-            showToast('Ошибка при сохранении изменений', true);
-        }
-    }
-</script>
+<script src="/js/inspections.js"></script>
 
 <%- include('layout', { part: 'footer' }) %>

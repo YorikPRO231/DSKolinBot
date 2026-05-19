@@ -1,7 +1,7 @@
 import {DETECTIVES_INFO, FRACTION_INFO} from "./constants/fractions";
 
 export const CHECK_SERVER_ID = ['1405927487095181322']
-export const ADMINS_SERVER_ID = [`1467227742037741846`]
+export const ADMINS_SERVER_ID = [`1316831633466458192`]
 
 
 export function getStateServerIds()  {

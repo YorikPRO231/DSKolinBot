@@ -1,0 +1,88 @@
+.delete-btn {
+    background: transparent;
+    border: none;
+    color: var(--danger);
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 6px;
+    transition: all 0.2s;
+    font-size: 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.delete-btn:hover {
+    background: rgba(255, 77, 77, 0.15);
+    transform: scale(1.05);
+}
+
+.delete-btn i {
+    pointer-events: none;
+}
+
+.name-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.name-text {
+    font-weight: 500;
+}
+
+.id-badge {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    background: var(--bg-main);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+}
+
+.loading-name {
+    color: var(--text-dim);
+    font-style: italic;
+    font-size: 0.85rem;
+}
+
+#addFormModal .modal-content,
+#confirmDeleteModal .modal-content,
+#notificationModal .modal-content {
+    background: var(--bg-card);
+    padding: 2rem;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+}
+
+#addFormModal .modal-content {
+    width: 450px;
+}
+
+#confirmDeleteModal .modal-content,
+#notificationModal .modal-content {
+    width: 400px;
+    text-align: center;
+}
+
+#addFormModal form input {
+    width: 100%;
+    padding: 0.8rem;
+    background: var(--bg-main);
+    border: 1px solid var(--border);
+    color: #fff;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+
+#addFormModal form input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+#addFormModal form button[type="button"] {
+    background: rgba(255,255,255,0.1);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+}

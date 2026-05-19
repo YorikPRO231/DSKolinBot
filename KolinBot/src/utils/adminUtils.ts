@@ -51,6 +51,18 @@ export async function handleNickKick(inter: ButtonInteraction, member: GuildMemb
         const targetMember = await inter.guild.members.fetch(mid).catch(() => null);
         if (!targetMember?.kickable) return inter.editReply("Игрок не найден или его нельзя кикнуть.");
         const adminName = (inter.member as GuildMember)?.displayName || inter.user.username;
+        const kickEmbed = new EmbedBuilder()
+          .setTitle(`GTA 5 RP | ${inter.guild?.name}`)
+          .setTimestamp()
+          .setColor(0xb8001c)
+          .setDescription(
+            `Вы были удалены из дискорда ${inter.guild?.name} администратором ${adminName}, так как ваш ник не соответствует форме никнеймов.\n`,
+          );
+        await targetMember.user.send({ embeds: [kickEmbed] }).catch(() => {
+          console.warn(
+            `Не удалось отправить ЛС пользователю ${targetMember.user.tag}`,
+          );
+        });
         await targetMember.kick(`Админ: ${adminName} [${inter.user.id}] Причина: check-nicknames`);
         const actionRow = ActionRowBuilder.from<MessageActionRowComponentBuilder>(inter.message.components[0] as any);
         actionRow.components.forEach((btn: any) => {
