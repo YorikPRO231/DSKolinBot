@@ -3,7 +3,7 @@ import {
     GOV_DELETE_PATCH_ACCESS_ROLE_ID,
     GOV_DELETE_PATCH_CHANNEL_ID
 } from "../../utils/config";
-import {pushPlayerId, retrievePlayerPatch} from "../../databases/sqlite";
+import { PatchesRepository } from "../../databases/index";
 
 export const data = new SlashCommandBuilder()
     .setName("удалить-нашивку")
@@ -33,12 +33,12 @@ export async function execute(inter: ChatInputCommandInteraction) {
         })
     }
     const passport = inter.options.getInteger('паспорт', true)
-    const ps = retrievePlayerPatch(passport)
+    const ps = PatchesRepository.retrievePlayerPatch(passport)
     if (!ps) {
         return inter.reply({content: 'Не удалось найти пользователя с данным паспортом.'})
     }
     
-    pushPlayerId(passport, ps.username,ps.discord_id, ps.faction, `DELETED BY <@${inter.user.id}>`)
+    PatchesRepository.pushPlayerId(passport, ps.username,ps.discord_id, ps.faction, `DELETED BY <@${inter.user.id}>`)
     const embedLS = new EmbedBuilder()
         .setAuthor({
             name: `GTA 5 RP | Blackberry`,

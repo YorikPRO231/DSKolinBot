@@ -1,5 +1,5 @@
 import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder} from 'discord.js';
-import { getPatchByDiscord } from '../../databases/sqlite';
+import { PatchesRepository } from '../../databases/index';
 
 
 export const data = new SlashCommandBuilder()
@@ -31,7 +31,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
 
     const discordId = inter.options.getString('discord-id', true);
     
-    const patches = getPatchByDiscord(discordId.toString());
+    const patches = PatchesRepository.getPatchByDiscord(discordId.toString());
     
     if (patches.length === 0) {
         await inter.reply({

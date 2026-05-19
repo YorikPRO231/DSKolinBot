@@ -1,9 +1,12 @@
 <%
   title = title || 'Ошибка';
   currentPage = 'error';
+  if (typeof permissions === 'undefined') {
+    permissions = [];
+  }
 %>
 
-<%- include('layout', { part: 'header', title: title, currentPage: currentPage, user: user }) %>
+<%- include('layout', { part: 'header', title: title, currentPage: currentPage, user: user, permissions: permissions }) %>
 
 <style>
     .error-container {
@@ -85,20 +88,20 @@
 <div class="error-container">
     <div class="error-card">
         <div class="error-code">
-            <%= error.code %>
+            <%= error ? error.code : '500' %>
         </div>
         
         <h1 class="error-title">
-            <%= error.message %>
+            <%= error ? error.message : 'Внутренняя ошибка сервера' %>
         </h1>
         
-        <% if (error.description) { %>
+        <% if (error && error.description) { %>
         <div class="error-description">
             <i class="fas fa-info-circle"></i> <%= error.description %>
         </div>
         <% } %>
         
-        <% if (error.stack && process.env.NODE_ENV === 'development') { %>
+        <% if (error && error.stack && process.env.NODE_ENV === 'development') { %>
         <div class="error-stack">
             <strong>Stack Trace:</strong>
             <pre style="margin-top: 0.5rem; white-space: pre-wrap; word-break: break-word;"><%= error.stack %></pre>
@@ -119,4 +122,4 @@
     </div>
 </div>
 
-<%- include('layout', { part: 'footer' }) %>
+<%- include('layout', { part: 'footer', permissions: permissions }) %>

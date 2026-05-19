@@ -1,5 +1,5 @@
 import { ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder } from 'discord.js';
-import { setAdminSurname, getAdminSurname, setAdminSecurity } from '../../databases/sqlite';
+import { AdminsRepository } from '../../databases/index';
 
 export const data = new SlashCommandBuilder()
     .setName("настройка-администратора")
@@ -58,8 +58,8 @@ export async function execute(inter: ChatInputCommandInteraction) {
             .setFooter({ text: `Изменил: ${inter.user.username}` });
 
         if (newSurname) {
-            const oldSurname = getAdminSurname(targetUser.id);
-            setAdminSurname(targetUser.id, newSurname);
+            const oldSurname = AdminsRepository.getAdminSurname(targetUser.id);
+            AdminsRepository.setAdminSurname(targetUser.id, newSurname);
             
             embed.addFields({ 
                 name: "Фамилия", 
@@ -69,7 +69,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
         }
 
         if (securityValue) {
-            setAdminSecurity(targetUser.id, securityValue);
+            AdminsRepository.setAdminSecurity(targetUser.id, securityValue);
             
             const securityStatus = securityValue === "yes" ? "Выдан" : "Забран";
             

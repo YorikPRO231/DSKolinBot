@@ -30,7 +30,7 @@ export async function handleButtonInteraction(interaction: any) {
   if (customId.startsWith("tr_approve_")) return handleApproveButton(interaction, member);
   if (customId.startsWith("tr_deny_")) return handleDenyButton(interaction, member);
   if (customId.startsWith("dnames")) return handleButton(interaction, member);
-  if (customId.startsWith("patchreq")) return handleButton(interaction, member);
+  if (customId.startsWith("apr_") || customId === "pdr") {return handleButton(interaction, member);}
   if (customId.startsWith('nicknames')) return handleNickKick(interaction, member);
 }
 

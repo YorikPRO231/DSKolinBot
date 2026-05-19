@@ -7,6 +7,7 @@ import securityRoutes from './api/security.routes';
 import inspectionsRoutes from './api/inspections.routes';
 import discordRoutes from './api/discord.routes';
 import webhookRoutes from './webhook.routes';
+import permissionsRoutes from './admin/permissions.routes';
 
 const router = Router();
 
@@ -19,6 +20,7 @@ router.use('/api/security', securityRoutes);
 router.use('/api/inspections', inspectionsRoutes);
 router.use('/api/discord', discordRoutes);
 
+router.use('/admin/permissions', permissionsRoutes);
 
 router.use('/webhook', webhookRoutes);
 

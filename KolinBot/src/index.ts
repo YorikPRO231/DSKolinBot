@@ -3,16 +3,13 @@ import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 import {getAllFiles} from './utils/fileUtils';
-
 import * as config from "./utils/config";
-
-
-import {DETECTIVES_INFO, FRACTION_INFO} from './utils/constants/fractions'
+import {DETECTIVES_INFO, FRACTION_INFO} from './utils/constants/fractions';
 import {logError} from './logger';
 import { createDashboardApp } from './dashboard/app';
 import { setDiscordClient as setAuthDiscordClient } from './dashboard/middleware/auth.middleware';
 import { setDiscordClient as setServiceDiscordClient } from './dashboard/services/discord.service';
-
+import { PermissionsRepository } from './databases'; 
 
 dotenv.config({path: '.env'});
 
@@ -45,10 +42,9 @@ function shouldLoadCommandForServer(commandPath: string, serverId?: string): boo
     if (!serverId) return false;
     
     const normalizedPath = commandPath.replace(/\\/g, '/');
-    const CHP = [FRACTION_INFO['CHP_SERVER'].discord_id]
+    const CHP = [FRACTION_INFO['CHP_SERVER'].discord_id];
     const detectivesId = Object.values(DETECTIVES_INFO).map(info => info.discord_id);
 
-    
     const folderToEnvMap: Record<string, string[] | undefined> = {
         'SpecialForHennesy': config.CHECK_SERVER_ID,
         'AdminsCommands': config.ADMINS_SERVER_ID,
@@ -138,11 +134,10 @@ async function registerGuildCommands(commands: any[]) {
     const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
     let guildIds = new Set<string>();
-    // TODO: Хочешь убери, хочешь оставь
-    const devServers = ['1467227742037741846', '1498687307593683174']
+    const devServers = ['1467227742037741846', '1498687307593683174'];
 
     if (process.env.ENVIRONMENT === 'dev') {
-        console.warn('Загрузка девелоп серверов....')
+        console.warn('Загрузка девелоп серверов....');
         devServers.forEach(id => guildIds.add(id));
     } else {
         config.getAllServerIds().forEach(id => guildIds.add(id));
@@ -177,11 +172,10 @@ async function registerGuildCommands(commands: any[]) {
         } catch (error) {
             const ser = (error + '');
             if (ser.includes('You are not authorized to perform this action on this application') || ser.includes('Missing access')) {
-                console.error(`Нет доступа к ${guildId} ${ser}`)
+                console.error(`Нет доступа к ${guildId} ${ser}`);
             } else {
                 console.error(`❌ Ошибка регистрации на сервере ${guildId}:`, error);
             }
-
         }
     }
 }
@@ -223,6 +217,8 @@ async function loadEvents() {
 async function start() {
     console.log('🚀 Запуск бота...');
     
+    PermissionsRepository.initDefaultPermissions();
+    
     const commands = await loadCommands();
     await loadEvents();
 
@@ -236,11 +232,11 @@ async function start() {
         
         const app = createDashboardApp(readyClient);
         app.listen(PORT, '0.0.0.0', () => {
-            console.log(`Dashboard сервер запущен на порту ${PORT}`);
+            console.log(`📊 Dashboard сервер запущен на порту ${PORT}`);
             
             const ALLOWED_ROLES = (process.env.ALLOWED_ROLES || "").split(",").filter(r => r.trim());
             if (ALLOWED_ROLES.length > 0) {
-                console.log(`Role protection enabled: ${ALLOWED_ROLES.join(", ")}`);
+                console.log(`🔒 Role protection enabled: ${ALLOWED_ROLES.join(", ")}`);
             }
         });
         
@@ -262,34 +258,24 @@ async function start() {
 }
 
 process.on('unhandledRejection', async (error: Error) => {
-  console.error('Необработанная ошибка (unhandledRejection):', error);
+  console.error('❌ Необработанная ошибка (unhandledRejection):', error);
   
   try {
-    await logError(
-      client,
-      error,
-      'Глобальный обработчик - unhandledRejection'
-    );
+    await logError(client, error, 'Глобальный обработчик - unhandledRejection');
   } catch (logError) {
     console.error('Ошибка при логировании unhandledRejection:', logError);
   }
 });
 
-
-
 process.on('warning', async (warning: Error) => {
-  console.warn('Предупреждение:', warning);
+  console.warn('⚠️ Предупреждение:', warning);
   
   if (warning.name === 'DeprecationWarning') {
     return;
   }
   
   try {
-    await logError(
-      client,
-      warning,
-      'Глобальный обработчик - process warning'
-    );
+    await logError(client, warning, 'Глобальный обработчик - process warning');
   } catch (logError) {
     console.error('Ошибка при логировании warning:', logError);
   }

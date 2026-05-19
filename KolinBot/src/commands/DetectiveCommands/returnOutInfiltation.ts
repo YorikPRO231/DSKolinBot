@@ -1,5 +1,5 @@
 import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder, TextChannel, NewsChannel, ThreadChannel} from 'discord.js';
-import {retrieveInfiltration} from "../../databases/sqlite";
+import { InfiltrationsRepository } from "../../databases/index";
 import {DETECTIVES_INFO} from "../../utils/constants/fractions";
 import {ADMIN_NICKNAME_LOGS_CHANNEL_ID} from "../../utils/config";
 
@@ -42,7 +42,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
     const targetMember = await inter.guild?.members.fetch(targetUser.id).catch(() => null);
     const adminMember = await inter.guild?.members.fetch(inter.user.id).catch(() => null);
     
-    const infiltration = retrieveInfiltration(targetUser.id);
+    const infiltration = InfiltrationsRepository.retrieveInfiltration(targetUser.id);
     if (!infiltration) {
         return inter.reply({
             content: 'Не удалось найти информацию о внедрении данного игрока.', 

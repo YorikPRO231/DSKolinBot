@@ -7,7 +7,7 @@ import {
     ButtonStyle,
     ComponentType, MessageFlags
 } from 'discord.js';
-import { getInspectionReportsByPassportPaginated, getSecurityAccess } from '../../../databases/sqlite';
+import { AdminsRepository, InspectionsRepository } from '../../../databases/index';
 
 export const data = new SlashCommandBuilder()
     .setName('получить-отчет')
@@ -22,7 +22,7 @@ export const data = new SlashCommandBuilder()
             .setRequired(false));
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-    const securityLevel = getSecurityAccess(interaction.user.id);
+    const securityLevel = AdminsRepository.getSecurityAccess(interaction.user.id);
     if (securityLevel !== 'yes') {
         return interaction.reply({ 
             content: 'У вас нет доступа к этой команде!', 
@@ -35,7 +35,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const limit = 5;
     
     try {
-        const { reports, total } = getInspectionReportsByPassportPaginated(passport, limit, (page - 1) * limit);
+        const { reports, total } = InspectionsRepository.getInspectionReportsByPassportPaginated(passport, limit, (page - 1) * limit);
         
         if (reports.length === 0) {
             return interaction.reply({
@@ -110,7 +110,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                 newPage = page + 1;
             }
             
-            const { reports: newReports } = getInspectionReportsByPassportPaginated(passport, limit, (newPage - 1) * limit);
+            const { reports: newReports } = InspectionsRepository.getInspectionReportsByPassportPaginated(passport, limit, (newPage - 1) * limit);
             
             const newEmbed = new EmbedBuilder()
                 .setColor(0x0099FF)

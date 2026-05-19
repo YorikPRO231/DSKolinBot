@@ -1,5 +1,5 @@
 import {AttachmentBuilder, ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder} from 'discord.js';
-import {retrieveDrain} from '../../../databases/sqlite';
+import { WarehouseRepository } from '../../../databases/index';
 import {PUNISHMENT_INFO, PunishmentType} from '../../../utils/constants/punishments';
 import {formReportData, WarehouseData} from "../../../utils/warehouseUtils";
 
@@ -12,7 +12,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
     await inter.deferReply();
     const passport = inter.options.getString("статик", true);
 
-    const entry = retrieveDrain(passport);
+    const entry = WarehouseRepository.retrieveDrain(passport);
 
     if (!entry) {
         return inter.editReply({content: `❌ Запись для статика **#${passport}** не найдена.`});

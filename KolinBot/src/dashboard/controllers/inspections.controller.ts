@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import db, { getInspectionReportsByPassportPaginated, getInspectionReportsByAdmin, saveInspectionReport } from '../../databases/sqlite';
+import { InspectionsRepository, db } from '../../databases/index';
 import { AppError } from '../middleware/errorHandler.middleware';
 
 export class InspectionsController {
@@ -8,7 +8,7 @@ export class InspectionsController {
     const limit = parseInt(req.query.limit as string) || 20;
     const offset = parseInt(req.query.offset as string) || 0;
     
-    const result = getInspectionReportsByPassportPaginated(passport, limit, offset);
+    const result = InspectionsRepository.getInspectionReportsByPassportPaginated(passport, limit, offset);
     res.json({ success: true, ...result });
   }
 
@@ -34,12 +34,12 @@ export class InspectionsController {
     const adminId = req.params.adminId as string;
     const limit = parseInt(req.query.limit as string) || 50;
     
-    const reports = getInspectionReportsByAdmin(adminId, limit);
+    const reports = InspectionsRepository.getInspectionReportsByAdmin(adminId, limit);
     res.json({ success: true, reports });
   }
 
   static async getRecent(req: Request, res: Response) {
-    const reports = getInspectionReportsByAdmin("", 10);
+    const reports = InspectionsRepository.getInspectionReportsByAdmin("", 10);
     res.json({ success: true, reports });
   }
 
@@ -48,7 +48,7 @@ export class InspectionsController {
     const adminId = (req.user as any)?.id || "unknown";
     const adminName = (req.user as any)?.username;
     
-    const id = saveInspectionReport(passport, result, adminId, adminName, discordId);
+    const id = InspectionsRepository.saveInspectionReport(passport, result, adminId, adminName, discordId);
     res.json({ success: true, id });
   }
 

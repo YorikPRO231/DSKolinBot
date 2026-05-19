@@ -1,5 +1,5 @@
 import { DETECTIVES_INFO } from "./constants/fractions";
-import { generateUniqueDigits } from "../databases/sqlite";
+import { PatchesRepository } from "../databases/index";
 import { factionByDiscordID } from "./constants/fractions";
 
 export function generatePatch(
@@ -10,7 +10,7 @@ export function generatePatch(
   passport: number,
   level: string,
 ): string {
-  const randomDigits = generateUniqueDigits(passport, faction);
+  const randomDigits = PatchesRepository.generateUniqueDigits(passport, faction);
 
   const detectiveDepartmentToFaction: Record<string, string> = {
     CID: "FIB",

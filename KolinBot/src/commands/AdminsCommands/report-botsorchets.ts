@@ -1,5 +1,5 @@
 import {ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder} from 'discord.js';
-import {addSecurityRequest} from '../../databases/sqlite'
+import { SecurityRepository } from '../../databases/index'
 
 export const data = new SlashCommandBuilder()
     .setName("запрос-проверки")
@@ -43,7 +43,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         }
         
         try {
-            addSecurityRequest(staticId!, interaction.user.id, reason!, video!);
+            SecurityRepository.addSecurityRequest(staticId!, interaction.user.id, reason!, video!);
         } catch (error) {
             console.error('Ошибка при записи запроса в БД:', error);
         }

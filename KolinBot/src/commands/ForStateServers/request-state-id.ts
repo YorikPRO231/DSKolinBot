@@ -1,6 +1,6 @@
 import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder} from 'discord.js';
-import {findPlayerPatch, retrievePlayerPatch} from "../../databases/sqlite";
-import type {StatePatch, PatchHistory} from "../../databases/sqlite";
+import { PatchesRepository } from "../../databases/index";
+import type {StatePatch, PatchHistory} from "../../databases";
 import { GOV_ACCESS_PATCH_REQUEST, DETECTIVE_PATCH_ACCESS_ROLES_ID } from '../../utils/config';
 import { DETECTIVES_INFO } from '../../utils/constants/fractions';
 
@@ -54,7 +54,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
         .setTimestamp();
 
     if (passport !== null) {
-        const ps = retrievePlayerPatch(passport);
+        const ps = PatchesRepository.retrievePlayerPatch(passport);
         if (!ps) {
             embed.setDescription('По указанному паспорту ничего не найдено.');
         } else {
@@ -72,7 +72,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
     }
 
     if (patch !== null) {
-        const matches = findPlayerPatch(patch);
+        const matches = PatchesRepository.findPlayerPatch(patch);
         if (!matches || matches.length === 0) {
             embed.setDescription('По указанной нашивке ничего не найдено.');
         } else {

@@ -8,7 +8,7 @@ import {
     ButtonStyle, 
     AttachmentBuilder 
 } from 'discord.js';
-import { getLogsByStatic, getLogById } from '../../../databases/sqlite';
+import { WarehouseRepository } from '../../../databases/index';
 
 export const data = new SlashCommandBuilder()
     .setName("логи-игрока")
@@ -22,13 +22,12 @@ export const data = new SlashCommandBuilder()
 export async function execute(inter: ChatInputCommandInteraction) {
     await inter.deferReply();
     const statick = inter.options.getInteger("статик")!.toString();
-    const logs = await getLogsByStatic(statick) as any[];
+    const logs = await WarehouseRepository.getLogsByStatic(statick) as any[];
 
     if (!logs || logs.length === 0) {
         return await inter.editReply({ content: `🔍 Записи по статику **#${statick}** не найдены.` });
     }
 
-    // Вспомогательная функция для парсинга предметов
     const formatItemsShort = (itemsRaw: any) => {
         try {
             let data = itemsRaw;
@@ -57,7 +56,6 @@ export async function execute(inter: ChatInputCommandInteraction) {
     let page = 0;
     const itemsPerPage = 5;
 
-    // Генерация эмбеда страницы
     const generateEmbed = (currentPage: number) => {
         const start = currentPage * itemsPerPage;
         const currentLogs = logs.slice(start, start + itemsPerPage);
@@ -81,7 +79,6 @@ export async function execute(inter: ChatInputCommandInteraction) {
         return embed;
     };
 
-    // Создание кнопок и меню
     const createComponents = (currentPage: number) => {
         const start = currentPage * itemsPerPage;
         const currentLogs = logs.slice(start, start + itemsPerPage);
@@ -121,19 +118,17 @@ export async function execute(inter: ChatInputCommandInteraction) {
     collector.on('collect', async (i) => {
         if (i.user.id !== inter.user.id) return i.reply({ content: "Это не ваш поиск!", ephemeral: true });
 
-        // Обработка переключения страниц
         if (i.isButton()) {
             if (i.customId === 'prev') page--;
             if (i.customId === 'next') page++;
             await i.update({ embeds: [generateEmbed(page)], components: createComponents(page) });
         }
 
-        // Обработка выбора лога
         if (i.isStringSelectMenu()) {
             const selectedId = parseInt(i.values[0]);
             await i.deferReply({ ephemeral: true });
 
-            const entry = await getLogById(selectedId);
+            const entry = await WarehouseRepository.getLogById(selectedId);
 
             if (!entry) {
                 return await i.editReply({ content: `❌ Запись с ID **#${selectedId}** не найдена.` });

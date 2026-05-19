@@ -1,5 +1,5 @@
 import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder, TextChannel,} from "discord.js";
-import {pushPlayerId} from "../../databases/sqlite";
+import { PatchesRepository } from "../../databases/index";
 import {generatePatch, getFaction} from "../../utils/utilsState";
 import {DETECTIVES_HIGH_ROLES_ID, getStateHighRoles, GOV_PATCH_LOG_CHANNEL_ID,} from "../../utils/config";
 import {DETECTIVES_INFO} from "../../utils/constants/fractions";
@@ -98,7 +98,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
   );
 
   try {
-    pushPlayerId(passport, nickname, userID.id, faction.abbreviation, patch);
+    PatchesRepository.pushPlayerId(passport, nickname, userID.id, faction.abbreviation, patch);
 
     const embed = new EmbedBuilder()
       .setColor(level === "detective" ? 0xff4654 : 0x2b2d31)

@@ -247,11 +247,11 @@ export async function execute(inter: ChatInputCommandInteraction) {
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
-        .setCustomId(`patchreq_approve_${customData}`)
+        .setCustomId(`apr_${customData}`)
         .setLabel('Выдать нашивку')
         .setStyle(ButtonStyle.Success),
     new ButtonBuilder()
-        .setCustomId('patchreq_deny')
+        .setCustomId('pdr')
         .setLabel('Отказ в выдаче')
         .setStyle(ButtonStyle.Danger)
 );

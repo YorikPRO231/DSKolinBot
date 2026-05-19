@@ -50,12 +50,40 @@
         <div class="nav-container">
             <a href="/dashboard" class="nav-brand"><span>BLACK</span>BERRY</a>
             <div class="nav-links">
-                <a href="/dashboard" class="nav-link <%= currentPage === 'dashboard' ? 'active' : '' %>">Дашборд</a>
-                <a href="/dashboard/forms" class="nav-link <%= currentPage === 'forms' ? 'active' : '' %>">Формы</a>
-                <a href="/dashboard/security" class="nav-link <%= currentPage === 'security' ? 'active' : '' %>">Security</a>
-                <a href="/dashboard/inspections" class="nav-link <%= currentPage === 'inspections' ? 'active' : '' %>">Проверки</a>
-                <a href="/dashboard/admin-logs" class="nav-link <%= currentPage === 'admin-logs' ? 'active' : '' %>">Админ-логи</a>
-            </div>
+    <a href="/dashboard" class="nav-link <%= currentPage === 'dashboard' ? 'active' : '' %>">
+        Дашборд
+    </a>
+    
+    <% if (permissions && permissions.includes('manage_forms')) { %>
+        <a href="/dashboard/forms" class="nav-link <%= currentPage === 'forms' ? 'active' : '' %>">
+           Формы
+        </a>
+    <% } %>
+    
+    <% if (permissions && permissions.includes('view_security')) { %>
+        <a href="/dashboard/security" class="nav-link <%= currentPage === 'security' ? 'active' : '' %>">
+            Security
+        </a>
+    <% } %>
+    
+    <% if (permissions && permissions.includes('view_inspections')) { %>
+        <a href="/dashboard/inspections" class="nav-link <%= currentPage === 'inspections' ? 'active' : '' %>">
+            Проверки
+        </a>
+    <% } %>
+    
+    <% if (permissions && permissions.includes('view_admin_logs')) { %>
+        <a href="/dashboard/admin-logs" class="nav-link <%= currentPage === 'admin-logs' ? 'active' : '' %>">
+           Админ-логи
+        </a>
+    <% } %>
+    
+    <% if (permissions && permissions.includes('manage_roles')) { %>
+        <a href="/admin/permissions" class="nav-link <%= currentPage === 'permissions' ? 'active' : '' %>">
+            Права
+        </a>
+    <% } %>
+</div>
             <div style="display:flex; align-items:center; gap:15px;">
                 <span style="font-size:0.85rem; font-weight:600;"><%= user ? user.username : 'Admin' %></span>
                 <a href="/logout" style="color:var(--danger);"><i class="fas fa-power-off"></i></a>

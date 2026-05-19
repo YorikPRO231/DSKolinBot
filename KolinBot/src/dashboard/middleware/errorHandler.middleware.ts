@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { StatusCodes, ReasonPhrases } from 'http-status-codes';
+import { PermissionsRepository } from '../../databases';
 
 export class AppError extends Error {
   public readonly statusCode: number;
@@ -75,6 +76,12 @@ function getErrorMessageFromStatus(statusCode: number): string {
   return messages[statusCode] || 'An error occurred';
 }
 
+async function getUserPermissions(req: Request): Promise<string[]> {
+  const userId = (req.user as any)?.id;
+  if (!userId) return [];
+  return PermissionsRepository.getUserPermissions(userId);
+}
+
 export function errorHandler(err: any, req: Request, res: Response, next: NextFunction) {
   console.error('[ERROR HANDLER]', {
     timestamp: new Date().toISOString(),
@@ -123,15 +130,33 @@ export function errorHandler(err: any, req: Request, res: Response, next: NextFu
     return res.status(statusCode).json(errorResponse);
   }
 
-  res.status(statusCode).render('error', {
-    user: (req as any).user || null,
-    title: `${statusCode} - ${getErrorMessageFromStatus(statusCode)}`,
-    error: {
-      code: statusCode,
-      message: err.message || getErrorMessageFromStatus(statusCode),
-      description: getErrorDescription(statusCode, err),
-      stack: process.env.NODE_ENV === 'development' ? err.stack : null
-    }
+  // Получаем права пользователя для layout
+  getUserPermissions(req).then(permissions => {
+    res.status(statusCode).render('error', {
+      user: (req as any).user || null,
+      title: `${statusCode} - ${getErrorMessageFromStatus(statusCode)}`,
+      currentPage: 'error',
+      permissions: permissions,
+      error: {
+        code: statusCode,
+        message: err.message || getErrorMessageFromStatus(statusCode),
+        description: getErrorDescription(statusCode, err),
+        stack: process.env.NODE_ENV === 'development' ? err.stack : null
+      }
+    });
+  }).catch(() => {
+    res.status(statusCode).render('error', {
+      user: (req as any).user || null,
+      title: `${statusCode} - ${getErrorMessageFromStatus(statusCode)}`,
+      currentPage: 'error',
+      permissions: [],
+      error: {
+        code: statusCode,
+        message: err.message || getErrorMessageFromStatus(statusCode),
+        description: getErrorDescription(statusCode, err),
+        stack: process.env.NODE_ENV === 'development' ? err.stack : null
+      }
+    });
   });
 }
 
@@ -185,14 +210,30 @@ export function notFoundHandler(req: Request, res: Response, next: NextFunction)
       return res.redirect('/login');
     }
     
-    res.status(StatusCodes.NOT_FOUND).render('error', {
-      user: user,
-      title: '404 - Page Not Found',
-      error: {
-        code: 404,
-        message: 'Page Not Found',
-        description: 'Запрашиваемая страница не существует или была перемещена'
-      }
+    getUserPermissions(req).then(permissions => {
+      res.status(StatusCodes.NOT_FOUND).render('error', {
+        user: user,
+        title: '404 - Page Not Found',
+        currentPage: 'error',
+        permissions: permissions,
+        error: {
+          code: 404,
+          message: 'Page Not Found',
+          description: 'Запрашиваемая страница не существует или была перемещена'
+        }
+      });
+    }).catch(() => {
+      res.status(StatusCodes.NOT_FOUND).render('error', {
+        user: user,
+        title: '404 - Page Not Found',
+        currentPage: 'error',
+        permissions: [],
+        error: {
+          code: 404,
+          message: 'Page Not Found',
+          description: 'Запрашиваемая страница не существует или была перемещена'
+        }
+      });
     });
   }
 }

@@ -12,7 +12,7 @@ import {
     ThreadChannel
 } from 'discord.js';
 import {GOV_NICKNAME_REQUESTS_CHANNEL_ID, GOV_NICKNAME_REQUESTS_ROLES_ID} from "../../utils/config";
-import {pushInfiltration} from "../../databases/sqlite";
+import { InfiltrationsRepository } from "../../databases/index";
 
 type SendableChannel = TextChannel | NewsChannel | ThreadChannel;
 
@@ -142,7 +142,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
         reportEmbed.addFields({name: 'Ник для внедрения', value: infiltrationNickname});
     }
 
-    pushInfiltration(
+    InfiltrationsRepository.pushInfiltration(
         rank,
         faction, 
         guildName.replace(' | Blackberry', ''),

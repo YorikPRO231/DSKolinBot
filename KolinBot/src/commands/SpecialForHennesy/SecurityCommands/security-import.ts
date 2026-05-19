@@ -1,5 +1,5 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder, MessageFlags } from 'discord.js';
-import { exportSecurityAlertsMany, getSecurityAccess } from '../../../databases/sqlite';
+import { SecurityRepository, AdminsRepository } from '../../../databases/index';
 import axios from 'axios';
 
 export const data = new SlashCommandBuilder()
@@ -22,7 +22,7 @@ const MAX_FILE_SIZE = 2 * 1024 * 1024;
 
 export async function execute(inter: ChatInputCommandInteraction) {
 
-    const securityLevel = getSecurityAccess(inter.user.id);
+    const securityLevel = AdminsRepository.getSecurityAccess(inter.user.id);
         if (securityLevel !== 'yes') {
             return inter.reply({ 
                 content: '❌ У вас нет доступа к этой команде!', 
@@ -54,7 +54,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
             return inter.editReply("⚠ В файле не найдено подходящих данных для импорта.");
         }
 
-        exportSecurityAlertsMany(inter.user.id, alerts.map(a => ({
+        SecurityRepository.exportSecurityAlertsMany(inter.user.id, alerts.map(a => ({
             suspect: a.suspect,
             action: a.suspected_action,
             data: a.work_data,

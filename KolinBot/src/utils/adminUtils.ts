@@ -7,7 +7,7 @@ import {
     MessageActionRowComponentBuilder,
     MessageFlags
 } from "discord.js";
-import {setAdminSurname} from "../databases/sqlite";
+import { AdminsRepository } from "../databases/index";
 
 export async function handleTwinkKick(interaction: any) {
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -80,7 +80,7 @@ export async function handleNickKick(inter: ButtonInteraction, member: GuildMemb
 
 export async function handleAdminRegistration(interaction: any) {
   const surname = interaction.fields.getTextInputValue("surname_input");
-  setAdminSurname(interaction.user.id, surname);
+  AdminsRepository.setAdminSurname(interaction.user.id, surname);
   await interaction.reply({
     content: `Зарегистрирован как **${surname}**. Введите команду снова.`,
     flags: MessageFlags.Ephemeral,

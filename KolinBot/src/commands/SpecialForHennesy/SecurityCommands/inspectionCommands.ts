@@ -7,13 +7,8 @@ import {
     GuildMember
 } from 'discord.js';
 import { 
-    saveInspectionReport, 
-    getInspectionReportsByPassportPaginated, 
-    getSecurityAccess, 
-    getAdminSurname,
-    closeAlertsBySuspectIfExists,
-    getSecurityAlertsBySuspect
-} from '../../../databases/sqlite';
+    SecurityRepository, AdminsRepository, InspectionsRepository
+} from '../../../databases/index';
 
 export const data = new SlashCommandBuilder()
     .setName('отчет-проверки')
@@ -36,7 +31,7 @@ export const data = new SlashCommandBuilder()
             .setRequired(false));
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-    const securityLevel = getSecurityAccess(interaction.user.id);
+    const securityLevel = AdminsRepository.getSecurityAccess(interaction.user.id);
     if (securityLevel !== 'yes') {
         return interaction.reply({ 
             content: '❌ У вас нет доступа к этой команде!', 
@@ -54,15 +49,15 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const fullResult = comment ? `${result}\nКомментарий: ${comment}` : result;
     
     try {
-        const openAlerts = getSecurityAlertsBySuspect(passport, 'OPEN');
+        const openAlerts = SecurityRepository.getSecurityAlertsBySuspect(passport, 'OPEN');
         
         let closedCount = 0;
         if (openAlerts.length > 0) {
-            closedCount = closeAlertsBySuspectIfExists(passport, adminId);
+            closedCount = SecurityRepository.closeAlertsBySuspectIfExists(passport, adminId);
         }
         
-        const reportId = saveInspectionReport(passport, fullResult, adminId, adminName, discordId);
-        const { total } = getInspectionReportsByPassportPaginated(passport, 1, 0);
+        const reportId = InspectionsRepository.saveInspectionReport(passport, fullResult, adminId, adminName, discordId);
+        const { total } = InspectionsRepository.getInspectionReportsByPassportPaginated(passport, 1, 0);
         
         const embed = new EmbedBuilder()
             .setColor(Colors.Green)

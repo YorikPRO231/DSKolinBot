@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import * as sqlite from '../../databases/sqlite';
+import { SecurityRepository } from '../../databases/index'
 import { AppError } from '../middleware/errorHandler.middleware';
 
 export class SecurityController {
@@ -9,9 +9,9 @@ export class SecurityController {
     
     let alerts;
     if (suspect) {
-      alerts = sqlite.getSecurityAlertsBySuspect(suspect);
+      alerts = SecurityRepository.getSecurityAlertsBySuspect(suspect);
     } else {
-      alerts = sqlite.getSecurityAlerts(status as any);
+      alerts = SecurityRepository.getSecurityAlerts(status as any);
     }
     
     res.json({ success: true, alerts });
@@ -21,7 +21,7 @@ export class SecurityController {
     const { suspect, action, data } = req.body;
     const adminId = (req.user as any)?.id || "unknown";
     
-    const result = sqlite.exportSecurityAlertsMany(adminId, [{
+    const result = SecurityRepository.exportSecurityAlertsMany(adminId, [{
       suspect: suspect,
       action: action,
       data: data || 'Ручное добавление'
@@ -33,7 +33,7 @@ export class SecurityController {
   static async closeAlert(req: Request, res: Response) {
     const id = req.params.id as string;
     const adminId = (req.user as any)?.id || "unknown";
-    const result = sqlite.closeAlert(parseInt(id), adminId);
+    const result = SecurityRepository.closeAlert(parseInt(id), adminId);
     
     if (result.changes === 0) {
       throw AppError.notFound('Alert not found');
@@ -45,7 +45,7 @@ export class SecurityController {
   static async reopenAlert(req: Request, res: Response) {
     const id = req.params.id as string;
     const adminId = (req.user as any)?.id || "unknown";
-    const result = sqlite.reopenAlert(parseInt(id), adminId);
+    const result = SecurityRepository.reopenAlert(parseInt(id), adminId);
     
     if (result.changes === 0) {
       throw AppError.notFound('Alert not found');
@@ -56,7 +56,7 @@ export class SecurityController {
 
   static async getLogs(req: Request, res: Response) {
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
-    const logs = sqlite.getSecurityLogs(limit);
+    const logs = SecurityRepository.getSecurityLogs(limit);
     res.json({ success: true, logs });
   }
 
@@ -64,7 +64,7 @@ export class SecurityController {
     const { suspect, reason, video } = req.body;
     const adminId = (req.user as any)?.id || "unknown";
     
-    sqlite.addSecurityRequest(suspect, adminId, reason, video);
+    SecurityRepository.addSecurityRequest(suspect, adminId, reason, video);
     res.json({ success: true });
   }
 }

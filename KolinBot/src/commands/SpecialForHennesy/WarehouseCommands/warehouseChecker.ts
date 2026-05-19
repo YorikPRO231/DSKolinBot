@@ -17,7 +17,7 @@ import {
     TextInputBuilder,
     TextInputStyle
 } from 'discord.js';
-import {getAdminSurname, registerDrain} from '../../../databases/sqlite';
+import { AdminsRepository, WarehouseRepository } from '../../../databases/index';
 import {FRACTION_INFO, FRACTION_TYPES, FractionType} from "../../../utils/constants/fractions";
 import axios from "axios";
 import {analyzeLogData, formReportData, WarehouseData} from "../../../utils/warehouseUtils";
@@ -58,7 +58,7 @@ function getAdminDisplayName(inter: ChatInputCommandInteraction): string {
 }
 
 export async function execute(inter: ChatInputCommandInteraction) {
-    const adminSurname = getAdminSurname(inter.user.id);
+    const adminSurname = AdminsRepository.getAdminSurname(inter.user.id);
     const adminDisplayName = getAdminDisplayName(inter);
     if (!adminSurname) {
         return inter.reply({content: "Вы не зарегистрированы!", flags: [MessageFlags.Ephemeral]});
@@ -284,7 +284,7 @@ async function processPunishment(
         const curatorEmbed = new EmbedBuilder()
             .setColor(0xFFA500)
             .setDescription(curatorText);
-        registerDrain(inter.user.id, passport, config.type, report, '-');
+        WarehouseRepository.registerDrain(inter.user.id, passport, config.type, report, '-');
         if ('editReply' in inter && typeof inter.editReply === 'function') {
             return inter.editReply({
                 content: 'Ниже приведен готовый выговор куратора',
@@ -330,7 +330,7 @@ async function processPunishment(
     }
     const responseContent = `✅ Нарушение зарегистрировано: **${adminDisplayName}**\nНаказание: ${config.name} ${durationText}\n\n**Команда:**\n\`${commandText}\``;
 
-    registerDrain(inter.user.id, passport, config.type, report, durationText);
+    WarehouseRepository.registerDrain(inter.user.id, passport, config.type, report, durationText);
     const group = getFractionGroup(faction);
     const channelId = LOG_CHANNEL_IDS[group]
     const channel = inter.client.channels.cache.get(channelId) as TextChannel | undefined

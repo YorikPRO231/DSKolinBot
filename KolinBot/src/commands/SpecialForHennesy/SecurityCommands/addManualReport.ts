@@ -1,5 +1,5 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder, MessageFlags } from 'discord.js';
-import { exportSecurityAlertsMany, getSecurityAccess } from '../../../databases/sqlite';
+import { SecurityRepository, AdminsRepository} from '../../../databases/index';
 
 export const data = new SlashCommandBuilder()
     .setName("добавить-игрока")
@@ -16,7 +16,7 @@ export const data = new SlashCommandBuilder()
     );
 
 export async function execute(inter: ChatInputCommandInteraction) {
-    const securityLevel = getSecurityAccess(inter.user.id);
+    const securityLevel = AdminsRepository.getSecurityAccess(inter.user.id);
     if (securityLevel !== 'yes') {
         return inter.reply({ 
             content: '❌ У вас нет доступа к этой команде!', 
@@ -34,7 +34,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
     }
 
     try {
-        exportSecurityAlertsMany(inter.user.id, [{
+        SecurityRepository.exportSecurityAlertsMany(inter.user.id, [{
             suspect: playerId,
             action: actionType,
             data: 'Ручное добавление'

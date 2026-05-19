@@ -1,5 +1,5 @@
 import { ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
-import { removeLogById } from '../../../databases/sqlite'; 
+import { WarehouseRepository } from '../../../databases/index'; 
 
 export const data = new SlashCommandBuilder()
     .setName("удалить-лог-id")
@@ -17,7 +17,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
     const logId = inter.options.getInteger("id")!;
 
     try {
-        const result = await removeLogById(logId);
+        const result = await WarehouseRepository.removeLogById(logId);
 
         if (result.changes === 0) {
             return await inter.editReply({ 
