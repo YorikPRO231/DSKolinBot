@@ -21,7 +21,7 @@ import { AdminsRepository, WarehouseRepository } from '../../../databases/index'
 import {FRACTION_INFO, FRACTION_TYPES, FractionType} from "../../../utils/constants/fractions";
 import axios from "axios";
 import {analyzeLogData, formReportData, WarehouseData} from "../../../utils/warehouseUtils";
-import {logError} from "../../../logger";
+import * as logger from "../../../logging";
 import {ButtonStyle, ComponentType} from "discord-api-types/v10";
 import {PUNISHMENT_TYPES} from "../../../utils/constants/punishments";
 
@@ -98,7 +98,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
         }
         await handleWarehouseButtons(message, report.passport, inter.user.id, faction, adminSurname, adminDisplayName, report)
     } catch (e) {
-        return logError(inter.client, e as Error, 'Обработка склада v2')
+        return logger.logError(inter.client, e as Error, 'Обработка склада v2')
     }
 }
 
@@ -252,7 +252,7 @@ async function processPunishment(
         let footer = ''
         for (const item of report.items) {
             if (item.totalLeak <= 0) {
-                await logError(inter.client, new Error(`item.totalLeak <= 0 ${item.totalLeak}`), 'Warehouse v2')
+                await logger.logError(inter.client, new Error(`item.totalLeak <= 0 ${item.totalLeak}`), 'Warehouse v2')
                 continue
             }
             if (item.vehicle && !storage.includes('машине')) {
@@ -335,7 +335,7 @@ async function processPunishment(
     const channelId = LOG_CHANNEL_IDS[group]
     const channel = inter.client.channels.cache.get(channelId) as TextChannel | undefined
     if (channelId === 'NS' || !channel) {
-        return logError(inter.client, new Error('Warehouse channel ID not found'), 'Обработка склада V2')
+        return logger.logError(inter.client, new Error('Warehouse channel ID not found'), 'Обработка склада V2')
     }
 
     const embed = new EmbedBuilder().setColor(Colors.Gold).setDescription(`\`\`\`\n${formReportData(report)[1]}\`\`\``)

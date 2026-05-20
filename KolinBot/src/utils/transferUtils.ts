@@ -23,6 +23,16 @@ import {TransferData, TransfersRepository} from "../databases/repositories/trans
 import {TRANSFER_TABLE} from "./constants/transferData";
 import {TRANSFER_LOG_CHANNEL_ID} from "./config";
 
+
+async function safeReply(interaction: any, data: any) {
+  if (interaction.replied || interaction.deferred) {
+    return interaction.followUp(data);
+  }
+
+  return interaction.reply(data);
+}
+
+
 /**
  * Получает список фракций игрока на основе его ролей на ЧП сервере
  */
@@ -41,7 +51,6 @@ async function getFactionsFromRoles(
       return ['NOCHP'];
     }
     const chpRoleIds = new Set(chpMember.roles.cache.map((role) => role.id));
-
     for (const [factionKey, factionInfo] of Object.entries(FRACTION_INFO)) {
       if (factionInfo.chp_role_id && chpRoleIds.has(factionInfo.chp_role_id)) {
         factions.push(factionKey);
@@ -162,13 +171,13 @@ export async function showFactionSelectMenu(
   const factions = await getFactionsFromRoles(member, interaction.client);
 
   if (factions.length === 0) {
-    return await interaction.reply({
+    return await safeReply(interaction, {
       content: "❌ Не удалось определить вашу фракцию по ролям ЧП. Обратитесь к администратору.",
       flags: MessageFlags.Ephemeral,
     });
   }
   if (factions.length === 1 && factions[0] === 'NOCHP') {
-    return await interaction.reply({
+    return await safeReply(interaction, {
       content: "❌ Для использования функционала перевода зайдите в сервер ЧП. Получите ссылку командой /чп-приглашение.",
       flags: MessageFlags.Ephemeral,
     });
@@ -186,15 +195,15 @@ export async function showFactionSelectMenu(
     );
 
   const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
-  const response = await interaction.reply({
+  const response = await safeReply(interaction, {
     content: "У вас обнаружено несколько фракционных ролей. Выберите ту, из которой переводитесь:",
     components: [row],
     flags: MessageFlags.Ephemeral,
   });
   const collector = response.createMessageComponentCollector({componentType: ComponentType.StringSelect, time: 30_000});
-  collector.on('collect', async (i) => {
+  collector.on('collect', async (i: StringSelectMenuInteraction) => {
     if (i.user.id !== interaction.user.id) {
-      return i.reply({content: "Недостаточно доступа!", flags: [MessageFlags.Ephemeral]});
+      return safeReply(i, {content: "Недостаточно доступа!", flags: [MessageFlags.Ephemeral]});
     }
     const selected = i.values[0]
     await interaction.editReply({content: 'Информация получена.', components: []})
@@ -212,9 +221,9 @@ export async function createTransferRequest(interaction: ChatInputCommandInterac
   if (["LSSD", "FIB", "LSPD"].includes(currentFrac) && currentRank === 6) {
     const res = `Перевод из ${currentFrac} с 6 ранга запрещен.`;
     if (interaction instanceof StringSelectMenuInteraction) {
-      await interaction.update({content: res, components: [], embeds: []});
+      return await interaction.update({content: res, components: [], embeds: []});
     } else {
-      await interaction.reply({content: res, flags: MessageFlags.Ephemeral});
+      return await safeReply(interaction, {content: res, flags: MessageFlags.Ephemeral});
     }
   }
   const mapping = TRANSFER_TABLE[targetFrac]?.[currentFrac]?.find(
@@ -226,7 +235,7 @@ export async function createTransferRequest(interaction: ChatInputCommandInterac
     if (interaction instanceof StringSelectMenuInteraction) {
       return await interaction.update({content: res, components: [], embeds: []});
     } else {
-      return await interaction.reply({content: res, flags: MessageFlags.Ephemeral});
+      return await safeReply(interaction, {content: res, flags: MessageFlags.Ephemeral});
     }
   }
   const leaderMentions = await findLeaders(interaction.client, currentFrac, targetFrac);
@@ -234,7 +243,7 @@ export async function createTransferRequest(interaction: ChatInputCommandInterac
       .setTitle('Заявление на перевод')
       .setColor("#dda01b")
       .setDescription(
-          `Сотрудник: <@${interaction.user.id}> ${nickname}[${passport}]\n` +
+          `Сотрудник: <@${interaction.user.id}> ${nickname} [${passport}]\n` +
           `**Из ${currentFrac} [${currentRank}] -> в ${targetFrac} [${mapping.new}]**\n\n` +
           `──────────────────────────────────────────\n` +
           `**Руководство:** ${leaderMentions}`,)
@@ -266,7 +275,7 @@ export async function createTransferRequest(interaction: ChatInputCommandInterac
         embeds: []
       });
     } else {
-      await interaction.reply({
+      await safeReply(interaction, {
         content: 'Заявление было отправлено на рассмотрение руководству фракции.\nОтвет придет Вам в личные сообщения. ',
         flags: MessageFlags.Ephemeral
       });
@@ -348,7 +357,7 @@ export async function processApproval(inter: ButtonInteraction, member: GuildMem
         .setTitle('Одобренное заявление на перевод')
         .setColor("#2ecc71")
         .setDescription(
-            `Сотрудник: <@${data.user_id}> ${data.nickname}[${data.passport}]\n` +
+            `Сотрудник: <@${data.user_id}> ${data.nickname} [${data.passport}]\n` +
             `**Из ${data.current} [${data.current_rank}] -> в ${data.destination} [${mapping.new}]**`)
         .addFields({
           name: "Одобрено:",
@@ -389,7 +398,7 @@ export async function processAction(inter: ButtonInteraction | StringSelectMenuI
       const toApprove = data.destination_approve;
       const isFrom = pFaction === data.current;
       if (isFrom && fromApprove !== 'ожидание' || !isFrom && toApprove !== 'ожидание') {
-        return inter.reply({
+        return safeReply(inter, {
           content: `Перевод уже одобрен стороной ${(isFrom ? data.current : data.destination)}. Ожидается одобрение ${((!isFrom) ? data.current : data.destination)}.`,
           components: [], flags: MessageFlags.Ephemeral
         });
@@ -407,7 +416,7 @@ export async function processAction(inter: ButtonInteraction | StringSelectMenuI
               `Если Вы будущий работодатель игрока (${data.destination}), то проверьте:\n` +
               `1. Наличие сотрудника в черных списках своей фракции\n2. Судимости сотрудника.\`\`\`\n` +
               `**После одобрения перевода кнопкой ниже отменить его возможно будет только через администрацию.**`).setColor(Colors.Aqua);
-      return inter.reply({embeds: [embed], components: [buttons], flags: MessageFlags.Ephemeral})
+      return safeReply(inter, {embeds: [embed], components: [buttons], flags: MessageFlags.Ephemeral})
     case 'deny':
       const modal = new ModalBuilder().setCustomId(`tr_deny_${data.passport}`).setTitle("Причина отказа");
       const reasonInput = new TextInputBuilder().setCustomId("reason_text")
@@ -426,10 +435,9 @@ export async function handleTransferButtons(inter: ButtonInteraction, member: Gu
   const passport = parts[2];
   const data = TransfersRepository.retrieveTransferData(passport);
   if (!data) {
-    return inter.reply({content: 'Не удалось найти информацию о данном переводе.', flags: MessageFlags.Ephemeral})
+    return safeReply(inter, {content: 'Не удалось найти информацию о данном переводе.', flags: MessageFlags.Ephemeral})
   }
   if (type === 'confirm') {
-    console.log('Begin confirm..')
     return processApproval(inter, member, data, parts[3]);
   }
   const hasFromPerm = await userHasFactionPermission(member, data.current, inter.client);
@@ -443,7 +451,7 @@ export async function handleTransferButtons(inter: ButtonInteraction, member: Gu
           {label: data.current, value: data.current},
           {label: data.destination, value: data.destination},
         ]);
-    await inter.reply({
+    await safeReply(inter, {
       content: "Выберите фракцию для продолжения:",
       components: [new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu)],
       flags: MessageFlags.Ephemeral,
@@ -475,7 +483,7 @@ export async function handleTransferButtons(inter: ButtonInteraction, member: Gu
   } else if (!hasFromPerm && hasToPerm) {
     return processAction(inter, member, data, type, data.destination)
   } else {
-    return inter.reply({content: 'Нет прав управления данными кнопками', flags: MessageFlags.Ephemeral})
+    return safeReply(inter, {content: 'Нет прав управления данными кнопками', flags: MessageFlags.Ephemeral})
   }
 }
 
@@ -484,7 +492,7 @@ export async function handleDenyModal(inter: any, member: GuildMember) {
   const passport = parts[2];
   const data = TransfersRepository.retrieveTransferData(passport);
   if (!data) {
-    return inter.reply({content: 'Не удалось найти информацию о данном переводе.', flags: MessageFlags.Ephemeral})
+    return safeReply(inter, {content: 'Не удалось найти информацию о данном переводе.', flags: MessageFlags.Ephemeral})
   }
   const original = await findOriginal(data.msg_id, inter.client);
   const reason = inter.fields.getTextInputValue("reason_text");
@@ -509,7 +517,7 @@ export async function handleDenyModal(inter: any, member: GuildMember) {
           .setTitle("Перевод отклонен")
           .setDescription(
               `Ваше заявление на перевод из ${oldFaction} в ${newFaction} было отклонено ${member.displayName}. Причина: ${reason}.\n` +
-              `В случае несогласия с решением, обратитесть в правительство к аппеляции данного решения.`
+              `В случае несогласия с решением, обратитесть в правительство для аппеляции данного решения.`
           )
           .setTimestamp()
           .setFooter({text: "Система переводов"});
@@ -522,5 +530,5 @@ export async function handleDenyModal(inter: any, member: GuildMember) {
       console.error("Не удалось отправить ЛС автору");
     }
   }
-  return inter.reply({content: `Перевод был отклонен: ${reason}`, flags: MessageFlags.Ephemeral})
+  return safeReply(inter, {content: `Перевод был отклонен: ${reason}`, flags: MessageFlags.Ephemeral})
 }
