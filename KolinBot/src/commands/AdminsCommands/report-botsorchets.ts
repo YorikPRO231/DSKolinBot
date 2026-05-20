@@ -1,5 +1,5 @@
 import {ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder} from 'discord.js';
-import { SecurityRepository } from '../../databases/index'
+import {SecurityRepository} from '../../databases'
 
 export const data = new SlashCommandBuilder()
     .setName("запрос-проверки")
@@ -22,28 +22,32 @@ export const data = new SlashCommandBuilder()
             .setRequired(true))
     .addStringOption(option =>
         option.setName('видео')
-            .setDescription('Ссылка на видео-доказательство')
-            .setRequired(true));
+            .setDescription('Ссылка на видео-доказательство'));
 
 export async function execute(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply({ flags: 'Ephemeral' });
     
     try {
-        const target = interaction.options.getString('адресат');
-        const staticId = interaction.options.getString('статик');
-        const reason = interaction.options.getString('причина');
-        const video = interaction.options.getString('видео');
+        const target = interaction.options.getString('адресат', true);
+        const staticId = interaction.options.getString('статик', true);
+        const reason = interaction.options.getString('причина', true);
+        const video = interaction.options.getString('видео')
+        if (video) {
+            const urlPattern = /^(https?:\/\/)[^\s$.?#].[^\s]*$/i;
 
-        const urlPattern = /^(https?:\/\/)[^\s$.?#].[^\s]*$/i;
-
-        if (!urlPattern.test(video!)) {
-            return interaction.editReply({ 
-                content: '❌ Ошибка: В поле "видео" должна быть указана прямая ссылка (начинающаяся с http:// или https://).'
-            });
+            if (!urlPattern.test(video!)) {
+                return interaction.editReply({
+                    content: '❌ Ошибка: В поле "видео" должна быть указана прямая ссылка (начинающаяся с http:// или https://).'
+                });
+            }
         }
+
         
         try {
-            SecurityRepository.addSecurityRequest(staticId!, interaction.user.id, reason!, video!);
+            SecurityRepository.addSecurityRequest(
+                target,
+                interaction.user.id, `Запрос от админов: ${reason}, ${video || 'без видео'}`,
+                staticId);
         } catch (error) {
             console.error('Ошибка при записи запроса в БД:', error);
         }

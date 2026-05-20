@@ -37,22 +37,21 @@ db.exec(`
     security TEXT DEFAULT 'no'
   );
 
-  CREATE TABLE IF NOT EXISTS security_alerts (
+  CREATE TABLE IF NOT EXISTS bot_cheat_reports
+  (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    suspect TEXT NOT NULL,
-    suspected_action TEXT NOT NULL,
-    work_data TEXT NOT NULL,
-    admin_id TEXT NOT NULL,
+    type       TEXT        NOT NULL CHECK (type IN ('Bots', 'Cheats')),
     count INTEGER DEFAULT 1,
-    status TEXT DEFAULT 'OPEN',
-    created_at DATETIME DEFAULT (datetime('now', 'localtime')),
-    updated_at DATETIME DEFAULT (datetime('now', 'localtime')),
-    UNIQUE(suspect, suspected_action)
+    author_id  TEXT        NOT NULL,
+    reason     TEXT        NOT NULL,
+    created_at TEXT DEFAULT (datetime('now', 'localtime')),
+    updated_at TEXT DEFAULT (datetime('now', 'localtime')),
+    passport   TEXT UNIQUE NOT NULL
   );
 
-  CREATE INDEX IF NOT EXISTS idx_security_suspect ON security_alerts(suspect);
-  CREATE INDEX IF NOT EXISTS idx_security_status ON security_alerts(status);
-  CREATE INDEX IF NOT EXISTS idx_security_created ON security_alerts(created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_security_suspect ON bot_cheat_reports (passport);
+  CREATE INDEX IF NOT EXISTS idx_security_status ON bot_cheat_reports (type);
+  CREATE INDEX IF NOT EXISTS idx_security_created ON bot_cheat_reports (created_at DESC);
 
   CREATE TABLE IF NOT EXISTS security_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

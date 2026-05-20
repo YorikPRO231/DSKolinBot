@@ -1,14 +1,12 @@
-import { 
-    SlashCommandBuilder, 
-    ChatInputCommandInteraction, 
-    EmbedBuilder,
+import {
+    ChatInputCommandInteraction,
     Colors,
+    EmbedBuilder,
+    GuildMember,
     MessageFlags,
-    GuildMember
+    SlashCommandBuilder
 } from 'discord.js';
-import { 
-    SecurityRepository, AdminsRepository, InspectionsRepository
-} from '../../../databases/index';
+import {AdminsRepository, InspectionsRepository, SecurityRepository} from '../../../databases';
 
 export const data = new SlashCommandBuilder()
     .setName('отчет-проверки')
@@ -53,7 +51,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         
         let closedCount = 0;
         if (openAlerts.length > 0) {
-            closedCount = SecurityRepository.closeAlertsBySuspectIfExists(passport, adminId);
+            closedCount = SecurityRepository.closeAlertsBySuspectIfExists(passport);
         }
         
         const reportId = InspectionsRepository.saveInspectionReport(passport, fullResult, adminId, adminName, discordId);

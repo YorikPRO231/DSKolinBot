@@ -1,6 +1,6 @@
-import { Request, Response } from 'express';
-import { SecurityRepository } from '../../databases/index'
-import { AppError } from '../middleware/errorHandler.middleware';
+import {Request, Response} from 'express';
+import {SecurityRepository} from '../../databases'
+import {AppError} from '../middleware/errorHandler.middleware';
 
 export class SecurityController {
   static async getAlerts(req: Request, res: Response) {
@@ -32,20 +32,7 @@ export class SecurityController {
 
   static async closeAlert(req: Request, res: Response) {
     const id = req.params.id as string;
-    const adminId = (req.user as any)?.id || "unknown";
-    const result = SecurityRepository.closeAlert(parseInt(id), adminId);
-    
-    if (result.changes === 0) {
-      throw AppError.notFound('Alert not found');
-    }
-    
-    res.json({ success: true });
-  }
-
-  static async reopenAlert(req: Request, res: Response) {
-    const id = req.params.id as string;
-    const adminId = (req.user as any)?.id || "unknown";
-    const result = SecurityRepository.reopenAlert(parseInt(id), adminId);
+    const result = SecurityRepository.closeAlert(parseInt(id));
     
     if (result.changes === 0) {
       throw AppError.notFound('Alert not found');
@@ -61,10 +48,10 @@ export class SecurityController {
   }
 
   static async addSecurityRequest(req: Request, res: Response) {
-    const { suspect, reason, video } = req.body;
+    const {suspect, reason, type} = req.body;
     const adminId = (req.user as any)?.id || "unknown";
-    
-    SecurityRepository.addSecurityRequest(suspect, adminId, reason, video);
+
+    SecurityRepository.addSecurityRequest(type, adminId, reason, suspect);
     res.json({ success: true });
   }
 }

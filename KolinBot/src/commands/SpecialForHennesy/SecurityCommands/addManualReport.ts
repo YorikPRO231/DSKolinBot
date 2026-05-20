@@ -1,5 +1,5 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder, MessageFlags } from 'discord.js';
-import { SecurityRepository, AdminsRepository} from '../../../databases/index';
+import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder} from 'discord.js';
+import {AdminsRepository, SecurityRepository} from '../../../databases';
 
 export const data = new SlashCommandBuilder()
     .setName("добавить-игрока")
@@ -13,7 +13,10 @@ export const data = new SlashCommandBuilder()
         option.setName("причина")
             .setDescription("Укажите на что требуется проверить игрока")
             .setRequired(true)
-    );
+    ).addStringOption(opt => opt.setName('тип')
+        .setDescription('Cheats/Bots')
+        .addChoices({name: 'Cheats', value: 'Cheats'}, {name: 'Bots', value: 'Bots'})
+        .setRequired(true));
 
 export async function execute(inter: ChatInputCommandInteraction) {
     const securityLevel = AdminsRepository.getSecurityAccess(inter.user.id);
@@ -27,18 +30,15 @@ export async function execute(inter: ChatInputCommandInteraction) {
     await inter.deferReply();
 
     const playerId = inter.options.getString("статик", true);
-    const actionType = inter.options.getString("причина", true);
+    const reason = inter.options.getString("причина", true);
+    const type = inter.options.getString('тип', true);
 
     if (!/^\d+$/.test(playerId)) {
         return inter.editReply("❌ ID игрока должен содержать только цифры");
     }
 
     try {
-        SecurityRepository.exportSecurityAlertsMany(inter.user.id, [{
-            suspect: playerId,
-            action: actionType,
-            data: 'Ручное добавление'
-        }]);
+        SecurityRepository.addSecurityRequest(type, inter.user.id, reason, playerId)
 
         const embed = new EmbedBuilder()
             .setColor(0x2ECC71)
@@ -46,7 +46,8 @@ export async function execute(inter: ChatInputCommandInteraction) {
             .setDescription(`Пользователь **${inter.user.displayName}** добавил нового подозрительного игрока`)
             .addFields(
                 { name: 'ID игрока', value: `\`${playerId}\``, inline: true },
-                { name: 'Причина добавления', value: `\`${actionType}\``, inline: true },
+                {name: 'Причина добавления', value: `\`${reason}\``, inline: true},
+                {name: 'Тип проверки', value: type, inline: true},
                 { name: 'Дата добавления', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false }
             )
             .setFooter({ text: `Добавлено: ${inter.user.tag}` })

@@ -1,14 +1,13 @@
-import { Router } from 'express';
-import { ensureAuthenticatedAndAuthorized } from '../../middleware/auth.middleware';
-import { validateSecurityAlert } from '../../middleware/validation.middleware';
-import { SecurityController } from '../../controllers/security.controller';
+import {Router} from 'express';
+import {ensureAuthenticatedAndAuthorized} from '../../middleware/auth.middleware';
+import {validateSecurityAlert} from '../../middleware/validation.middleware';
+import {SecurityController} from '../../controllers/security.controller';
 
 const router = Router();
 
 router.get('/alerts', ensureAuthenticatedAndAuthorized, SecurityController.getAlerts);
 router.post('/alerts/add', ensureAuthenticatedAndAuthorized, validateSecurityAlert, SecurityController.addAlert);
 router.post('/alerts/:id/close', ensureAuthenticatedAndAuthorized, SecurityController.closeAlert);
-router.post('/alerts/:id/reopen', ensureAuthenticatedAndAuthorized, SecurityController.reopenAlert);
 router.get('/logs', ensureAuthenticatedAndAuthorized, SecurityController.getLogs);
 router.post('/request', ensureAuthenticatedAndAuthorized, SecurityController.addSecurityRequest);
 
