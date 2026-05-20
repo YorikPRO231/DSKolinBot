@@ -1,18 +1,18 @@
-import { Client, EmbedBuilder, Guild, GuildMember } from "discord.js";
-import { factionByDiscordID, FRACTION_INFO } from "../utils/constants/fractions";
-import { getStateFractionRoles, getStateServerIds } from "../utils/config";
+import {Client, EmbedBuilder, Guild, GuildMember} from "discord.js";
+import {factionByDiscordID, FRACTION_INFO} from "../utils/constants/fractions";
+import {getCrimeServerIds, getStateFractionRoles, getStateServerIds} from "../utils/config";
 
 
 export async function syncFactionRolesOnJoin(
   client: Client,
   member: GuildMember,
 ): Promise<boolean> {
-  if (member.guild.id !== FRACTION_INFO["CHP_SERVER"].discord_id) return false;
+  if (member.guild.id !== FRACTION_INFO["CHP_SERVER"].discord_id && member.guild.id !== FRACTION_INFO['MP_SERVER'].discord_id) return false;
   if (member.user.bot) return false;
   if (member.roles.cache.some(r => /администратор|хелпер/i.test(r.name))) return false;
 
   let roleAdded = false;
-  const stateServerIds = getStateServerIds();
+  const stateServerIds = [...getStateServerIds(), ...getCrimeServerIds()];
   await new Promise(resolve => setTimeout(resolve, 2000));
 
   for (const sid of stateServerIds) {
@@ -20,27 +20,25 @@ export async function syncFactionRolesOnJoin(
     if (!guild) continue;
 
     const factionInfo = factionByDiscordID(sid);
-    if (!factionInfo?.[1]?.state) continue;
+
 
     try {
       const targetMember = await guild.members.fetch(member.user.id).catch(() => null);
       
       if (targetMember?.roles.cache.has(factionInfo[1].faction_role_id)) {
-        const chpRole = member.guild.roles.cache.find(
-          role => role.name === factionInfo[0],
+        const targetRole = member.guild.roles.cache.find(
+            role => role.name === factionInfo[0],
         );
 
-        if (!chpRole) {
-          console.warn(`⚠️ Роль "${factionInfo[0]}" не найдена на сервере ЧП`);
-          continue;
+        if (!targetRole) {
+          console.warn(`⚠️ Роль "${factionInfo[0]}" не найдена на сервере ЧП/МП`);
+        } else {
+          if (!member.roles.cache.has(targetRole.id)) {
+            await member.roles.add(targetRole, "Наличие роли в фракционном дискорде при заходе на сервер.");
+            console.log(`✅ Выдана роль ${factionInfo[0]} для ${member.user.tag}`);
+          }
+          roleAdded = true;
         }
-
-        if (!member.roles.cache.has(chpRole.id)) {
-          await member.roles.add(chpRole, "Наличие роли в фракционном дискорде при заходе на сервер.");
-          console.log(`✅ Выдана роль ${factionInfo[0]} для ${member.user.tag}`);
-        }
-
-        roleAdded = true;
       }
     } catch (error) {
       console.error(`Ошибка проверки на сервере ${guild.name}:`, error);
@@ -90,61 +88,108 @@ export async function checkAndKickIfNoRoles(
   }
 }
 
-
 export async function handleFactionLeave(
   client: Client,
   guildId: string,
   userId: string,
 ): Promise<void> {
-  if (!getStateServerIds().includes(guildId)) return;
-
   const chpServerId = FRACTION_INFO["CHP_SERVER"].discord_id;
   const chp = client.guilds.cache.get(chpServerId);
-  if (!chp) return;
-
+  const mpServerId = FRACTION_INFO['MP_SERVER'].discord_id;
+  const mp = client.guilds.cache.get(mpServerId);
+  if (!chp || !mp) return;
   const chpMember = await chp.members.fetch(userId).catch(() => null);
-  if (!chpMember) return;
-  if (chpMember.user.bot) return;
-  if (chpMember.roles.cache.some(r => /администратор|хелпер/i.test(r.name))) return;
-
-  const factionInfo = factionByDiscordID(guildId);
-  if (!factionInfo?.[1]?.chp_role_id) return;
-
-  if (chpMember.roles.cache.has(factionInfo[1].chp_role_id)) {
-    await chpMember.roles.remove(
-      factionInfo[1].chp_role_id,
-      `Выход из фракционного дискорда ${factionInfo[0]}`,
+  const mpMember = await mp.members.fetch(userId).catch(() => null);
+  if (chpMember) {
+    if (chpMember.user.bot) return;
+    if (chpMember.roles.cache.some(r => /администратор|хелпер/i.test(r.name))) return;
+    const factionInfo = factionByDiscordID(guildId);
+    if (!factionInfo?.[1]?.chp_role_id) return;
+    if (chpMember.roles.cache.has(factionInfo[1].chp_role_id)) {
+      await chpMember.roles.remove(
+          factionInfo[1].chp_role_id,
+          `Выход из фракционного дискорда ${factionInfo[0]}`,
+      );
+    }
+    const stateChpRoleIds = Object.values(FRACTION_INFO)
+        .filter(i => i.state && i.discord_id !== chpServerId)
+        .map(i => i.chp_role_id)
+        .filter(id => id.length > 0);
+    const hasOtherFractionRoles = chpMember.roles.cache.some(role =>
+        stateChpRoleIds.includes(role.id),
     );
+    if (!hasOtherFractionRoles) {
+      try {
+        await chpMember.kick("Отсутствие ролей фракций после выхода из фракционного сервера");
+        const kickEmbed = new EmbedBuilder()
+            .setTitle("GTA 5 RP | ЧП Blackberry")
+            .setTimestamp()
+            .setColor(0xb8001c)
+            .setDescription(
+                "Вы были удалены из дискорда ЧП, так как больше не имеете ролей фракций.\nПолучите роль фракции у старшего состава для авторизации доступа.",
+            );
+
+        await chpMember.user.send({embeds: [kickEmbed]}).catch(() => {
+        });
+      } catch (error) {
+        console.error(`Ошибка при кике ${chpMember.user.tag} из ЧП:`, error);
+      }
+    }
   }
-
-  const stateChpRoleIds = Object.values(FRACTION_INFO)
-    .filter(i => i.state && i.discord_id !== chpServerId)
-    .map(i => i.chp_role_id)
-    .filter(id => id.length > 0);
-
-  const hasOtherFractionRoles = chpMember.roles.cache.some(role =>
-    stateChpRoleIds.includes(role.id),
-  );
-
-  if (!hasOtherFractionRoles) {
-    try {
-      await chpMember.kick("Отсутствие ролей фракций после выхода из фракционного сервера");
-
-      const kickEmbed = new EmbedBuilder()
-        .setTitle("GTA 5 RP | ЧП Blackberry")
-        .setTimestamp()
-        .setColor(0xb8001c)
-        .setDescription(
-          "Вы были удалены из дискорда ЧП, так как больше не имеете ролей фракций.\nПолучите роль фракции у старшего состава для авторизации доступа.",
-        );
-
-      await chpMember.user.send({ embeds: [kickEmbed] }).catch(() => {});
-    } catch (error) {
-      console.error(`Ошибка при кике ${chpMember.user.tag} из ЧП:`, error);
+  if (mpMember) {
+    if (mpMember.user.bot) return;
+    if (mpMember.roles.cache.some(r => /администратор|хелпер/i.test(r.name))) return;
+    const factionInfo = factionByDiscordID(guildId);
+    if (!factionInfo?.[1]?.mp_role_id) return;
+    if (mpMember.roles.cache.has(factionInfo[1].mp_role_id)) {
+      await mpMember.roles.remove(
+          factionInfo[1].mp_role_id,
+          `Выход из фракционного дискорда ${factionInfo[0]}`,
+      );
     }
   }
 }
 
+
+async function addMPRole(
+    mp: Guild,
+    member: GuildMember,
+    factionName: string
+) {
+  try {
+
+    const mpMember = await mp.members.fetch(member.id).catch(() => null);
+    if (!mpMember) return;
+
+    const mpRole = mp.roles.cache.find(role => role.name === factionName);
+    if (mpRole && !mpMember.roles.cache.has(mpRole.id)) {
+      await mpMember.roles.add(mpRole, `Получение роли ${factionName} в фракционном дискорде`);
+    }
+  } catch (error) {
+    console.error(`Ошибка при выдаче роли ЧП для ${member.id}:`, error);
+  }
+}
+
+async function removeMPRole(
+    mp: Guild,
+    member: GuildMember,
+    factionName: string,
+): Promise<void> {
+  try {
+    const mpMember = await mp.members.fetch(member.id).catch(() => null);
+    if (!mpMember) return;
+    if (mpMember.user.bot) return;
+    if (mpMember.roles.cache.some(r => /администратор|хелпер/i.test(r.name))) return;
+
+    const mpRoleToRemove = mp.roles.cache.find(role => role.name === factionName);
+    if (mpRoleToRemove && mpMember.roles.cache.has(mpRoleToRemove.id)) {
+      await mpMember.roles.remove(mpRoleToRemove, `Снятие роли ${factionName} во фракционном дискорде`);
+    }
+
+  } catch (error) {
+    console.error(`Ошибка при обработке снятия роли для ${member.id}:`, error);
+  }
+}
 
 export async function syncFactionRolesOnRoleChange(
   client: Client,
@@ -153,21 +198,29 @@ export async function syncFactionRolesOnRoleChange(
   removedRoleIds: string[],
 ): Promise<void> {
   const factionInfo = factionByDiscordID(member.guild.id);
-  if (!factionInfo?.[1]?.state || factionInfo[0] === "TEST_SERVER") return;
+  const wasFactionRoleAdded = addedRoleIds.includes(factionInfo[1].faction_role_id);
+  const wasFactionRoleRemoved = removedRoleIds.includes(factionInfo[1].faction_role_id);
+  if (factionInfo[0] === "TEST_SERVER") return;
 
   const chpServerId = FRACTION_INFO["CHP_SERVER"].discord_id;
   const chp = client.guilds.cache.get(chpServerId);
-  if (!chp) return;
+  const mpServerId = FRACTION_INFO['MP_SERVER'].discord_id;
+  const mp = client.guilds.cache.get(mpServerId);
+  if (!chp || !mp) return;
 
-  const wasFactionRoleAdded = addedRoleIds.includes(factionInfo[1].faction_role_id);
-  const wasFactionRoleRemoved = removedRoleIds.includes(factionInfo[1].faction_role_id);
 
   if (wasFactionRoleAdded) {
-    await addChpRole(chp, member, factionInfo[0]);
+    if (factionInfo[1].state) {
+      await addChpRole(chp, member, factionInfo[0]);
+    }
+    await addMPRole(mp, member, factionInfo[0])
   }
 
   if (wasFactionRoleRemoved) {
-    await removeChpRoleAndCheck(chp, member, factionInfo[0]);
+    if (factionInfo[1].state) {
+      await removeChpRoleAndCheck(chp, member, factionInfo[0]);
+    }
+    await removeMPRole(mp, member, factionInfo[0])
   }
 }
 

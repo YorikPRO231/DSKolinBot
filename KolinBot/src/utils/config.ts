@@ -5,7 +5,8 @@ export const ADMINS_SERVER_ID = [`1316831633466458192`]
 
 
 export function getStateServerIds()  {
-    return Object.values(FRACTION_INFO).filter(i=> i.state && i.discord_id.length != 0 && i.discord_id != FRACTION_INFO['CHP_SERVER'].discord_id).map(i => i.discord_id)
+    return Object.values(FRACTION_INFO).filter(i =>
+        i.state && i.discord_id.length != 0 && ![FRACTION_INFO['CHP_SERVER'].discord_id, FRACTION_INFO['MP_SERVER']].includes(i.discord_id)).map(i => i.discord_id)
 }
 
 export function getDetectivesServerIds() {
@@ -13,7 +14,8 @@ export function getDetectivesServerIds() {
 }
 
 export function getCrimeServerIds() {
-    return Object.values(FRACTION_INFO).filter(i => !i.state && i.discord_id.length != 0).map(i => i.discord_id);
+    return Object.values(FRACTION_INFO).filter(i =>
+        !i.state && i.discord_id.length != 0 && ![FRACTION_INFO['CHP_SERVER'].discord_id, FRACTION_INFO['MP_SERVER']].includes(i.discord_id)).map(i => i.discord_id);
 }
 
 export function getPlayerServerIds() {
