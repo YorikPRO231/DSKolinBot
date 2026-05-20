@@ -145,7 +145,7 @@ async function handlePatchRequest(inter: ButtonInteraction, member: GuildMember)
 
     let requestData;
     try {
-        const jsonString = customId.replace('patchreq_approve_', '');
+        const jsonString = customId.replace('apr_', '');
         requestData = JSON.parse(jsonString);
     } catch (error) {
         console.error("Ошибка парсинга данных запроса:", error);
