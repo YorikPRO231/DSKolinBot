@@ -33,6 +33,7 @@ export type FractionInfo = {
   state_high_role_id: string[];
   patch_log_channel: string;
   mp_role_id: string;
+  logs_channel: string;
 }
 export const FRACTION_INFO: Record<
     FractionType, FractionInfo
@@ -46,7 +47,8 @@ export const FRACTION_INFO: Record<
     faction_role_id: "",
     state_high_role_id: [""],
     patch_log_channel: ``,
-    mp_role_id: ``
+    mp_role_id: ``,
+    logs_channel: ``
   },
   RM: {
     label: "Русская мафия",
@@ -57,7 +59,8 @@ export const FRACTION_INFO: Record<
     faction_role_id: "",
     state_high_role_id: [""],
     patch_log_channel: ``,
-    mp_role_id: ``
+    mp_role_id: ``,
+    logs_channel: ``
   },
   LCN: {
     label: "Итальянская мафия",
@@ -68,7 +71,8 @@ export const FRACTION_INFO: Record<
     faction_role_id: "",
     state_high_role_id: [""],
     patch_log_channel: ``,
-    mp_role_id: ``
+    mp_role_id: ``,
+    logs_channel: ``
   },
   YAK: {
     label: "Японская мафия",
@@ -79,7 +83,8 @@ export const FRACTION_INFO: Record<
     faction_role_id: "",
     state_high_role_id: [""],
     patch_log_channel: ``,
-    mp_role_id: ``
+    mp_role_id: ``,
+    logs_channel: ``
   },
   AM: {
     label: "Армянская мафия",
@@ -90,7 +95,8 @@ export const FRACTION_INFO: Record<
     faction_role_id: "",
     state_high_role_id: [""],
     patch_log_channel: ``,
-    mp_role_id: ``
+    mp_role_id: ``,
+    logs_channel: ``
   },
   LSPD: {
     label: "LSPD",
@@ -101,7 +107,8 @@ export const FRACTION_INFO: Record<
     faction_role_id: "673463361983217665",
     state_high_role_id: ["829041631545655306"],
     patch_log_channel: `1470898370364313630`,
-    mp_role_id: ``
+    mp_role_id: ``,
+    logs_channel: ``
   },
   LSSD: {
     label: "LSSD",
@@ -112,7 +119,8 @@ export const FRACTION_INFO: Record<
     faction_role_id: "673464024473534465",
     state_high_role_id: ["673464013837041664"],
     patch_log_channel: `1395107667478843536`,
-    mp_role_id: ``
+    mp_role_id: ``,
+    logs_channel: ``
   },
   FIB: {
     label: "FIB",
@@ -123,7 +131,8 @@ export const FRACTION_INFO: Record<
     faction_role_id: "673463335294861331",
     state_high_role_id: ["895382852462600272"],
     patch_log_channel: `1500511818773172415`,
-    mp_role_id: ``
+    mp_role_id: ``,
+    logs_channel: ``
   },
   GOV: {
     label: "Government",
@@ -134,7 +143,8 @@ export const FRACTION_INFO: Record<
     faction_role_id: "674572465791303699",
     state_high_role_id: ["894157975286087721"],
     patch_log_channel: `1380143712503332925`,
-    mp_role_id: ``
+    mp_role_id: ``,
+    logs_channel: ``
   },
   ARMY: {
     label: "ARMY",
@@ -145,7 +155,8 @@ export const FRACTION_INFO: Record<
     faction_role_id: "933431913207718019",
     state_high_role_id: ["933436258296938536"],
     patch_log_channel: `1395108469413122199`,
-    mp_role_id: ``
+    mp_role_id: ``,
+    logs_channel: ``
   },
   SASPA: {
     label: "SASPA",
@@ -156,7 +167,8 @@ export const FRACTION_INFO: Record<
     faction_role_id: "802190616221581335",
     state_high_role_id: ["839242470234521692"],
     patch_log_channel: `1395106916656742480`,
-    mp_role_id: ``
+    mp_role_id: ``,
+    logs_channel: ``
   },
   WN: {
     label: `WN`,
@@ -167,7 +179,8 @@ export const FRACTION_INFO: Record<
     faction_role_id: "673463412495220736",
     state_high_role_id: [""],
     patch_log_channel: ``,
-    mp_role_id: ``
+    mp_role_id: ``,
+    logs_channel: ``
   },
   FAM: {
     label: "The Families",
@@ -178,7 +191,8 @@ export const FRACTION_INFO: Record<
     faction_role_id: "",
     state_high_role_id: [""],
     patch_log_channel: ``,
-    mp_role_id: ``
+    mp_role_id: ``,
+    logs_channel: ``
   },
   MG: {
     label: "Marabunta Grande",
@@ -189,7 +203,8 @@ export const FRACTION_INFO: Record<
     faction_role_id: "",
     state_high_role_id: [""],
     patch_log_channel: ``,
-    mp_role_id: ``
+    mp_role_id: ``,
+    logs_channel: ``
   },
   LSV: {
     label: "Los Santos Vagos",
@@ -200,7 +215,8 @@ export const FRACTION_INFO: Record<
     faction_role_id: "",
     state_high_role_id: [""],
     patch_log_channel: ``,
-    mp_role_id: ``
+    mp_role_id: ``,
+    logs_channel: ``
   },
   ESB: {
     label: "East Side Ballas",
@@ -211,7 +227,8 @@ export const FRACTION_INFO: Record<
     faction_role_id: "",
     state_high_role_id: [""],
     patch_log_channel: ``,
-    mp_role_id: ``
+    mp_role_id: ``,
+    logs_channel: ``
   },
   BSG: {
     label: "Bloods Street Gang",
@@ -222,7 +239,8 @@ export const FRACTION_INFO: Record<
     faction_role_id: "",
     state_high_role_id: [""],
     patch_log_channel: ``,
-    mp_role_id: ``
+    mp_role_id: ``,
+    logs_channel: ``
   },
   EMS: {
     label: `Emergency Medical Services`,
@@ -233,7 +251,8 @@ export const FRACTION_INFO: Record<
     faction_role_id: "673463454190796810",
     state_high_role_id: [""],
     patch_log_channel: ``,
-    mp_role_id: ``
+    mp_role_id: ``,
+    logs_channel: ``
   },
   TEST_SERVER: {
     label: "Test Server",
@@ -244,7 +263,8 @@ export const FRACTION_INFO: Record<
     faction_role_id: "",
     state_high_role_id: [""],
     patch_log_channel: ``,
-    mp_role_id: ``
+    mp_role_id: ``,
+    logs_channel: ``
   },
   CHP_SERVER: {
     label: "Emergency State Server",
@@ -255,7 +275,8 @@ export const FRACTION_INFO: Record<
     faction_role_id: "",
     state_high_role_id: [""],
     patch_log_channel: ``,
-    mp_role_id: ``
+    mp_role_id: ``,
+    logs_channel: ``
   },
   MP_SERVER: {
     label: "Event Server",
@@ -266,7 +287,8 @@ export const FRACTION_INFO: Record<
     faction_role_id: "",
     state_high_role_id: [""],
     patch_log_channel: ``,
-    mp_role_id: ``
+    mp_role_id: ``,
+    logs_channel: ``
   },
 };
 
