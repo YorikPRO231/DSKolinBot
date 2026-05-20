@@ -3,7 +3,7 @@ import { ChatInputCommandInteraction, SlashCommandBuilder, PermissionFlagsBits, 
 export const data = new SlashCommandBuilder()
   .setName("clear-invite")
   .setDescription("[Admin] Очистка всех приглашений на сервере")
-  .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+  .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
 
 export async function execute(inter: ChatInputCommandInteraction) {
   if (!inter.guild) {
@@ -13,13 +13,14 @@ export async function execute(inter: ChatInputCommandInteraction) {
     });
   }
 
+  await inter.deferReply({ flags: MessageFlags.Ephemeral });
+
   try {
     const invites = await inter.guild.invites.fetch();
 
     if (invites.size === 0) {
-      return inter.reply({
-        content: "На сервере нет активных приглашений!",
-        flags: MessageFlags.Ephemeral
+      return inter.editReply({
+        content: "На сервере нет активных приглашений!"
       });
     }
 
@@ -29,15 +30,14 @@ export async function execute(inter: ChatInputCommandInteraction) {
     
     await Promise.allSettled(deletePromises);
     
-    return inter.reply({
-      content: `✅ Удалено ${invites.size} приглашений`,
-      flags: MessageFlags.Ephemeral
+    return inter.editReply({
+      content: `✅ Успешно удалено приглашений: ${invites.size}`
     });
   } catch (error) {
     console.error("Ошибка при очистке приглашений:", error);
-    return inter.reply({
-      content: "❌ Ошибка при очистке приглашений",
-      flags: MessageFlags.Ephemeral
+    
+    return inter.editReply({
+      content: "❌ Произошла ошибка при очистке приглашений."
     });
   }
 }

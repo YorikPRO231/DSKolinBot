@@ -5,11 +5,11 @@ import dotenv from 'dotenv';
 import {getAllFiles} from './utils/fileUtils';
 import * as config from "./utils/config";
 import {DETECTIVES_INFO, FRACTION_INFO} from './utils/constants/fractions';
-import {logError} from './logger';
 import {createDashboardApp} from './dashboard/app';
 import {setDiscordClient as setAuthDiscordClient} from './dashboard/middleware/auth.middleware';
 import {setDiscordClient as setServiceDiscordClient} from './dashboard/services/discord.service';
 import {PermissionsRepository} from './databases';
+import * as logger from "./logging";
 
 dotenv.config({path: '.env'});
 
@@ -264,7 +264,7 @@ process.on('unhandledRejection', async (error: Error) => {
   console.error('❌ Необработанная ошибка (unhandledRejection):', error);
   
   try {
-    await logError(client, error, 'Глобальный обработчик - unhandledRejection');
+    await logger.logError(client, error, 'Глобальный обработчик - unhandledRejection');
   } catch (logError) {
     console.error('Ошибка при логировании unhandledRejection:', logError);
   }
@@ -278,7 +278,7 @@ process.on('warning', async (warning: Error) => {
   }
   
   try {
-    await logError(client, warning, 'Глобальный обработчик - process warning');
+    await logger.logError(client, warning, 'Глобальный обработчик - process warning');
   } catch (logError) {
     console.error('Ошибка при логировании warning:', logError);
   }

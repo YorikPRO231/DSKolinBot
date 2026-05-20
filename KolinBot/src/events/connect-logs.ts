@@ -1,84 +1,46 @@
-import {AuditLogEvent, Client, Events, GuildChannel, User} from "discord.js";
-import * as logger from "../logger";
-import {punishChecker} from "./messages";
+import { AuditLogEvent, Client, Events, GuildChannel, User } from "discord.js";
+import * as logger from "../logging";
+import { emergencyFlush } from "../logging/helpers/files";
+import { punishChecker } from "./messages";
 
 export const name = "ready";
 export const once = true;
 
 export function execute(client: Client) {
-  console.log('📝 Логи подключены, канал "logs" отслеживается');
+  console.log('📝 Система логирования подключена');
 
   client.on(Events.MessageDelete, async (message) => {
-    if (message.partial) return;
-    await logger.logMessageDelete(client, message);
+    try {
+      await logger.logMessageDelete(client, message);
+    } catch (error) {
+      console.error("Ошибка в MessageDelete:", error);
+      await logger.logError(client, error as Error, "MessageDelete");
+    }
   });
 
   client.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
-    if (oldMessage.partial || newMessage.partial) return;
-    await punishChecker(client, newMessage);
-    await logger.logMessageUpdate(client, oldMessage as any, newMessage as any);
+    try {
+      await punishChecker(client, newMessage);
+      await logger.logMessageUpdate(client, oldMessage, newMessage);
+    } catch (error) {
+      console.error("Ошибка в MessageUpdate:", error);
+      await logger.logError(client, error as Error, "MessageUpdate");
+    }
   });
 
   client.on(Events.GuildMemberAdd, async (member) => {
-    await logger.logMemberJoin(client, member);
-  });
-
-  client.on(Events.GuildMemberRemove, async (member) => {
-    await logger.logMemberLeave(client, member);
-  });
-
-  client.on(Events.GuildMemberUpdate, async (oldMember, newMember) => {
-    await logger.logMemberUpdate(client, oldMember, newMember);
-  });
-
-  client.on(Events.ChannelCreate, async (channel) => {
-    if ("guild" in channel && channel.guild) {
-      await logger.logChannelCreate(client, channel as GuildChannel);
+    try {
+      await logger.logMemberJoin(client, member);
+    } catch (error) {
+      console.error("Ошибка в GuildMemberAdd:", error);
+      await logger.logError(client, error as Error, "GuildMemberAdd");
     }
-  });
-
-  client.on(Events.ChannelDelete, async (channel) => {
-    if ("guild" in channel && channel.guild) {
-      await logger.logChannelDelete(client, channel as GuildChannel);
-    }
-  });
-
-  client.on(Events.ChannelUpdate, async (oldChannel, newChannel) => {
-    if (
-      "guild" in oldChannel &&
-      oldChannel.guild &&
-      "guild" in newChannel &&
-      newChannel.guild
-    ) {
-      await logger.logChannelUpdate(
-        client,
-        oldChannel as GuildChannel,
-        newChannel as GuildChannel,
-      );
-    }
-  });
-
-  client.on(Events.GuildBanAdd, async (ban) => {
-    await logger.logMemberBan(client, ban.user, ban.guild.id, ban.reason);
-  });
-
-  client.on(Events.GuildBanRemove, async (ban) => {
-    await logger.logMemberUnban(client, ban.user, ban.guild.id);
-  });
-
-  client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
-    await logger.logVoiceStateUpdate(client, oldState, newState);
-  });
-
-  client.on(Events.MessageCreate, async (message) => {
-    if (message.partial) {
-      await message.fetch();
-    }
-    await punishChecker(client, message);
   });
 
   client.on(Events.GuildMemberRemove, async (member) => {
     try {
+      await logger.logMemberLeave(client, member);
+      
       if (!member.guild) return;
 
       const auditLogs = await member.guild.fetchAuditLogs({
@@ -112,12 +74,112 @@ export function execute(client: Client) {
         }
       }
     } catch (error) {
-      console.error("Ошибка при отслеживании кика:", error);
-      await logger.logError(
-        client,
-        error as Error,
-        "GuildMemberRemove (kick check)",
-      );
+      console.error("Ошибка в GuildMemberRemove:", error);
+      await logger.logError(client, error as Error, "GuildMemberRemove");
     }
   });
+
+  client.on(Events.GuildMemberUpdate, async (oldMember, newMember) => {
+    try {
+      await logger.logMemberUpdate(client, oldMember, newMember);
+    } catch (error) {
+      console.error("Ошибка в GuildMemberUpdate:", error);
+      await logger.logError(client, error as Error, "GuildMemberUpdate");
+    }
+  });
+
+  client.on(Events.ChannelCreate, async (channel) => {
+    try {
+      if ("guild" in channel && channel.guild) {
+        await logger.logChannelCreate(client, channel as GuildChannel);
+      }
+    } catch (error) {
+      console.error("Ошибка в ChannelCreate:", error);
+      await logger.logError(client, error as Error, "ChannelCreate");
+    }
+  });
+
+  client.on(Events.ChannelDelete, async (channel) => {
+    try {
+      if ("guild" in channel && channel.guild) {
+        await logger.logChannelDelete(client, channel as GuildChannel);
+      }
+    } catch (error) {
+      console.error("Ошибка в ChannelDelete:", error);
+      await logger.logError(client, error as Error, "ChannelDelete");
+    }
+  });
+
+  client.on(Events.ChannelUpdate, async (oldChannel, newChannel) => {
+    try {
+      if (
+        "guild" in oldChannel &&
+        oldChannel.guild &&
+        "guild" in newChannel &&
+        newChannel.guild
+      ) {
+        await logger.logChannelUpdate(
+          client,
+          oldChannel as GuildChannel,
+          newChannel as GuildChannel,
+        );
+      }
+    } catch (error) {
+      console.error("Ошибка в ChannelUpdate:", error);
+      await logger.logError(client, error as Error, "ChannelUpdate");
+    }
+  });
+
+  client.on(Events.GuildBanAdd, async (ban) => {
+    try {
+      await logger.logMemberBan(client, ban.user, ban.guild.id, ban.reason);
+    } catch (error) {
+      console.error("Ошибка в GuildBanAdd:", error);
+      await logger.logError(client, error as Error, "GuildBanAdd");
+    }
+  });
+
+  client.on(Events.GuildBanRemove, async (ban) => {
+    try {
+      await logger.logMemberUnban(client, ban.user, ban.guild.id);
+    } catch (error) {
+      console.error("Ошибка в GuildBanRemove:", error);
+      await logger.logError(client, error as Error, "GuildBanRemove");
+    }
+  });
+
+  client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
+    try {
+      await logger.logVoiceStateUpdate(client, oldState, newState);
+    } catch (error) {
+      console.error("Ошибка в VoiceStateUpdate:", error);
+      await logger.logError(client, error as Error, "VoiceStateUpdate");
+    }
+  });
+
+  client.on(Events.MessageCreate, async (message) => {
+    try {
+      if (message.partial) {
+        await message.fetch();
+      }
+      await punishChecker(client, message);
+    } catch (error) {
+      console.error("Ошибка в MessageCreate:", error);
+      await logger.logError(client, error as Error, "MessageCreate");
+    }
+  });
+
+  process.on("SIGINT", () => {
+    console.log("Сброс буферов логов перед выходом...");
+    emergencyFlush();
+    process.exit(0);
+  });
+
+  process.on("SIGTERM", () => {
+    console.log("Сброс буферов логов перед выходом...");
+    emergencyFlush();
+    process.exit(0);
+  });
+
+  console.log('Все обработчики логирования успешно подключены');
 }
