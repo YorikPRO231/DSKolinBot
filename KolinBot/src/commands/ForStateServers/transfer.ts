@@ -1,11 +1,7 @@
-import { 
-    ChatInputCommandInteraction, 
-    SlashCommandBuilder, 
-    GuildMember 
-} from 'discord.js';
-import { 
-    showFactionSelectMenu 
-} from '../../utils/transferUtils';
+import {ChatInputCommandInteraction, GuildMember, SlashCommandBuilder} from 'discord.js';
+import {showFactionSelectMenu} from '../../utils/transferUtils';
+import {MessageFlags} from "discord-api-types/v10";
+import {TransfersRepository} from "../../databases/repositories/transfers.repository";
 
 export const data = new SlashCommandBuilder()
     .setName('запрос-перевода')
@@ -21,13 +17,21 @@ export const data = new SlashCommandBuilder()
             { name: 'SASPA', value: 'SASPA' },
             { name: 'ARMY', value: 'ARMY' },
             { name: 'USSS', value: 'GOV' }
-        ));
+        ))
+    .addStringOption(opt => opt.setName('ник').setDescription('Ваш текущий ник').setRequired(true));
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-    const passport = interaction.options.getString('паспорт')!;
-    const currentRank = interaction.options.getInteger('ранг')!;
-    const targetFrac = interaction.options.getString('фракция')!;
+    const passport = interaction.options.getString('паспорт', true);
+    const currentRank = interaction.options.getInteger('ранг', true);
+    const targetFrac = interaction.options.getString('фракция', true);
     const member = interaction.member as GuildMember;
-    
-    await showFactionSelectMenu(interaction, passport, currentRank, targetFrac, member);
+    const nickname = interaction.options.getString('ник', true);
+    if (TransfersRepository.retrieveTransferData(passport)) {
+        return interaction.reply({
+            content: 'У Вас уже имеется заявление, ожидайте его рассмотрения.\nПри задержке рассмотрения обратитесь к кураторам фракции.',
+            flags: MessageFlags.Ephemeral
+        });
+    }
+
+    return await showFactionSelectMenu(interaction, passport, currentRank, targetFrac, member, nickname);
 }

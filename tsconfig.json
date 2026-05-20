@@ -9,7 +9,11 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "typeRoots": [
+      "./KolinBot/src/types",
+      "./node_modules/@types"
+    ]
   },
   "include": ["KolinBot/src/**/*.ts"],
   "exclude": ["node_modules", "dist"]

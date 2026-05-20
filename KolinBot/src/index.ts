@@ -6,10 +6,10 @@ import {getAllFiles} from './utils/fileUtils';
 import * as config from "./utils/config";
 import {DETECTIVES_INFO, FRACTION_INFO} from './utils/constants/fractions';
 import {logError} from './logger';
-import { createDashboardApp } from './dashboard/app';
-import { setDiscordClient as setAuthDiscordClient } from './dashboard/middleware/auth.middleware';
-import { setDiscordClient as setServiceDiscordClient } from './dashboard/services/discord.service';
-import { PermissionsRepository } from './databases'; 
+import {createDashboardApp} from './dashboard/app';
+import {setDiscordClient as setAuthDiscordClient} from './dashboard/middleware/auth.middleware';
+import {setDiscordClient as setServiceDiscordClient} from './dashboard/services/discord.service';
+import {PermissionsRepository} from './databases';
 
 dotenv.config({path: '.env'});
 
@@ -134,7 +134,7 @@ async function registerGuildCommands(commands: any[]) {
     const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
     let guildIds = new Set<string>();
-    const devServers = ['1467227742037741846', '1498687307593683174'];
+    const devServers = ['1467227742037741846', '1498687307593683174', '1499051164195356914', '1498691947345350880', '1499063053600424136'];
 
     if (process.env.ENVIRONMENT === 'dev') {
         console.warn('Загрузка девелоп серверов....');
@@ -226,20 +226,23 @@ async function start() {
 
     client.once('ready', (readyClient) => {
         console.log(`✅ Бот запущен как ${readyClient.user?.tag}`);
-        
-        setAuthDiscordClient(readyClient);
-        setServiceDiscordClient(readyClient);
-        
-        const app = createDashboardApp(readyClient);
-        app.listen(PORT, '0.0.0.0', () => {
-            console.log(`📊 Dashboard сервер запущен на порту ${PORT}`);
-            
-            const ALLOWED_ROLES = (process.env.ALLOWED_ROLES || "").split(",").filter(r => r.trim());
-            if (ALLOWED_ROLES.length > 0) {
-                console.log(`🔒 Role protection enabled: ${ALLOWED_ROLES.join(", ")}`);
-            }
-        });
-        
+
+
+        if (process.env.DASHBOARD === 'true') {
+            setAuthDiscordClient(readyClient);
+            setServiceDiscordClient(readyClient);
+            const app = createDashboardApp(readyClient);
+            app.listen(PORT, '0.0.0.0', () => {
+                console.log(`📊 Dashboard сервер запущен на порту ${PORT}`);
+
+                const ALLOWED_ROLES = (process.env.ALLOWED_ROLES || "").split(",").filter(r => r.trim());
+                if (ALLOWED_ROLES.length > 0) {
+                    console.log(`🔒 Role protection enabled: ${ALLOWED_ROLES.join(", ")}`);
+                }
+            });
+        } else {
+            console.warn('Отключение дешборда..')
+        }
         console.log('✅ Google Forms интеграция активирована');
     });
 

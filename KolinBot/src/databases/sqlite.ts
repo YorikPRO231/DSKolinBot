@@ -159,6 +159,20 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_role_permissions_perm ON role_permissions(permission_key);
   CREATE INDEX IF NOT EXISTS idx_user_permissions_user ON user_permissions(user_id);
   CREATE INDEX IF NOT EXISTS idx_user_permissions_perm ON user_permissions(permission_key);
+
+  CREATE TABLE IF NOT EXISTS transfers
+  (
+      id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+      current_rank        INTEGER     NOT NULL,
+      current             TEXT        NOT NULL,
+      destination         TEXT        NOT NULL,
+      passport            TEXT UNIQUE NOT NULL,
+      user_id             TEXT        NOT NULL,
+      current_approve     TEXT        NOT NULL,
+      destination_approve TEXT        NOT NULL,
+      nickname            TEXT        NOT NULL,
+      msg_id              TEXT        NOT NULL
+  )
 `);
 
 export default db;
