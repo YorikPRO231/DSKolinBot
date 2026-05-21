@@ -102,6 +102,9 @@ export async function handleFactionLeave(
   const mpMember = await mp.members.fetch(userId).catch(() => null);
   if (chpMember) {
     if (chpMember.user.bot) return;
+
+    if (!chpMember.manageable) return;
+
     if (chpMember.roles.cache.some(r => /администратор|хелпер/i.test(r.name))) return;
     const factionInfo = factionByDiscordID(guildId);
     if (!factionInfo?.[1]?.chp_role_id) return;
@@ -228,7 +231,8 @@ async function addChpRole(chp: Guild, member: GuildMember, factionName: string):
   try {
     const chpMember = await chp.members.fetch(member.id).catch(() => null);
     if (!chpMember) return;
-
+    if (!chpMember.manageable) return;
+    
     const chpRole = chp.roles.cache.find(role => role.name === factionName);
     if (chpRole && !chpMember.roles.cache.has(chpRole.id)) {
       await chpMember.roles.add(chpRole, `Получение роли ${factionName} в фракционном дискорде`);
@@ -246,6 +250,7 @@ async function removeChpRoleAndCheck(
   try {
     const chpMember = await chp.members.fetch(member.id).catch(() => null);
     if (!chpMember) return;
+    if (!chpMember.manageable) return;
     if (chpMember.user.bot) return;
     if (chpMember.roles.cache.some(r => /администратор|хелпер/i.test(r.name))) return;
 

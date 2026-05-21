@@ -71,6 +71,81 @@
         background: rgba(241, 196, 15, 0.15);
         color: #f1c40f;
     }
+    .stat-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.25rem;
+        transition: all 0.2s;
+    }
+    .stat-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--accent);
+    }
+    .efficiency-low {
+        color: #e63946;
+    }
+    .efficiency-medium {
+        color: #f1c40f;
+    }
+    .efficiency-high {
+        color: #2ecc71;
+    }
+    .chart-container {
+        position: relative;
+        width: 180px;
+        height: 180px;
+        margin: 0 auto;
+    }
+    .alerts-table {
+        width: 100%;
+        font-size: 0.85rem;
+    }
+    .alerts-table th {
+        text-align: left;
+        padding: 8px 8px;
+        color: var(--text-dim);
+        font-weight: 500;
+        border-bottom: 1px solid var(--border);
+    }
+    .alerts-table td {
+        padding: 10px 8px;
+        border-bottom: 1px solid var(--border);
+    }
+    .alerts-table tr:last-child td {
+        border-bottom: none;
+    }
+    .badge-bots {
+        background: rgba(52, 152, 219, 0.15);
+        color: #3498db;
+        border: 1px solid rgba(52, 152, 219, 0.3);
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        display: inline-block;
+    }
+    .badge-cheats {
+        background: rgba(230, 57, 70, 0.15);
+        color: #e63946;
+        border: 1px solid rgba(230, 57, 70, 0.3);
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        display: inline-block;
+    }
+    .progress-bar {
+        height: 8px;
+        background: var(--bg-main);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    .progress-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.5s ease;
+    }
 </style>
 
 <div style="margin-bottom: 2rem;">
@@ -97,7 +172,7 @@
     
     <div class="stat-card" style="border-left: 4px solid var(--danger);">
         <div style="display: flex; align-items: center; justify-content: space-between;">
-            <div style="color: var(--danger); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">Активные алярты</div>
+            <div style="color: var(--danger); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">Активные алерты</div>
             <i class="fas fa-bell" style="color: var(--danger); font-size: 1.2rem;"></i>
         </div>
         <div style="font-size: 2.2rem; font-weight: 800; margin-top: 0.5rem;"><%= stats.activeAlerts %></div>
@@ -106,24 +181,15 @@
     
     <div class="stat-card" style="border-left: 4px solid var(--success);">
         <div style="display: flex; align-items: center; justify-content: space-between;">
-            <div style="color: var(--success); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">Закрыто аляртов</div>
-            <i class="fas fa-check-circle" style="color: var(--success); font-size: 1.2rem;"></i>
-        </div>
-        <div style="font-size: 2.2rem; font-weight: 800; margin-top: 0.5rem;"><%= stats.closedAlerts %></div>
-        <div style="color: var(--text-dim); font-size: 0.7rem; margin-top: 0.5rem;">успешно решено</div>
-    </div>
-</div>
-
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
-    <div class="stat-card">
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-            <div style="color: var(--text-dim); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">Всего проверок</div>
-            <i class="fas fa-clipboard-list" style="color: var(--accent); font-size: 1.2rem;"></i>
+            <div style="color: var(--success); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">Всего проверок</div>
+            <i class="fas fa-clipboard-list" style="color: var(--success); font-size: 1.2rem;"></i>
         </div>
         <div style="font-size: 2.2rem; font-weight: 800; margin-top: 0.5rem;"><%= stats.inspections || 0 %></div>
         <div style="color: var(--text-dim); font-size: 0.7rem; margin-top: 0.5rem;">выполнено за всё время</div>
     </div>
-    
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
     <div class="stat-card">
         <div style="display: flex; align-items: center; justify-content: space-between;">
             <div style="color: var(--text-dim); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">Сливов склада</div>
@@ -135,17 +201,42 @@
     
     <div class="stat-card">
         <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="color: var(--text-dim); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">Нашивки</div>
+            <i class="fas fa-tags" style="color: var(--accent); font-size: 1.2rem;"></i>
+        </div>
+        <div style="font-size: 2.2rem; font-weight: 800; margin-top: 0.5rem;"><%= stats.totalPatches || 0 %></div>
+        <div style="color: var(--text-dim); font-size: 0.7rem; margin-top: 0.5rem;">в системе</div>
+    </div>
+    
+    <div class="stat-card">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
             <div style="color: var(--text-dim); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">Эффективность</div>
             <i class="fas fa-chart-line" style="color: var(--accent); font-size: 1.2rem;"></i>
         </div>
         <div style="font-size: 2.2rem; font-weight: 800; margin-top: 0.5rem;">
             <% 
-                const total = stats.closedAlerts + stats.activeAlerts;
-                const efficiency = total > 0 ? Math.round((stats.closedAlerts / total) * 100) : 0;
+                const activeAlerts = stats.activeAlerts || 0;
+                const inspections = stats.inspections || 0;
+                let efficiency = 0;
+                let efficiencyClass = '';
+                
+                if (inspections > 0) {
+                    efficiency = Math.min(100, Math.round((activeAlerts / inspections) * 100));
+                } else if (activeAlerts > 0) {
+                    efficiency = 100;
+                }
+                
+                if (efficiency >= 70) {
+                    efficiencyClass = 'efficiency-high';
+                } else if (efficiency >= 40) {
+                    efficiencyClass = 'efficiency-medium';
+                } else {
+                    efficiencyClass = 'efficiency-low';
+                }
             %>
-            <%= efficiency %>%
+            <span class="<%= efficiencyClass %>"><%= efficiency %>%</span>
         </div>
-        <div style="color: var(--text-dim); font-size: 0.7rem; margin-top: 0.5rem;">закрытых алартов</div>
+        <div style="color: var(--text-dim); font-size: 0.7rem; margin-top: 0.5rem;">алартов к проверкам</div>
     </div>
 </div>
 
@@ -161,46 +252,83 @@
     </div>
 </div>
 
-<div class="card" style="margin-bottom: 2rem;">
-    <h3 style="margin-bottom: 1rem; font-size: 1rem;">
-        <i class="fas fa-bolt" style="color: var(--accent); margin-right: 8px;"></i> 
-        Быстрые действия
-    </h3>
-    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-        <a href="/dashboard/forms" class="btn btn-primary" style="text-decoration: none;">
-            <i class="fas fa-plus"></i> Добавить форму
-        </a>
-        <a href="/dashboard/security" class="btn" style="background: rgba(255,107,0,0.1); color: var(--accent); text-decoration: none;">
-            <i class="fas fa-shield-alt"></i> Проверить аларты
-        </a>
-        <a href="/dashboard/inspections" class="btn" style="background: rgba(255,255,255,0.05); text-decoration: none;">
-            <i class="fas fa-search"></i> Найти проверку
-        </a>
-    </div>
-</div>
-
 <% if (stats.activeAlerts > 0) { %>
-<div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+<div class="card" style="margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
         <h3 style="font-size: 1rem;">
-            <i class="fas fa-exclamation-triangle" style="color: var(--danger); margin-right: 8px;"></i> 
-            Последние активные аларты
+            <i class="fas fa-chart-pie" style="color: var(--accent); margin-right: 8px;"></i> 
+            Статистика алартов
         </h3>
         <a href="/dashboard/security" style="color: var(--accent); font-size: 0.8rem; text-decoration: none;">Все аларты →</a>
     </div>
-    <div style="color: var(--text-dim); font-size: 0.85rem; text-align: center; padding: 2rem;">
-        <i class="fas fa-bell" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
-        Есть <%= stats.activeAlerts %> активных алартов, требующих внимания
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: center;">
+        <div class="chart-container">
+            <canvas id="alertsChart" width="180" height="180" style="width: 180px; height: 180px;"></canvas>
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
+                <div style="font-size: 2rem; font-weight: 800;"><%= stats.activeAlerts %></div>
+                <div style="font-size: 0.7rem; color: var(--text-dim);">всего</div>
+            </div>
+        </div>
+        
+        <div>
+            <div style="margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                    <span style="font-size: 0.75rem;">Боты</span>
+                    <span style="font-size: 0.75rem; font-weight: 600;" id="botsCount">-</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="botsProgress" style="width: 0%; background: #3498db;"></div>
+                </div>
+            </div>
+            <div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                    <span style="font-size: 0.75rem;">Читы</span>
+                    <span style="font-size: 0.75rem; font-weight: 600;" id="cheatsCount">-</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="cheatsProgress" style="width: 0%; background: #e63946;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3 style="font-size: 1rem;">
+            <i class="fas fa-list" style="color: var(--accent); margin-right: 8px;"></i> 
+            Последние аларты
+        </h3>
+        <a href="/dashboard/security" style="color: var(--accent); font-size: 0.8rem; text-decoration: none;">Все →</a>
+    </div>
+    <div style="overflow-x: auto;">
+        <table class="alerts-table">
+            <thead>
+                <tr>
+                    <th>Статик</th>
+                    <th>Тип</th>
+                    <th>Причина</th>
+                    <th style="text-align: center;">Кол-во</th>
+                    <th>Дата</th>
+                </tr>
+            </thead>
+            <tbody id="latestAlerts">
+                <tr><td colspan="5" style="text-align: center; padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> Загрузка...</td</tr>
+            </tbody>
+        </table>
     </div>
 </div>
 <% } %>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
 <script>
+let alertsChart = null;
+
 async function refreshHealthData() {
     const container = document.getElementById('healthData');
     if (!container) return;
-    
-    container.innerHTML = '<div style="text-align: center; padding: 1rem;"><i class="fas fa-spinner fa-spin"></i> Загрузка данных...</div>';
     
     try {
         const response = await fetch('/health');
@@ -250,10 +378,12 @@ async function refreshHealthData() {
             </div>
         `;
         
-        container.innerHTML = healthHtml;
+        if (container.innerHTML !== healthHtml) {
+            container.innerHTML = healthHtml;
+        }
     } catch (error) {
         console.error('Ошибка загрузки health:', error);
-        container.innerHTML = `
+        const errorHtml = `
             <div class="system-info-row">
                 <span class="system-info-label">Статус</span>
                 <span class="system-info-value"><span class="status-badge status-offline"><i class="fas fa-exclamation-triangle"></i> Ошибка загрузки</span></span>
@@ -263,12 +393,150 @@ async function refreshHealthData() {
                 <span class="system-info-value"><span class="status-badge status-offline"><i class="fas fa-circle" style="font-size: 0.5rem;"></i> Неизвестно</span></span>
             </div>
         `;
+        if (container.innerHTML !== errorHtml) {
+            container.innerHTML = errorHtml;
+        }
     }
 }
 
-refreshHealthData();
+async function loadLatestAlerts() {
+    try {
+        const response = await fetch('/api/security/alerts?limit=10');
+        const data = await response.json();
+        const tbody = document.getElementById('latestAlerts');
+        
+        if (!tbody) return;
+        
+        if (data.success && data.alerts && data.alerts.length > 0) {
+            let botsCount = 0;
+            let cheatsCount = 0;
+            let html = '';
+            
+            const alertsToShow = data.alerts.slice(0, 10);
+            
+            for (const alert of alertsToShow) {
+                const typeClass = alert.type === 'Bots' ? 'badge-bots' : 'badge-cheats';
+                const typeText = alert.type === 'Bots' ? 'Боты' : 'Читы';
+                const reason = alert.reason || '';
+                const shortReason = reason.length > 40 ? reason.substring(0, 40) + '...' : reason;
+                
+                if (alert.type === 'Bots') botsCount++;
+                else cheatsCount++;
+                
+                html += `
+                    <tr>
+                        <td><strong>${escapeHtml(alert.passport)}</strong></td>
+                        <td><span class="${typeClass}">${typeText}</span></td>
+                        <td title="${escapeHtml(reason)}">${escapeHtml(shortReason)}</td>
+                        <td style="text-align: center;">${alert.count || 1}</td>
+                        <td><small>${new Date(alert.created_at).toLocaleString()}</small></td>
+                    </tr>
+                `;
+            }
+            
+            if (tbody.innerHTML !== html) {
+                tbody.innerHTML = html;
+            }
+            
+            const total = botsCount + cheatsCount;
+            if (total > 0) {
+                const botsCountEl = document.getElementById('botsCount');
+                const cheatsCountEl = document.getElementById('cheatsCount');
+                const botsProgressEl = document.getElementById('botsProgress');
+                const cheatsProgressEl = document.getElementById('cheatsProgress');
+                
+                if (botsCountEl && botsCountEl.innerText !== botsCount.toString()) {
+                    botsCountEl.innerText = botsCount;
+                }
+                if (cheatsCountEl && cheatsCountEl.innerText !== cheatsCount.toString()) {
+                    cheatsCountEl.innerText = cheatsCount;
+                }
+                
+                const botsPercent = (botsCount / total * 100) + '%';
+                const cheatsPercent = (cheatsCount / total * 100) + '%';
+                
+                if (botsProgressEl && botsProgressEl.style.width !== botsPercent) {
+                    botsProgressEl.style.width = botsPercent;
+                }
+                if (cheatsProgressEl && cheatsProgressEl.style.width !== cheatsPercent) {
+                    cheatsProgressEl.style.width = cheatsPercent;
+                }
+            }
+            
+            if (alertsChart) {
+                if (alertsChart.data.datasets[0].data[0] !== botsCount || alertsChart.data.datasets[0].data[1] !== cheatsCount) {
+                    alertsChart.data.datasets[0].data = [botsCount, cheatsCount];
+                    alertsChart.update();
+                }
+            } else {
+                const ctx = document.getElementById('alertsChart');
+                if (ctx) {
+                    alertsChart = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Боты', 'Читы'],
+                            datasets: [{
+                                data: [botsCount, cheatsCount],
+                                backgroundColor: ['#3498db', '#e63946'],
+                                borderWidth: 0,
+                                hoverOffset: 5
+                            }]
+                        },
+                        options: {
+                            cutout: '65%',
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const label = context.label || '';
+                                            const value = context.raw || 0;
+                                            const total = botsCount + cheatsCount;
+                                            const percent = total > 0 ? Math.round((value / total) * 100) : 0;
+                                            return `${label}: ${value} (${percent}%)`;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+        } else {
+            const emptyHtml = '<tr><td colspan="5" style="text-align: center;">Нет активных алартов</td></tr>';
+            if (tbody.innerHTML !== emptyHtml) {
+                tbody.innerHTML = emptyHtml;
+            }
+        }
+    } catch (error) {
+        console.error('Ошибка загрузки алартов:', error);
+        const errorHtml = '<tr><td colspan="5" style="text-align: center;">Ошибка загрузки</td></tr>';
+        const tbody = document.getElementById('latestAlerts');
+        if (tbody && tbody.innerHTML !== errorHtml) {
+            tbody.innerHTML = errorHtml;
+        }
+    }
+}
 
+function escapeHtml(text) {
+    if (!text) return '';
+    return String(text).replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+    });
+}
+
+refreshHealthData();
 setInterval(refreshHealthData, 30000);
+
+loadLatestAlerts();
+setInterval(loadLatestAlerts, 30000);
 </script>
 
 <%- include('layout', { part: 'footer' }) %>

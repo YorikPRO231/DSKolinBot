@@ -1,4 +1,5 @@
 import {
+  AttachmentBuilder,
   Client,
   EmbedBuilder,
   Message,
@@ -6,7 +7,7 @@ import {
 } from "discord.js";
 import { shouldCreateFile } from "../config";
 import { formatDate } from "../helpers/dates";
-import { createTextAttachment, formatSize } from "../helpers/formatters";
+import { createTextAttachment, formatSize, createAttachmentBuilder } from "../helpers/formatters";
 import { sendFullLog } from "../helpers/senders";
 import { getAdminLogServerIds } from "../../utils/config";
 
@@ -50,34 +51,37 @@ export async function logMessageDelete(
     })
     .setTimestamp();
 
-  let attachment: ReturnType<typeof createTextAttachment> | undefined;
+  let attachment: AttachmentBuilder | undefined;
+
+  const fields: Array<{ name: string; value: string; inline?: boolean }> = [];
 
   if (needsFile) {
     const preview = content.substring(0, 1000);
-    embed.addFields({
+    fields.push({
       name: `Содержание (${content.length} символов)`,
       value: preview + "\n\n*Полный текст в прикрепленном файле*",
       inline: false,
     });
 
-    attachment = createTextAttachment(
+    const textAttachment = createTextAttachment(
       content,
       `deleted_message_${message.id}.txt`,
     );
+    attachment = createAttachmentBuilder(textAttachment);
 
     if (message.attachments.size > 0) {
       const attachmentsList = message.attachments
         .map((a, i) => `${i + 1}. ${a.name} (${formatSize(a.size)})`)
         .join("\n");
 
-      embed.addFields({
+      fields.push({
         name: `Вложения (${message.attachments.size})`,
         value: attachmentsList,
         inline: false,
       });
     }
   } else {
-    embed.addFields({
+    fields.push({
       name: content ? "Содержание" : "Тип сообщения",
       value: content || "Сообщение без текста (только вложения)",
       inline: false,
@@ -90,7 +94,7 @@ export async function logMessageDelete(
         )
         .join("\n");
 
-      embed.addFields({
+      fields.push({
         name: `Вложения (${message.attachments.size})`,
         value: attachmentsList.substring(0, 1024),
         inline: false,
@@ -98,15 +102,15 @@ export async function logMessageDelete(
     }
   }
 
-  const discordAttachment = attachment 
-    ? new (require("discord.js").AttachmentBuilder)(attachment.buffer, { name: attachment.name, description: attachment.description })
-    : undefined;
+  if (fields.length > 0) {
+    embed.addFields(fields);
+  }
 
   await sendFullLog(
     client,
     message.guild,
     embed,
-    discordAttachment,
+    attachment,
     getAdminLogServerIds(),
   );
 }
@@ -147,13 +151,15 @@ export async function logMessageUpdate(
     })
     .setTimestamp();
 
-  let attachment: ReturnType<typeof createTextAttachment> | undefined;
+  let attachment: AttachmentBuilder | undefined;
+
+  const fields: Array<{ name: string; value: string; inline?: boolean }> = [];
 
   if (needsFile) {
     const oldPreview = oldContent.substring(0, 500);
     const newPreview = newContent.substring(0, 500);
 
-    embed.addFields(
+    fields.push(
       {
         name: `Старая версия (${oldContent.length} символов)`,
         value: oldPreview + (oldContent.length > 500 ? "\n\n*Полный текст в файле*" : ""),
@@ -178,12 +184,13 @@ export async function logMessageUpdate(
       newContent,
     ].join("\n");
 
-    attachment = createTextAttachment(
+    const textAttachment = createTextAttachment(
       fullContent,
       `edited_message_${oldMessage.id}.txt`,
     );
+    attachment = createAttachmentBuilder(textAttachment);
   } else {
-    embed.addFields(
+    fields.push(
       {
         name: "Старая версия",
         value: oldContent.substring(0, 1024) || "Пусто",
@@ -197,15 +204,15 @@ export async function logMessageUpdate(
     );
   }
 
-  const discordAttachment = attachment
-    ? new (require("discord.js").AttachmentBuilder)(attachment.buffer, { name: attachment.name, description: attachment.description })
-    : undefined;
+  if (fields.length > 0) {
+    embed.addFields(fields);
+  }
 
   await sendFullLog(
     client,
     oldMessage.guild,
     embed,
-    discordAttachment,
+    attachment,
     getAdminLogServerIds(),
   );
 }

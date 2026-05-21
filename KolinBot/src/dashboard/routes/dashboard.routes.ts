@@ -1,4 +1,3 @@
-// src/dashboard/routes/dashboard.routes.ts
 import { Router } from 'express';
 import { ensureAuthenticatedAndAuthorized } from '../middleware/auth.middleware';
 import { requirePermission } from '../middleware/permissions.middleware';
@@ -28,9 +27,9 @@ router.get('/', ensureAuthenticatedAndAuthorized, async (req, res) => {
       stats: {
         totalForms: bindings.length,
         activeAlerts: stats.alerts_open,
-        closedAlerts: stats.alerts_closed,
         inspections: stats.inspection_count,
-        warehouseItems: stats.warehouse_count
+        warehouseItems: stats.warehouse_count,
+        totalPatches: stats.total_patches
       }
     });
   } catch (error) {
@@ -40,7 +39,13 @@ router.get('/', ensureAuthenticatedAndAuthorized, async (req, res) => {
       currentPage: 'dashboard',
       title: 'Dashboard',
       permissions: [],
-      stats: { totalForms: 0, activeAlerts: 0, closedAlerts: 0, inspections: 0, warehouseItems: 0 } 
+      stats: { 
+        totalForms: 0, 
+        activeAlerts: 0, 
+        inspections: 0, 
+        warehouseItems: 0,
+        totalPatches: 0
+      } 
     });
   }
 });

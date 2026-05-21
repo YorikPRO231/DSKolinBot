@@ -1,5 +1,5 @@
 import {Client, EmbedBuilder, Message} from "discord.js";
-import {ADMINS_SERVER_ID, PUNISHMENT_ADMINS_CHANNEL_ID} from "../utils/config";
+import {ADMINS_SERVER_ID, PUNISHMENT_ADMINS_CHANNEL_ID} from "./config";
 
 const COMMAND_PATTERNS = {
     TIME_COMMANDS:  ['offprison', 'offban', 'offmute', 'offvehicle_ban', 'offweapon_ban', 'sban', 'offsban'],

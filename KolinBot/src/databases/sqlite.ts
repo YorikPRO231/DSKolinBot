@@ -14,7 +14,7 @@ db.exec(`
     punishment TEXT NOT NULL,
     items TEXT NOT NULL,
     log_file BLOB NOT NULL,
-    duration TEXT NOT NULL,
+    duration TEXT NOT NULL, 
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
   
@@ -37,32 +37,6 @@ db.exec(`
     security TEXT DEFAULT 'no'
   );
 
-  CREATE TABLE IF NOT EXISTS bot_cheat_reports
-  (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    type       TEXT        NOT NULL CHECK (type IN ('Bots', 'Cheats')),
-    count INTEGER DEFAULT 1,
-    author_id  TEXT        NOT NULL,
-    reason     TEXT        NOT NULL,
-    created_at TEXT DEFAULT (datetime('now', 'localtime')),
-    updated_at TEXT DEFAULT (datetime('now', 'localtime')),
-    passport   TEXT UNIQUE NOT NULL
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_security_suspect ON bot_cheat_reports (passport);
-  CREATE INDEX IF NOT EXISTS idx_security_status ON bot_cheat_reports (type);
-  CREATE INDEX IF NOT EXISTS idx_security_created ON bot_cheat_reports (created_at DESC);
-
-  CREATE TABLE IF NOT EXISTS security_logs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT NOT NULL,
-    suspected_action TEXT NOT NULL,
-    checked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    admin_id TEXT NOT NULL,
-    check_results TEXT NOT NULL
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_security_logs_username ON security_logs(username);
 
   CREATE TABLE IF NOT EXISTS inspection_reports (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -170,7 +144,18 @@ db.exec(`
       destination_approve TEXT NOT NULL,
       nickname TEXT NOT NULL,
       msg_id TEXT NOT NULL
-  )
+  );
+
+  CREATE TABLE IF NOT EXISTS bot_cheat_reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    passport TEXT NOT NULL,
+    type TEXT NOT NULL CHECK(type IN ('Bots', 'Cheats')),
+    count INTEGER DEFAULT 1,
+    author_id TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now', 'localtime')),
+    updated_at TEXT DEFAULT (datetime('now', 'localtime'))
+);
 `);
 
 export default db;

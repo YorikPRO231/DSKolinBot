@@ -79,7 +79,7 @@ export async function saveLogToFile(
     }
     
     if (entry.eventTime) {
-      logLines.push(`Время события (МСК): ${entry.eventTime}`);
+      logLines.push(`Время события: ${entry.eventTime}`);
     }
     
     if (entry.attachmentName) {

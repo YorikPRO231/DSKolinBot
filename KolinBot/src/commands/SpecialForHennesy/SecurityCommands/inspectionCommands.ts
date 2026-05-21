@@ -47,7 +47,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const fullResult = comment ? `${result}\nКомментарий: ${comment}` : result;
     
     try {
-        const openAlerts = SecurityRepository.getSecurityAlertsBySuspect(passport, 'OPEN');
+        const openAlerts = SecurityRepository.getSecurityAlertsBySuspect(passport);
         
         let closedCount = 0;
         if (openAlerts.length > 0) {
@@ -85,14 +85,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         if (closedCount > 0) {
             embed.addFields({ 
                 name: 'Автоматическое закрытие', 
-                value: `Закрыто подозрений: **${closedCount}**\nВсе открытые записи на этого игрока были автоматически закрыты.`,
+                value: `Удалено записей: **${closedCount}**\nВсе записи на этого игрока были автоматически удалены.`,
                 inline: false 
             });
             embed.setColor(Colors.Blue);
         } else if (openAlerts.length === 0) {
             embed.addFields({ 
                 name: 'Информация', 
-                value: 'На этого игрока не было открытых подозрений.',
+                value: 'На этого игрока нет записей в базе.',
                 inline: false 
             });
         }

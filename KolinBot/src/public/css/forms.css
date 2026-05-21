@@ -25,6 +25,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-wrap: wrap;
 }
 
 .name-text {
@@ -46,6 +47,44 @@
     font-size: 0.85rem;
 }
 
+/* Скелетоны */
+.skeleton {
+    background: linear-gradient(
+        90deg,
+        var(--bg-main) 25%,
+        var(--border) 50%,
+        var(--bg-main) 75%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+    border-radius: 6px;
+}
+
+@keyframes skeleton-loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+.skeleton-text {
+    height: 20px;
+    width: 100%;
+}
+
+.skeleton-badge {
+    height: 20px;
+    width: 80px;
+    display: inline-block;
+}
+
+.skeleton-cell {
+    padding: 12px 8px;
+}
+
+/* Модальные окна */
 #addFormModal .modal-content,
 #confirmDeleteModal .modal-content,
 #notificationModal .modal-content {
@@ -53,36 +92,230 @@
     padding: 2rem;
     border-radius: 16px;
     border: 1px solid var(--border);
+    animation: modalFadeIn 0.2s ease;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 #addFormModal .modal-content {
-    width: 450px;
+    width: 500px;
+    max-width: 90%;
 }
 
 #confirmDeleteModal .modal-content,
 #notificationModal .modal-content {
-    width: 400px;
+    width: 420px;
+    max-width: 90%;
     text-align: center;
 }
 
-#addFormModal form input {
+/* Стили для форм */
+.form-group {
+    margin-bottom: 1.25rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.form-group input {
     width: 100%;
     padding: 0.8rem;
     background: var(--bg-main);
     border: 1px solid var(--border);
-    color: #fff;
+    color: var(--text);
     border-radius: 8px;
-    margin-bottom: 1rem;
     font-size: 0.9rem;
+    transition: all 0.2s;
 }
 
-#addFormModal form input:focus {
+.form-group input:focus {
     outline: none;
     border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
 }
 
-#addFormModal form button[type="button"] {
-    background: rgba(255,255,255,0.1);
+.form-group input::placeholder {
+    color: var(--text-dim);
+    opacity: 0.5;
+}
+
+.form-group small {
+    display: block;
+    margin-top: 0.25rem;
+    color: var(--text-dim);
+    font-size: 0.7rem;
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+}
+
+.modal-buttons button {
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+.modal-buttons button[type="button"] {
+    background: var(--bg-main);
     color: var(--text-dim);
     border: 1px solid var(--border);
+}
+
+.modal-buttons button[type="button"]:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--accent);
+    color: var(--text);
+}
+
+.modal-buttons button[type="submit"],
+.modal-buttons .btn-primary {
+    background: var(--accent);
+    color: white;
+}
+
+.modal-buttons button[type="submit"]:hover,
+.modal-buttons .btn-primary:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+}
+
+.confirm-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 1.5rem;
+}
+
+.confirm-buttons button {
+    padding: 0.6rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+.confirm-buttons .btn-cancel {
+    background: var(--bg-main);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+}
+
+.confirm-buttons .btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--accent);
+    color: var(--text);
+}
+
+.confirm-buttons .btn-danger {
+    background: var(--danger);
+    color: white;
+}
+
+.confirm-buttons .btn-danger:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+}
+
+.data-table tr {
+    transition: background 0.2s;
+}
+
+.data-table tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.data-table code {
+    background: var(--bg-main);
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-family: monospace;
+    word-break: break-all;
+    display: inline-block;
+    max-width: 250px;
+}
+
+.modal {
+    animation: modalOverlayFade 0.2s ease;
+}
+
+@keyframes modalOverlayFade {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-dim);
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-state p {
+    margin-bottom: 1.5rem;
+}
+
+.copy-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    font-size: 0.7rem;
+}
+
+.copy-btn:hover {
+    background: var(--bg-main);
+    color: var(--accent);
+}
+
+.page-header-forms {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.page-header-forms h1 {
+    font-size: 1.8rem;
+    letter-spacing: -0.5px;
 }

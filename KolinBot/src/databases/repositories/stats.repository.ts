@@ -4,19 +4,19 @@ export const StatsRepository = {
   getStats(): {
     warehouse_count: number;
     alerts_open: number;
-    alerts_closed: number;
     inspection_count: number;
+    total_patches: number;
   } {
-    const warehouse = db.prepare("SELECT COUNT(*) as count FROM warehouse_drain").get() as { count: number };
-    const alertsOpen = db.prepare("SELECT COUNT(*) as count FROM security_alerts WHERE status = 'OPEN'").get() as { count: number };
-    const alertsClosed = db.prepare("SELECT COUNT(*) as count FROM security_alerts WHERE status = 'CLOSED'").get() as { count: number };
+    const warehouse = db.prepare("SELECT COUNT(*) as count FROM warehouse_drain_v2").get() as { count: number };
+    const alertsOpen = db.prepare("SELECT COUNT(*) as count FROM bot_cheat_reports").get() as { count: number };
     const inspections = db.prepare("SELECT COUNT(*) as count FROM inspection_reports").get() as { count: number };
-
+    const totalPatches = db.prepare("SELECT COUNT(*) as count FROM state_patches").get() as { count: number };
+    
     return {
       warehouse_count: warehouse.count,
       alerts_open: alertsOpen.count,
-      alerts_closed: alertsClosed.count,
-      inspection_count: inspections.count
+      inspection_count: inspections.count,
+      total_patches: totalPatches.count
     };
   },
 

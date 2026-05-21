@@ -8,122 +8,120 @@
 <link rel="stylesheet" href="/css/security.css">
 
 <div class="page-header">
-    <h1>Security</h1>
-    <div class="tabs">
-        <button class="tab-btn active" onclick="showTab(event, 'alerts')">
-            <i class="fas fa-bell"></i> Алерты
-        </button>
-        <button class="tab-btn" onclick="showTab(event, 'logs')">
-            <i class="fas fa-history"></i> История проверок
-        </button>
-    </div>
+    <h1><i class="fas fa-shield-alt"></i> Security</h1>
 </div>
 
 <div id="alertsTab" class="tab-content active">
     <div class="filter-bar">
-        <select id="alertStatusFilter" onchange="loadAlerts()">
-            <option value="ALL">Все статусы</option>
-            <option value="OPEN">Открытые</option>
-            <option value="CLOSED">Закрытые</option>
-        </select>
-        <input type="text" id="alertSearch" placeholder="Поиск по подозреваемому..." onkeyup="loadAlerts()">
-        <button class="btn-primary" onclick="openAddPlayerModal()" style="padding: 0.5rem 1rem;">
+        <div class="custom-dropdown" id="typeDropdown">
+            <div class="dropdown-trigger" onclick="SecurityModule.toggleDropdown()">
+                <span id="dropdownSelectedValue"><i class="fas fa-filter text-dim"></i> Все типы</span>
+                <i class="fas fa-chevron-down arrow"></i>
+            </div>
+            <div class="dropdown-menu">
+                <div class="dropdown-item active" data-value="ALL" onclick="SecurityModule.selectDropdownItem(this)">
+                    <i class="fas fa-list-ul"></i> Все типы
+                </div>
+                <div class="dropdown-item" data-value="Bots" onclick="SecurityModule.selectDropdownItem(this)">
+                    <i class="fas fa-robot text-bots"></i> Боты
+                </div>
+                <div class="dropdown-item" data-value="Cheats" onclick="SecurityModule.selectDropdownItem(this)">
+                    <i class="fas fa-gamepad text-cheats"></i> Читы
+                </div>
+            </div>
+        </div>
+    
+        <input type="text" id="alertSearch" placeholder="Поиск по статику игрока..." oninput="SecurityModule.debouncedLoadAlerts()">
+        
+        <button class="btn-primary" onclick="openAddPlayerModal()">
             <i class="fas fa-plus"></i> Добавить игрока
         </button>
-        <button class="btn-secondary" onclick="copyAllStats()" style="padding: 0.5rem 1rem;">
-            <i class="fas fa-copy"></i> Копировать все статики
+        <button class="btn-secondary" onclick="copyAllStats()">
+            <i class="fas fa-copy"></i> Копировать статики
         </button>
     </div>
-    <div class="card" style="padding:0; overflow-x: auto;">
-        <table class="data-table" style="min-width: 900px; width: 100%;">
+
+    <div class="card table-container">
+        <table class="data-table">
             <thead>
                 <tr>
-                    <th style="width: 10%;">Подозреваемый</th>
-                    <th style="width: 12%;">Действие</th>
-                    <th style="width: 35%;">Данные</th>
-                    <th style="width: 15%;">ID администратора</th>
-                    <th style="width: 6%; text-align: center;">Кол-во</th>
-                    <th style="width: 12%;">Дата</th>
-                    <th style="width: 6%;">Статус</th>
-                    <th style="width: 4%;">Действия</th>
+                    <th>Статик</th>
+                    <th>Тип</th>
+                    <th>Причина</th>
+                    <th>Кто добавил</th>
+                    <th style="text-align: center;">Кол-во</th>
+                    <th>Дата</th>
+                    <th>Действия</th>
                 </tr>
             </thead>
             <tbody id="alertsList">
-                <tr><td colspan="8" class="loading"><i class="fas fa-spinner fa-spin"></i> Загрузка...</td></tr>
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<div id="logsTab" class="tab-content">
-    <div class="card" style="padding:0; overflow-x: auto;">
-        <table class="data-table" style="min-width: 900px; width: 100%;">
-            <thead>
                 <tr>
-                    <th style="width: 15%;">Пользователь</th>
-                    <th style="width: 15%;">Действие</th>
-                    <th style="width: 40%;">Результат проверки</th>
-                    <th style="width: 15%;">Администратор</th>
-                    <th style="width: 15%;">Дата проверки</th>
+                    <td colspan="7" class="loading">
+                        <i class="fas fa-spinner fa-spin"></i> Загрузка...
+                    </td>
                 </tr>
-            </thead>
-            <tbody id="logsList">
-                <tr><td colspan="5" class="loading"><i class="fas fa-spinner fa-spin"></i> Загрузка...</td></tr>
             </tbody>
         </table>
     </div>
 </div>
 
 <div id="confirmModal" class="modal">
-    <div class="modal-content" style="background: var(--bg-card); padding: 2rem; border-radius: 16px; width: 400px; text-align: center;">
-        <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: var(--accent); margin-bottom: 1rem;"></i>
-        <h3 id="confirmTitle" style="margin-bottom: 0.5rem;">Подтверждение</h3>
-        <p id="confirmMessage" style="color: var(--text-dim); margin-bottom: 1.5rem;">Вы уверены?</p>
-        <div style="display: flex; gap: 10px; justify-content: center;">
-            <button id="confirmCancelBtn" class="btn" style="background: rgba(255,255,255,0.1); color: var(--text-dim); border: 1px solid var(--border);">Отмена</button>
-            <button id="confirmActionBtn" class="btn btn-primary">Подтвердить</button>
+    <div class="modal-content modal-sm text-center">
+        <i class="fas fa-exclamation-triangle modal-icon-warning"></i>
+        <h3 id="confirmTitle">Подтверждение</h3>
+        <p id="confirmMessage">Вы уверены?</p>
+        <div class="modal-buttons confirm-buttons">
+            <button id="confirmCancelBtn" type="button" class="btn-cancel">Отмена</button>
+            <button id="confirmActionBtn" class="btn-danger">Подтвердить</button>
         </div>
     </div>
 </div>
 
 <div id="detailsModal" class="modal">
-    <div class="modal-content" style="background: var(--bg-card); padding: 2rem; border-radius: 16px; width: 550px; max-width: 90%;">
-        <h3 style="margin-bottom: 1rem; color: var(--accent);">Детали алерта</h3>
-        <div id="detailsContent" style="margin-bottom: 1.5rem; max-height: 60vh; overflow-y: auto;"></div>
-        <button class="btn btn-primary" onclick="closeModal('detailsModal')" style="width: 100%;">Закрыть</button>
+    <div class="modal-content modal-md">
+        <h3 class="modal-title">Детали</h3>
+        <div id="detailsContent" class="modal-scroll-content"></div>
+        <div class="modal-buttons">
+            <button type="button" class="btn-primary" onclick="closeModal('detailsModal')" style="width: 100%;">Закрыть</button>
+        </div>
     </div>
 </div>
 
 <div id="addPlayerModal" class="modal">
-    <div class="modal-content" style="background: var(--bg-card); padding: 2rem; border-radius: 16px; width: 500px; max-width: 90%;">
-        <h3 style="margin-bottom: 1rem; color: var(--accent);">
-            <i class="fas fa-user-plus"></i> Добавить игрока в список проверок
+    <div class="modal-content modal-md">
+        <h3 class="modal-title">
+            <i class="fas fa-user-plus"></i> Добавить игрока
         </h3>
-        <div style="margin-bottom: 1rem;">
-            <label style="display: block; margin-bottom: 0.5rem; color: var(--text-dim); font-size: 0.85rem;">Статик игрока</label>
-            <input type="text" id="playerStatic" class="search-input-field" placeholder="Введите ID игрока..." style="width: 100%;">
+        <div class="form-group">
+            <label for="alertType">Тип нарушения</label>
+            <select id="alertType">
+                <option value="Cheats">Читы</option>
+                <option value="Bots">Боты</option>
+            </select>
         </div>
-        <div style="margin-bottom: 1.5rem;">
-            <label style="display: block; margin-bottom: 0.5rem; color: var(--text-dim); font-size: 0.85rem;">Причина проверки</label>
-            <textarea id="playerReason" class="search-input-field" rows="3" placeholder="Укажите на что требуется проверить игрока..." style="width: 100%; resize: vertical;"></textarea>
+        <div class="form-group">
+            <label for="playerStatic">Статик игрока</label>
+            <input type="text" id="playerStatic" placeholder="Введите ID игрока...">
         </div>
-        <div style="display: flex; gap: 10px;">
-            <button class="btn-primary" onclick="addPlayerToSecurity()" style="flex: 1;">
-                <i class="fas fa-save"></i> Добавить
-            </button>
-            <button class="btn-secondary" onclick="closeModal('addPlayerModal')" style="flex: 1;">
-                Отмена
-            </button>
+        <div class="form-group">
+            <label for="playerReason">Причина</label>
+            <textarea id="playerReason" rows="3" placeholder="Укажите причину проверки..."></textarea>
+        </div>
+        <div class="modal-buttons">
+            <button type="button" onclick="closeModal('addPlayerModal')">Отмена</button>
+            <button type="button" class="btn-primary" onclick="addPlayerToSecurity()">Добавить</button>
         </div>
     </div>
 </div>
 
 <div id="notificationModal" class="modal">
-    <div class="modal-content" style="background: var(--bg-card); padding: 2rem; border-radius: 16px; width: 350px; text-align: center;">
-        <i id="notificationIcon" class="fas fa-check-circle" style="font-size: 3rem; margin-bottom: 1rem;"></i>
-        <h3 id="notificationTitle" style="margin-bottom: 0.5rem;">Успех</h3>
-        <p id="notificationMessage" style="color: var(--text-dim); margin-bottom: 1.5rem;">Действие выполнено</p>
-        <button class="btn btn-primary" onclick="closeModal('notificationModal')">Закрыть</button>
+    <div class="modal-content modal-sm text-center">
+        <i id="notificationIcon" class="fas fa-check-circle"></i>
+        <h3 id="notificationTitle">Успех</h3>
+        <p id="notificationMessage">Действие выполнено</p>
+        <div class="modal-buttons" style="justify-content: center;">
+            <button type="button" class="btn-primary" onclick="closeModal('notificationModal')">Закрыть</button>
+        </div>
     </div>
 </div>
 

@@ -50,7 +50,8 @@ function shouldLoadCommandForServer(commandPath: string, serverId?: string): boo
         'AdminsCommands': config.ADMINS_SERVER_ID,
         'ForServer': CHP,
         'ForStateServers': [...config.getStateServerIds(), ...Object.values(DETECTIVES_INFO).map(i => i.discord_id)],
-        'DetectiveCommands': detectivesId
+        'DetectiveCommands': detectivesId,
+        'CrimeCommands': [...config.getCrimeServerIds()]
     };
 
     if (normalizedPath.includes('/ForAllServers/')) {
