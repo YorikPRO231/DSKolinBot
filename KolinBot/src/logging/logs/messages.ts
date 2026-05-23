@@ -74,16 +74,25 @@ export async function logMessageDelete(
         .map((a, i) => `${i + 1}. ${a.name} (${formatSize(a.size)})`)
         .join("\n");
 
+      const truncatedList = attachmentsList.length > 1024 
+        ? attachmentsList.substring(0, 1020) + "..."
+        : attachmentsList;
+
       fields.push({
         name: `Вложения (${message.attachments.size})`,
-        value: attachmentsList,
+        value: truncatedList || "Нет информации о вложениях",
         inline: false,
       });
     }
   } else {
+    const contentValue = content || "Сообщение без текста (только вложения)";
+    const truncatedContent = contentValue.length > 1024 
+      ? contentValue.substring(0, 1020) + "..."
+      : contentValue;
+
     fields.push({
       name: content ? "Содержание" : "Тип сообщения",
-      value: content || "Сообщение без текста (только вложения)",
+      value: truncatedContent,
       inline: false,
     });
 
@@ -94,16 +103,23 @@ export async function logMessageDelete(
         )
         .join("\n");
 
+      const truncatedAttachments = attachmentsList.length > 1024
+        ? attachmentsList.substring(0, 1020) + "..."
+        : attachmentsList;
+
       fields.push({
         name: `Вложения (${message.attachments.size})`,
-        value: attachmentsList.substring(0, 1024),
+        value: truncatedAttachments || "Нет информации о вложениях",
         inline: false,
       });
     }
   }
 
   if (fields.length > 0) {
-    embed.addFields(fields);
+    const validFields = fields.filter(field => field.value && field.value.trim().length > 0);
+    if (validFields.length > 0) {
+      embed.addFields(validFields);
+    }
   }
 
   await sendFullLog(
@@ -159,15 +175,18 @@ export async function logMessageUpdate(
     const oldPreview = oldContent.substring(0, 500);
     const newPreview = newContent.substring(0, 500);
 
+    const oldValue = oldPreview + (oldContent.length > 500 ? "\n\n*Полный текст в файле*" : "");
+    const newValue = newPreview + (newContent.length > 500 ? "\n\n*Полный текст в файле*" : "");
+
     fields.push(
       {
         name: `Старая версия (${oldContent.length} символов)`,
-        value: oldPreview + (oldContent.length > 500 ? "\n\n*Полный текст в файле*" : ""),
+        value: oldValue || "Пусто",
         inline: false,
       },
       {
         name: `Новая версия (${newContent.length} символов)`,
-        value: newPreview + (newContent.length > 500 ? "\n\n*Полный текст в файле*" : ""),
+        value: newValue || "Пусто",
         inline: false,
       },
     );
@@ -205,7 +224,10 @@ export async function logMessageUpdate(
   }
 
   if (fields.length > 0) {
-    embed.addFields(fields);
+    const validFields = fields.filter(field => field.value && field.value.trim().length > 0);
+    if (validFields.length > 0) {
+      embed.addFields(validFields);
+    }
   }
 
   await sendFullLog(
