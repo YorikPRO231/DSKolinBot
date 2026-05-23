@@ -84,7 +84,7 @@
     padding: 12px 8px;
 }
 
-/* Модальные окна */
+/* Стили для контента модальных окон */
 #addFormModal .modal-content,
 #confirmDeleteModal .modal-content,
 #notificationModal .modal-content {
@@ -92,18 +92,6 @@
     padding: 2rem;
     border-radius: 16px;
     border: 1px solid var(--border);
-    animation: modalFadeIn 0.2s ease;
-}
-
-@keyframes modalFadeIn {
-    from {
-        opacity: 0;
-        transform: scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
 }
 
 #addFormModal .modal-content {
@@ -138,7 +126,7 @@
     padding: 0.8rem;
     background: var(--bg-main);
     border: 1px solid var(--border);
-    color: var(--text);
+    color: var(--text-main);
     border-radius: 8px;
     font-size: 0.9rem;
     transition: all 0.2s;
@@ -147,7 +135,7 @@
 .form-group input:focus {
     outline: none;
     border-color: var(--accent);
-    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+    box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.1);
 }
 
 .form-group input::placeholder {
@@ -188,7 +176,7 @@
 .modal-buttons button[type="button"]:hover {
     background: rgba(255, 255, 255, 0.05);
     border-color: var(--accent);
-    color: var(--text);
+    color: var(--text-main);
 }
 
 .modal-buttons button[type="submit"],
@@ -229,7 +217,7 @@
 .confirm-buttons .btn-cancel:hover {
     background: rgba(255, 255, 255, 0.05);
     border-color: var(--accent);
-    color: var(--text);
+    color: var(--text-main);
 }
 
 .confirm-buttons .btn-danger {
@@ -259,19 +247,6 @@
     word-break: break-all;
     display: inline-block;
     max-width: 250px;
-}
-
-.modal {
-    animation: modalOverlayFade 0.2s ease;
-}
-
-@keyframes modalOverlayFade {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
 }
 
 .empty-state {

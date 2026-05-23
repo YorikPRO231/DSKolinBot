@@ -113,8 +113,14 @@ export async function logMemberLeave(
 
   await sendLogToGuild(member.guild, embed);
   
-  if (member.guild) {
-    await handleFactionLeave(client, member.guild.id, member.id);
+  try {
+    if (member.guild) {
+      await handleFactionLeave(client, member.guild.id, member.id);
+    }
+  } catch (error) {
+    if (!(typeof error === 'object' && error !== null && 'code' in error && error.code === 10007)) {
+      console.error(`Ошибка в handleFactionLeave для ${member.id}:`, error);
+    }
   }
 }
 

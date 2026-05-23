@@ -1,23 +1,32 @@
 <%- include('layout', { part: 'header', title: 'Архив Системных Логов', currentPage: 'admin-logs', user: user }) %>
 
-<link rel="stylesheet" href="/css/admin-logs.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="/css/admin-logs.css">
 
 <div class="admin-logs-wrapper">
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ru.js"></script>
-    
     <div class="progress-bar-container" id="progressBarContainer">
         <div class="progress-bar" id="progressBar"></div>
     </div>
 
     <div class="search-panel">
         <div class="search-row">
-            <input type="text" id="searchInput" class="search-input-field" placeholder="Поиск по ID, имени пользователя, событию, содержимому сообщения...">
-            
-            <div class="custom-select-wrapper">
-                <select id="categoryFilter" class="custom-select">
-                    <option value="all">Все категории</option>
+            <div class="search-input-container">
+                <input type="text" id="searchInput" class="search-input-field" placeholder="Поиск по ID, имени, событию...">
+            </div>
+          
+            <div class="custom-select-container" id="categorySelectContainer">
+                <div class="custom-select-trigger">
+                    <span class="custom-select-text">Все категории</span>
+                    <span class="custom-select-arrow"></span>
+                </div>
+                <div class="custom-options-dropdown">
+                    <div class="custom-option selected" data-value="all">Все категории</div>
+                    <div class="custom-option" data-value="message_delete">Удаление сообщений</div>
+                    <div class="custom-option" data-value="message_edit">Редактирование сообщений</div>
+                    <div class="custom-option" data-value="voice">Голосовые каналы</div>
+                </div>
+                <select id="categoryFilter" style="display: none;">
+                    <option value="all" selected>Все категории</option>
                     <option value="message_delete">Удаление сообщений</option>
                     <option value="message_edit">Редактирование сообщений</option>
                     <option value="voice">Голосовые каналы</option>
@@ -33,11 +42,15 @@
         <div class="date-filters">
             <div class="date-filter-group">
                 <label>С даты</label>
-                <input type="text" id="dateFrom" class="custom-date-input" placeholder="Выберите дату">
+                <div class="date-input-wrapper">
+                    <input type="text" id="dateFrom" class="custom-date-input" placeholder="Выберите дату" readonly>
+                </div>
             </div>
             <div class="date-filter-group">
                 <label>По дату</label>
-                <input type="text" id="dateTo" class="custom-date-input" placeholder="Выберите дату">
+                <div class="date-input-wrapper">
+                    <input type="text" id="dateTo" class="custom-date-input" placeholder="Выберите дату" readonly>
+                </div>
             </div>
         </div>
 
@@ -83,7 +96,7 @@
     <div class="modal-content">
         <div class="modal-header">
             <h3>Детали события</h3>
-            <button class="modal-close" id="closeModalBtn">×</button>
+            <button class="modal-close" id="closeModalBtn" aria-label="Закрыть">×</button>
         </div>
         <div class="modal-body">
             <div id="logDetailContent" class="log-details"></div>
@@ -94,6 +107,8 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ru.js"></script>
 <script src="/js/admin-logs.js"></script>
 
 <%- include('layout', { part: 'footer' }) %>

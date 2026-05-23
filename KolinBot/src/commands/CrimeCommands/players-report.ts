@@ -13,8 +13,8 @@ export const data = new SlashCommandBuilder()
         .setDescription('Все сыгранные игроком капты/бизы/территории. Пример: 2025-19-3-9 и 2025-19-3-8')
         .setRequired(true))
     .addStringOption(option =>
-        option.setName('видео')
-            .setDescription('Ссылка на видео-доказательство')
+        option.setName('доказательства')
+            .setDescription('Ссылка на доказательства')
             .setRequired(false));
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -22,19 +22,18 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     try {
         const staticId = interaction.options.getString('паспорт', true);
-        const video = interaction.options.getString('видео');
+        const video = interaction.options.getString('доказательства');
         const bizData = interaction.options.getString('бизкапт', true);
 
-        if (video) {
-            const urlPattern = /^(https?:\/\/)[^\s$.?#].[^\s]*$/i;
-            if (!urlPattern.test(video)) {
-                return interaction.editReply({
-                    content: '❌ Ошибка: В поле "видео" должна быть указана прямая ссылка (начинающаяся с http:// или https://).'
-                });
-            }
+        if (!/^\d+$/.test(staticId)) {
+            return interaction.editReply({ 
+                content: 'Ошибка: Паспорт должен содержать только цифры. Пожалуйста, введите корректный ID игрока.' 
+            });
         }
 
         const requestText = `Запрос от игроков${video ? `\nВидео: ${video}` : ''}\n${bizData}`;
+
+        
 
         try {
             SecurityRepository.addSecurityRequest('Cheats',

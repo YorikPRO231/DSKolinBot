@@ -1,0 +1,128 @@
+<%
+  title = 'Выгрузка System Informer';
+  currentPage = 'upload';
+%>
+
+<%- include('layout', { part: 'header', title: title, currentPage: currentPage, user: user }) %>
+
+<link rel="stylesheet" href="/css/upload.css">
+
+<div class="upload-container">
+    <div class="page-header">
+        <h1>System Informer</h1>
+        <p>Анализ выгрузки System Informer</p>
+    </div>
+
+    <div class="upload-card" id="dropZone">
+        <div class="upload-info">
+            <i class="fas fa-info-circle"></i>
+            <p>Загрузите файл <strong>.txt</strong> для анализа.<br>
+            Будут автоматически извлечены email адреса и сайты читов (Medusa-Cheat, Vanish, Binware, Leet-Cheats, Skript, Unicorn).</p>
+        </div>
+
+        <form id="uploadForm" method="POST" action="/upload/upload" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="logFile">
+                    <i class="fas fa-file-alt"></i> Выберите файл (.txt)
+                </label>
+                <div class="file-input-wrapper">
+                    <input type="file" id="logFile" name="logFile" accept=".txt" style="display: none;">
+                    <button type="button" class="file-input-label" id="fileInputLabel">
+                        <i class="fas fa-folder-open"></i> Обзор...
+                    </button>
+                    <span id="fileName" class="file-name">Файл не выбран</span>
+                </div>
+                <div id="filePreview" style="display: none;"></div>
+                <div id="progressContainer" class="progress-container" style="display: none;">
+                    <div class="progress-bar-wrapper">
+                        <div class="progress-bar" id="uploadProgress"></div>
+                    </div>
+                    <div class="progress-text">
+                        <span><i class="fas fa-spinner fa-spin"></i> Анализирую файл...</span>
+                        <span>Пожалуйста, подождите</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-primary" id="submitBtn">
+                    <i class="fas fa-chart-line"></i> Анализировать файл
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <% if (results) { %>
+    <div id="resultsData" 
+         data-emails="<%- encodeURIComponent(JSON.stringify(results.emails || [])) %>"
+         data-cheatsites="<%- encodeURIComponent(JSON.stringify(results.cheatSites || [])) %>"
+         data-totallines="<%- results.totalLines || 0 %>"
+         data-processedlines="<%- results.processedLines || 0 %>"
+         style="display: none;">
+    </div>
+
+    <div class="results-container">
+        <div class="results-header">
+            <h2><i class="fas fa-chart-bar"></i> Результаты анализа</h2>
+            <div class="results-controls">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchInput" placeholder="Поиск...">
+                </div>
+                <div class="export-buttons">
+                    <button class="export-btn" id="copyEmails"><i class="fas fa-copy"></i> Копировать email</button>
+                    <button class="export-btn" id="exportEmails"><i class="fas fa-envelope"></i> Email CSV</button>
+                    <button class="export-btn" id="exportSites"><i class="fas fa-skull"></i> Сайты CSV</button>
+                    <button class="export-btn" id="exportAll"><i class="fas fa-download"></i> Все CSV</button>
+                </div>
+            </div>
+            <div class="results-stats">
+                <div class="stat-card">
+                    <div class="stat-value"><%= results.totalLines %></div>
+                    <div class="stat-label">Всего строк</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value"><%= results.processedLines %></div>
+                    <div class="stat-label">Найдено совпадений</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value"><%= results.emails.length %></div>
+                    <div class="stat-label">Email адресов</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value"><%= results.cheatSites.length %></div>
+                    <div class="stat-label">Сайтов читов</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="result-section">
+            <h3><i class="fas fa-envelope"></i> Найденные email адреса</h3>
+            <div id="emailResults"></div>
+        </div>
+
+        <div class="result-section">
+            <h3><i class="fas fa-skull"></i> Найденные сайты читов</h3>
+            <div id="cheatSitesResults"></div>
+        </div>
+
+        <% if (results.emails.length === 0 && results.cheatSites.length === 0) { %>
+        <div class="empty-results">
+            <i class="fas fa-search"></i>
+            <p>Ничего не найдено</p>
+        </div>
+        <% } %>
+    </div>
+    <% } %>
+
+    <% if (error) { %>
+    <div class="error-container">
+        <i class="fas fa-exclamation-triangle"></i>
+        <p><%= error %></p>
+    </div>
+    <% } %>
+</div>
+
+<script src="/js/upload.js"></script>
+
+<%- include('layout', { part: 'footer' }) %>

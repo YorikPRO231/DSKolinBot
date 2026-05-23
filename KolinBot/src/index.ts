@@ -10,6 +10,8 @@ import {setDiscordClient as setAuthDiscordClient} from './dashboard/middleware/a
 import {setDiscordClient as setServiceDiscordClient} from './dashboard/services/discord.service';
 import {PermissionsRepository} from './databases';
 import * as logger from "./logging";
+import { startLostPunishmentsChecker } from './tasks/lostPunishments';
+import { punishChecker } from './utils/punishChecker';
 
 dotenv.config({path: '.env'});
 
@@ -228,6 +230,8 @@ async function start() {
     client.once('ready', (readyClient) => {
         console.log(`✅ Бот запущен как ${readyClient.user?.tag}`);
 
+        startLostPunishmentsChecker(readyClient);
+        console.log('✅ Запущен планировщик проверки потеряшек');
 
         if (process.env.DASHBOARD === 'true') {
             setAuthDiscordClient(readyClient);
@@ -246,6 +250,11 @@ async function start() {
         }
         console.log('✅ Google Forms интеграция активирована');
     });
+
+    client.on('messageCreate', async (message) => {
+        await punishChecker(client, message);
+    });
+    console.log('✅ Загружен обработчик punishChecker');
 
     if (commands.length > 0 && process.env.GUILD_ID) {
         await registerGuildCommands(commands);

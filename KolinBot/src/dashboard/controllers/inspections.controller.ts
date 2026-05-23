@@ -1,77 +1,128 @@
-import { Request, Response } from 'express';
-import { InspectionsRepository, db } from '../../databases/index';
-import { AppError } from '../middleware/errorHandler.middleware';
+import { Request, Response } from "express";
+import { db } from "../../databases/index";
+import { AppError } from "../middleware/errorHandler.middleware";
 
 export class InspectionsController {
-  static async getByPassport(req: Request, res: Response) {
-    const passport = req.params.passport as string;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const offset = parseInt(req.query.offset as string) || 0;
-    
-    const result = InspectionsRepository.getInspectionReportsByPassportPaginated(passport, limit, offset);
-    res.json({ success: true, ...result });
-  }
-
-  static async getByDiscord(req: Request, res: Response) {
-    const discordId = req.params.discordId as string;
+  static async search(req: Request, res: Response) {
+    const query = req.query.query as string;
+    const searchType = req.query.type as string;
+    const page = parseInt(req.query.page as string) || 0;
     const limit = parseInt(req.query.limit as string) || 10;
-    const offset = parseInt(req.query.offset as string) || 0;
-    
-    const total = db.prepare('SELECT COUNT(*) as count FROM inspection_reports WHERE discord_id = ?')
-      .get(discordId) as { count: number };
-    
-    const reports = db.prepare(`
+    const offset = page * limit;
+
+    if (!query || !query.trim()) {
+      throw AppError.badRequest("Query parameter is required");
+    }
+
+    let whereClause = "";
+    let params: any[] = [];
+
+    if (searchType === "passport") {
+      whereClause = "passport LIKE ?";
+      params.push(`%${query}%`);
+    } else {
+      whereClause = "discord_id LIKE ?";
+      params.push(`%${query}%`);
+    }
+
+    const countStmt = db.prepare(`
+      SELECT COUNT(*) as count FROM inspection_reports
+      WHERE ${whereClause}
+    `);
+    const { count: total } = countStmt.get(...params) as { count: number };
+
+    const recordsStmt = db.prepare(`
       SELECT * FROM inspection_reports
-      WHERE discord_id = ?
+      WHERE ${whereClause}
       ORDER BY created_at DESC
       LIMIT ? OFFSET ?
-    `).all(discordId, limit, offset);
-    
-    res.json({ success: true, reports, total: total.count });
-  }
+    `);
+    const records = recordsStmt.all(...params, limit, offset);
 
-  static async getByAdmin(req: Request, res: Response) {
-    const adminId = req.params.adminId as string;
-    const limit = parseInt(req.query.limit as string) || 50;
-    
-    const reports = InspectionsRepository.getInspectionReportsByAdmin(adminId, limit);
-    res.json({ success: true, reports });
-  }
-
-  static async getRecent(req: Request, res: Response) {
-    const reports = InspectionsRepository.getInspectionReportsByAdmin("", 10);
-    res.json({ success: true, reports });
+    res.json({
+      success: true,
+      records,
+      total,
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
+      limit,
+    });
   }
 
   static async create(req: Request, res: Response) {
     const { passport, result, discordId } = req.body;
     const adminId = (req.user as any)?.id || "unknown";
     const adminName = (req.user as any)?.username;
-    
-    const id = InspectionsRepository.saveInspectionReport(passport, result, adminId, adminName, discordId);
-    res.json({ success: true, id });
+
+    if (!passport || !result) {
+      throw AppError.badRequest("Passport and result are required");
+    }
+
+    const stmt = db.prepare(`
+      INSERT INTO inspection_reports (passport, result, admin_id, admin_name, discord_id, created_at)
+      VALUES (?, ?, ?, ?, ?, datetime('now'))
+    `);
+
+    const info = stmt.run(
+      passport,
+      result,
+      adminId,
+      adminName,
+      discordId || null,
+    );
+
+    res.json({ success: true, id: info.lastInsertRowid });
   }
 
   static async update(req: Request, res: Response) {
     const id = parseInt(req.params.id as string);
     const { discord_id, result } = req.body;
-    
+
     if (isNaN(id)) {
-      throw AppError.badRequest('Invalid ID');
+      return res.status(400).json({
+        success: false,
+        error: "Invalid ID",
+      });
     }
-    
-    const stmt = db.prepare(`
+
+    if (!result) {
+      return res.status(400).json({
+        success: false,
+        error: "Result is required",
+      });
+    }
+
+    try {
+      const stmt = db.prepare(`
       UPDATE inspection_reports 
       SET discord_id = ?, result = ?
       WHERE id = ?
     `);
-    
-    const updateResult = stmt.run(discord_id || null, result, id);
-    
-    if (updateResult.changes === 0) {
-      throw AppError.notFound('Report not found');
+
+      const updateResult = stmt.run(discord_id || null, result, id);
+
+      if (updateResult.changes === 0) {
+        return res.status(404).json({
+          success: false,
+          error: "Report not found",
+        });
+      }
+
+      const updatedRecord = db
+        .prepare("SELECT * FROM inspection_reports WHERE id = ?")
+        .get(id);
+
+      res.json({
+        success: true,
+        message: "Report updated",
+        record: updatedRecord,
+      });
+    } catch (error) {
+      console.error("Update error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Database error during update",
+      });
     }
-    
-    res.json({ success: true, message: 'Report updated' });
   }
 }

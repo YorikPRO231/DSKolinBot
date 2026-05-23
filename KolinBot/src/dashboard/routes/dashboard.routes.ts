@@ -106,4 +106,19 @@ router.get('/admin-logs',
   }
 );
 
+router.get('/upload', 
+  ensureAuthenticatedAndAuthorized, 
+  requirePermission('view_logs_systeminformer'),
+  async (req, res) => {
+    const permissions = await getUserPermissions(req);
+    res.render('upload', {
+      user: req.user || null,
+      currentPage: 'upload',
+      title: 'Выгрузка System Informer',
+      permissions,
+      results: null
+    });
+  }
+);
+
 export default router;

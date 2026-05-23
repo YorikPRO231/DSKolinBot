@@ -27,7 +27,7 @@
             </tr>
         </thead>
         <tbody id="formsList">
-            <tr><td colspan="6" class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка данных...</p></td</tr>
+            <tr><td colspan="6" class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка данных...</p></td></tr>
         </tbody>
     </table>
 </div>
@@ -40,9 +40,9 @@
         </h3>
         <form id="addForm">
             <div class="form-group">
-                <label><i class="fas fa-id-card"></i> ID формы</label>
+                <label><i class="fas fa-id-card"></i> ID или ссылка на форму</label>
                 <input type="text" name="formId" placeholder="https://docs.google.com/forms/d/.../viewform" required>
-                <small>ID из URL Google Forms</small>
+                <small>Можно вставить полную ссылку или чистый ID формы</small>
             </div>
             <div class="form-group">
                 <label><i class="fas fa-hashtag"></i> Discord Channel ID</label>
@@ -61,16 +61,16 @@
             </div>
             <div class="form-group">
                 <label><i class="fas fa-at"></i> ID роли для пинга</label>
-                <input type="text" name="pingRoleId" placeholder="ID роли">
-                <small>Роль, которая будет упоминаться при новом ответе</small>
+                <input type="text" name="pingRoleId" placeholder="ID первой роли">
+                <small>Опционально, роль для упоминания при новом ответе</small>
             </div>
             <div class="form-group">
                 <label><i class="fas fa-at"></i> ID второй роли</label>
-                <input type="text" name="pingRoleId2" placeholder="ID роли">
+                <input type="text" name="pingRoleId2" placeholder="ID второй роли">
                 <small>Опционально, вторая роль для упоминания</small>
             </div>
             <div class="modal-buttons">
-                <button type="button" onclick="FormsModule.closeModal('addFormModal')">Отмена</button>
+                <button type="button" class="btn btn-secondary" onclick="FormsModule.closeModal('addFormModal')">Отмена</button>
                 <button type="submit" class="btn btn-primary">Создать интеграцию</button>
             </div>
         </form>
@@ -78,23 +78,23 @@
 </div>
 
 <div id="confirmDeleteModal" class="modal">
-    <div class="modal-content">
+    <div class="modal-content" style="text-align: center;">
         <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: var(--danger); margin-bottom: 1rem;"></i>
         <h3 style="margin-bottom: 0.5rem;">Удаление интеграции</h3>
         <p id="deleteFormName" style="color: var(--text-dim); margin-bottom: 1.5rem;">Вы уверены, что хотите удалить эту интеграцию?</p>
-        <div class="confirm-buttons">
-            <button id="deleteCancelBtn" class="btn-cancel">Отмена</button>
-            <button id="deleteConfirmBtn" class="btn-danger">Удалить</button>
+        <div class="confirm-buttons" style="display: flex; justify-content: center; gap: 12px;">
+            <button type="button" id="deleteCancelBtn" class="btn btn-secondary">Отмена</button>
+            <button type="button" id="deleteConfirmBtn" class="btn btn-danger">Удалить</button>
         </div>
     </div>
 </div>
 
 <div id="notificationModal" class="modal">
-    <div class="modal-content">
+    <div class="modal-content" style="text-align: center;">
         <i id="notificationIcon" class="fas fa-check-circle" style="font-size: 3rem; margin-bottom: 1rem;"></i>
         <h3 id="notificationTitle" style="margin-bottom: 0.5rem;">Успех</h3>
         <p id="notificationMessage" style="color: var(--text-dim); margin-bottom: 1.5rem;">Действие выполнено</p>
-        <button class="btn btn-primary" onclick="FormsModule.closeModal('notificationModal')">Закрыть</button>
+        <button type="button" class="btn btn-primary" onclick="FormsModule.closeModal('notificationModal')">Закрыть</button>
     </div>
 </div>
 

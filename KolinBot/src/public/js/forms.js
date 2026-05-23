@@ -4,43 +4,29 @@ const FormsModule = (function() {
     const roleCache = {};
     const guildCache = {};
 
-    function escapeHtml(text) {
-        if (!text) return '';
-        const map = { 
-            '&': '&amp;', 
-            '<': '&lt;', 
-            '>': '&gt;', 
-            '"': '&quot;', 
-            "'": '&#039;' 
-        };
-        return String(text).replace(/[&<>"']/g, m => map[m]);
-    }
-
     function showModal(modalId) {
-        const modal = document.getElementById(modalId);
-        if (modal) {
-            modal.style.display = 'flex';
-            document.body.style.overflow = 'hidden';
-        }
+        Utils.showModal(modalId);
     }
 
     function closeModal(modalId) {
-        const modal = document.getElementById(modalId);
-        if (modal) {
-            modal.style.display = 'none';
-            document.body.style.overflow = '';
-        }
+        Utils.closeModal(modalId);
+    }
+
+    function extractFormId(input) {
+        if (!input) return '';
+        const matches = input.match(/\/d\/([a-zA-Z0-9-_]+)/);
+        return matches ? matches[1] : input.trim();
     }
 
     function showSkeletonRow(index) {
         return '<tr id="row-' + index + '">' +
-            '<td class="skeleton-cell"><div class="skeleton skeleton-text" style="width: 120px;"></div></td>' +
-            '<td class="skeleton-cell"><div class="skeleton skeleton-text" style="width: 150px;"></div></td>' +
-            '<td class="skeleton-cell"><div class="skeleton skeleton-text" style="width: 150px;"></div></td>' +
-            '<td class="skeleton-cell"><div class="skeleton skeleton-text" style="width: 100px;"></div></td>' +
-            '<td class="skeleton-cell"><div class="skeleton skeleton-text" style="width: 120px;"></div></td>' +
-            '<td class="skeleton-cell"><div class="skeleton skeleton-badge"></div></td>' +
-        '</tr>';
+            '<td class="skeleton-cell"><div class="skeleton skeleton-text" style="width: 120px;"></div><\/td>' +
+            '<td class="skeleton-cell"><div class="skeleton skeleton-text" style="width: 150px;"></div><\/td>' +
+            '<td class="skeleton-cell"><div class="skeleton skeleton-text" style="width: 150px;"></div><\/td>' +
+            '<td class="skeleton-cell"><div class="skeleton skeleton-text" style="width: 100px;"></div><\/td>' +
+            '<td class="skeleton-cell"><div class="skeleton skeleton-text" style="width: 120px;"></div><\/td>' +
+            '<td class="skeleton-cell"><div class="skeleton skeleton-badge"></div><\/td>' +
+        '<\/tr>';
     }
 
     async function getChannelInfo(channelId) {
@@ -57,7 +43,6 @@ const FormsModule = (function() {
         } catch (error) {
             console.error('Ошибка получения информации о канале:', error);
         }
-        
         return null;
     }
 
@@ -75,7 +60,6 @@ const FormsModule = (function() {
         } catch (error) {
             console.error('Ошибка получения названия сервера:', error);
         }
-        
         return guildId;
     }
 
@@ -94,7 +78,6 @@ const FormsModule = (function() {
         } catch (error) {
             console.error('Ошибка получения названия роли:', error);
         }
-        
         return roleId;
     }
 
@@ -106,32 +89,30 @@ const FormsModule = (function() {
         
         if (roleId1) {
             const name1 = await getRoleName(guildId, roleId1);
-            rolesHtml += '<div class="name-cell"><span class="name-text">@' + escapeHtml(name1) + '</span><span class="id-badge" title="ID роли">' + escapeHtml(roleId1) + '</span><button class="copy-btn" onclick="FormsModule.copyToClipboard(\'' + escapeHtml(roleId1) + '\')" title="Копировать ID"><i class="fas fa-copy"></i></button></div>';
+            rolesHtml += '<div class="name-cell"><span class="name-text">@' + Utils.escapeHtml(name1) + '</span><span class="id-badge" title="ID роли">' + Utils.escapeHtml(roleId1) + '</span><button class="copy-btn" onclick="FormsModule.copyToClipboard(\'' + Utils.escapeHtml(roleId1) + '\')" title="Копировать ID"><i class="fas fa-copy"></i></button></div>';
         }
         
         if (roleId2) {
             const name2 = await getRoleName(guildId, roleId2);
-            rolesHtml += '<div class="name-cell" style="margin-top: 4px;"><span class="name-text">@' + escapeHtml(name2) + '</span><span class="id-badge" title="ID роли">' + escapeHtml(roleId2) + '</span><button class="copy-btn" onclick="FormsModule.copyToClipboard(\'' + escapeHtml(roleId2) + '\')" title="Копировать ID"><i class="fas fa-copy"></i></button></div>';
+            rolesHtml += '<div class="name-cell" style="margin-top: 4px;"><span class="name-text">@' + Utils.escapeHtml(name2) + '</span><span class="id-badge" title="ID роли">' + Utils.escapeHtml(roleId2) + '</span><button class="copy-btn" onclick="FormsModule.copyToClipboard(\'' + Utils.escapeHtml(roleId2) + '\')" title="Копировать ID"><i class="fas fa-copy"></i></button></div>';
         }
         
-        if (rolesHtml) {
-            cell.innerHTML = rolesHtml;
-        } else {
-            cell.innerHTML = '<span style="color: var(--text-dim);">—</span>';
-        }
+        cell.innerHTML = rolesHtml || '<span style="color: var(--text-dim);">—</span>';
     }
 
     async function copyToClipboard(text) {
         try {
             await navigator.clipboard.writeText(text);
-            showNotificationModal('Скопировано', 'ID скопирован в буфер обмена', 'success');
+            Utils.showToast('ID скопирован в буфер обмена');
         } catch (err) {
             console.error('Ошибка копирования:', err);
+            Utils.showToast('Не удалось скопировать', true);
         }
     }
 
     async function loadForms() {
         const list = document.getElementById('formsList');
+        list.innerHTML = '';
         
         for (let i = 0; i < 5; i++) {
             list.innerHTML += showSkeletonRow(i);
@@ -139,24 +120,11 @@ const FormsModule = (function() {
         
         try {
             const res = await fetch('/api/forms');
-            
-            if (!res.ok) {
-                throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-            }
+            if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
             
             const data = await res.json();
-            
-            let bindings = null;
-            
-            if (data.bindings && Array.isArray(data.bindings)) {
-                bindings = data.bindings;
-            } else if (data.data && Array.isArray(data.data)) {
-                bindings = data.data;
-            } else if (Array.isArray(data)) {
-                bindings = data;
-            } else if (data.success && data.bindings) {
-                bindings = data.bindings;
-            }
+            let bindings = data.bindings || data.data || data;
+            if (data.success && data.bindings) bindings = data.bindings;
             
             if (bindings && bindings.length > 0) {
                 let html = '';
@@ -179,13 +147,13 @@ const FormsModule = (function() {
                     const escapedFormName = String(formName).replace(/'/g, "\\'");
                     
                     html += '<tr id="row-' + i + '">' +
-                        '<td><code title="' + escapeHtml(String(formId)) + '">' + escapeHtml(formIdDisplay) + '</code><button class="copy-btn" onclick="FormsModule.copyToClipboard(\'' + escapeHtml(String(formId)) + '\')" title="Копировать ID" style="margin-left: 8px;"><i class="fas fa-copy"></i></button></td>' +
-                        '<td id="guild-' + i + '"><span class="loading-name">Загрузка...</span></td>' +
-                        '<td id="channel-' + i + '"><span class="loading-name">Загрузка...</span></td>' +
-                        '<td>' + escapeHtml(String(formName)) + '</td>' +
-                        '<td id="roles-' + i + '"><span class="loading-name">Загрузка...</span></td>' +
-                        '<td><button class="delete-btn" onclick="FormsModule.confirmDelete(\'' + escapedFormId + '\', \'' + escapedFormName + '\')" title="Удалить"><i class="fas fa-trash"></i></button></td>' +
-                    '</tr>';
+                        '<td><code title="' + Utils.escapeHtml(String(formId)) + '">' + Utils.escapeHtml(formIdDisplay) + '</code><button class="copy-btn" onclick="FormsModule.copyToClipboard(\'' + Utils.escapeHtml(String(formId)) + '\')" title="Копировать ID" style="margin-left: 8px;"><i class="fas fa-copy"></i></button><\/td>' +
+                        '<td id="guild-' + i + '"><span class="loading-name">Загрузка...</span><\/td>' +
+                        '<td id="channel-' + i + '"><span class="loading-name">Загрузка...</span><\/td>' +
+                        '<td>' + Utils.escapeHtml(String(formName)) + '<\/td>' +
+                        '<td id="roles-' + i + '"><span class="loading-name">Загрузка...</span><\/td>' +
+                        '<td><button class="delete-btn" onclick="FormsModule.confirmDelete(\'' + escapedFormId + '\', \'' + escapedFormName + '\')" title="Удалить"><i class="fas fa-trash"></i></button><\/td>' +
+                    '<\/tr>';
                 }
                 list.innerHTML = html;
                 
@@ -199,7 +167,7 @@ const FormsModule = (function() {
                     const guildCell = document.getElementById('guild-' + i);
                     if (guildCell && guildId && guildId !== '—') {
                         getGuildName(guildId).then(name => {
-                            guildCell.innerHTML = '<div class="name-cell"><span class="name-text">' + escapeHtml(name) + '</span><span class="id-badge" title="ID сервера">' + escapeHtml(String(guildId)) + '</span><button class="copy-btn" onclick="FormsModule.copyToClipboard(\'' + escapeHtml(String(guildId)) + '\')" title="Копировать ID"><i class="fas fa-copy"></i></button></div>';
+                            guildCell.innerHTML = '<div class="name-cell"><span class="name-text">' + Utils.escapeHtml(name) + '</span><span class="id-badge" title="ID сервера">' + Utils.escapeHtml(String(guildId)) + '</span><button class="copy-btn" onclick="FormsModule.copyToClipboard(\'' + Utils.escapeHtml(String(guildId)) + '\')" title="Копировать ID"><i class="fas fa-copy"></i></button></div>';
                         });
                     } else if (guildCell) {
                         guildCell.innerHTML = '<span style="color: var(--text-dim);">—</span>';
@@ -209,9 +177,9 @@ const FormsModule = (function() {
                     if (channelCell && channelId && channelId !== '—') {
                         getChannelInfo(channelId).then(info => {
                             if (info && info.channel) {
-                                channelCell.innerHTML = '<div class="name-cell"><span class="name-text">#' + escapeHtml(info.channel.name) + '</span><span class="id-badge" title="ID канала">' + escapeHtml(String(channelId)) + '</span><button class="copy-btn" onclick="FormsModule.copyToClipboard(\'' + escapeHtml(String(channelId)) + '\')" title="Копировать ID"><i class="fas fa-copy"></i></button></div>';
+                                channelCell.innerHTML = '<div class="name-cell"><span class="name-text">#' + Utils.escapeHtml(info.channel.name) + '</span><span class="id-badge" title="ID канала">' + Utils.escapeHtml(String(channelId)) + '</span><button class="copy-btn" onclick="FormsModule.copyToClipboard(\'' + Utils.escapeHtml(String(channelId)) + '\')" title="Копировать ID"><i class="fas fa-copy"></i></button></div>';
                             } else {
-                                channelCell.innerHTML = '<div class="name-cell"><span class="name-text" style="color: var(--text-dim);">Канал не найден</span><span class="id-badge">' + escapeHtml(String(channelId)) + '</span></div>';
+                                channelCell.innerHTML = '<div class="name-cell"><span class="name-text" style="color: var(--text-dim);">Канал не найден</span><span class="id-badge">' + Utils.escapeHtml(String(channelId)) + '</span></div>';
                             }
                         });
                     } else if (channelCell) {
@@ -219,24 +187,24 @@ const FormsModule = (function() {
                     }
                     
                     const rolesCell = document.getElementById('roles-' + i);
-                    if (rolesCell && pingRoleId && guildId && guildId !== '—') {
+                    if (rolesCell && (pingRoleId || pingRoleId2) && guildId && guildId !== '—') {
                         updateRolesCell(i, guildId, pingRoleId, pingRoleId2);
                     } else if (rolesCell) {
                         rolesCell.innerHTML = '<span style="color: var(--text-dim);">—</span>';
                     }
                 }
             } else {
-                list.innerHTML = '<tr><td colspan="6" class="empty-state"><i class="fas fa-link"></i><p>Формы не найдены</p><button class="btn btn-primary" onclick="FormsModule.showModal(\'addFormModal\')"><i class="fas fa-plus"></i> Добавить первую форму</button></td></tr>';
+                list.innerHTML = '<tr><td colspan="6" class="empty-state"><i class="fas fa-link"></i><p>Формы не найдены</p><button class="btn btn-primary" onclick="FormsModule.showModal(\'addFormModal\')"><i class="fas fa-plus"></i> Добавить первую форму</button><\/td><\/tr>';
             }
         } catch (error) {
             console.error('Ошибка загрузки:', error);
-            list.innerHTML = '<tr><td colspan="6" class="empty-state"><i class="fas fa-exclamation-triangle" style="color: var(--danger);"></i><p>Ошибка загрузки: ' + error.message + '</p><button class="btn btn-primary" onclick="FormsModule.loadForms()"><i class="fas fa-sync-alt"></i> Попробовать снова</button></td></tr>';
+            list.innerHTML = '<tr><td colspan="6" class="empty-state"><i class="fas fa-exclamation-triangle" style="color: var(--danger);"></i><p>Ошибка загрузки: ' + error.message + '</p><button class="btn btn-primary" onclick="FormsModule.loadForms()"><i class="fas fa-sync-alt"></i> Попробовать снова</button><\/td><\/tr>';
         }
     }
 
     function confirmDelete(formId, formName) {
         pendingDeleteId = formId;
-        document.getElementById('deleteFormName').innerHTML = 'Вы уверены, что хотите удалить интеграцию?<br><small style="color: var(--accent); display: block; margin-top: 8px;">' + escapeHtml(formName || formId) + '</small>';
+        document.getElementById('deleteFormName').innerHTML = 'Вы уверены, что хотите удалить интеграцию?<br><small style="color: #ff9f43; display: block; margin-top: 8px;">' + Utils.escapeHtml(formName || formId) + '</small>';
         showModal('confirmDeleteModal');
     }
 
@@ -251,58 +219,28 @@ const FormsModule = (function() {
         try {
             const res = await fetch('/api/forms/' + encodeURIComponent(pendingDeleteId), { 
                 method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
+                headers: { 'Content-Type': 'application/json' }
             });
             
-            if (!res.ok) {
-                throw new Error(`HTTP ${res.status}`);
-            }
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
             
             const data = await res.json();
             closeModal('confirmDeleteModal');
             
             if (data.success) {
-                showNotificationModal('Успех', 'Интеграция успешно удалена', 'success');
+                Utils.showToast('Интеграция успешно удалена');
                 loadForms();
             } else {
-                showNotificationModal('Ошибка', data.error || 'Не удалось удалить интеграцию', 'error');
+                Utils.showToast(data.error || 'Не удалось удалить интеграцию', true);
             }
         } catch (error) {
             closeModal('confirmDeleteModal');
-            showNotificationModal('Ошибка', 'Ошибка сервера: ' + error.message, 'error');
+            Utils.showToast('Ошибка сервера: ' + error.message, true);
         } finally {
             pendingDeleteId = null;
             deleteBtn.innerHTML = originalText;
             deleteBtn.disabled = false;
         }
-    }
-
-    function showNotificationModal(title, message, type) {
-        const icon = document.getElementById('notificationIcon');
-        const iconTitle = document.getElementById('notificationTitle');
-        
-        if (type === 'success') {
-            icon.className = 'fas fa-check-circle';
-            icon.style.color = '#00c853';
-            iconTitle.innerText = title || 'Успех';
-        } else if (type === 'error') {
-            icon.className = 'fas fa-times-circle';
-            icon.style.color = '#ff4d4d';
-            iconTitle.innerText = title || 'Ошибка';
-        } else {
-            icon.className = 'fas fa-info-circle';
-            icon.style.color = 'var(--accent)';
-            iconTitle.innerText = title || 'Информация';
-        }
-        
-        document.getElementById('notificationMessage').innerHTML = message;
-        showModal('notificationModal');
-        
-        setTimeout(() => {
-            closeModal('notificationModal');
-        }, 3000);
     }
 
     async function handleFormSubmit(e) {
@@ -314,10 +252,14 @@ const FormsModule = (function() {
         submitBtn.disabled = true;
         
         const fd = new FormData(e.target);
+        
+        const rawFormId = fd.get('formId');
+        const cleanFormId = extractFormId(rawFormId);
+        
         const data = {
-            formId: fd.get('formId'),
-            channelId: fd.get('channelId'),
-            guildId: fd.get('guildId'),
+            formId: cleanFormId,
+            channelId: fd.get('channelId').trim(),
+            guildId: fd.get('guildId').trim(),
             formName: fd.get('formName') || null,
             pingRoleId: fd.get('pingRoleId') || null,
             pingRoleId2: fd.get('pingRoleId2') || null
@@ -326,26 +268,24 @@ const FormsModule = (function() {
         try {
             const res = await fetch('/api/forms', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
             
-            if (!res.ok) {
-                throw new Error(`HTTP ${res.status}`);
-            }
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
             
             const result = await res.json();
             
             if (result.success) {
                 closeModal('addFormModal');
-                showNotificationModal('Успех', 'Интеграция успешно добавлена', 'success');
+                Utils.showToast('Интеграция успешно добавлена');
                 loadForms();
                 e.target.reset();
             } else {
-                showNotificationModal('Ошибка', result.error || 'Не удалось добавить интеграцию', 'error');
+                Utils.showToast(result.error || 'Не удалось добавить интеграцию', true);
             }
         } catch (error) {
-            showNotificationModal('Ошибка', 'Ошибка сервера: ' + error.message, 'error');
+            Utils.showToast('Ошибка сервера: ' + error.message, true);
         } finally {
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
@@ -365,14 +305,10 @@ const FormsModule = (function() {
 
 document.addEventListener('DOMContentLoaded', function() {
     const addForm = document.getElementById('addForm');
-    if (addForm) {
-        addForm.onsubmit = FormsModule.handleFormSubmit;
-    }
+    if (addForm) addForm.onsubmit = FormsModule.handleFormSubmit;
     
     const deleteConfirmBtn = document.getElementById('deleteConfirmBtn');
-    if (deleteConfirmBtn) {
-        deleteConfirmBtn.onclick = FormsModule.executeDelete;
-    }
+    if (deleteConfirmBtn) deleteConfirmBtn.onclick = FormsModule.executeDelete;
     
     const deleteCancelBtn = document.getElementById('deleteCancelBtn');
     if (deleteCancelBtn) {
@@ -382,6 +318,5 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     FormsModule.loadForms();
-    
     window.FormsModule = FormsModule;
 });

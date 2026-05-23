@@ -54,13 +54,13 @@ export class LogParserService {
 
       if (trimmedLine.includes("Время события:")) {
         const timeValue = trimmedLine.replace("Время события:", "").trim();
-        const date = new Date(timeValue);
-        if (!isNaN(date.getTime())) {
-          entry.utcTimestamp = timeValue;
-          entry.utcDate = timeValue.split("T")[0];
-          entry.timestamp = timeValue;
-        } else {
-          entry.timestamp = timeValue;
+        entry.utcTimestamp = timeValue;
+        entry.timestamp = timeValue;
+        
+        const dateMatch = timeValue.match(/(\d{2})\.(\d{2})\.(\d{4})/);
+        if (dateMatch) {
+          const [_, day, month, year] = dateMatch;
+          entry.utcDate = `${year}-${month}-${day}`;
         }
       } else if (trimmedLine.includes("Событие:")) {
         entry.event = trimmedLine.replace("Событие:", "").trim();
@@ -97,9 +97,7 @@ export class LogParserService {
           entry.channelId = channelMatch[1];
         }
 
-        const voiceChannelMatch = desc.match(
-          /Голосовой канал:\s*(.+?)(?:\s*\(|$)/,
-        );
+        const voiceChannelMatch = desc.match(/Голосовой канал:\s*(.+?)(?:\s*\(|$)/);
         if (voiceChannelMatch) {
           entry.channelName = voiceChannelMatch[1].trim();
         }
@@ -115,9 +113,7 @@ export class LogParserService {
           entry.channelName = nameMatch[1].trim();
         }
       } else if (trimmedLine.includes("Голосовой канал:")) {
-        const voiceMatch = trimmedLine.match(
-          /Голосовой канал:\s*(.+?)(?:\s*\(|$)/,
-        );
+        const voiceMatch = trimmedLine.match(/Голосовой канал:\s*(.+?)(?:\s*\(|$)/);
         if (voiceMatch) entry.channelName = voiceMatch[1].trim();
 
         const idMatch = trimmedLine.match(/\((\d{17,20})\)/);
@@ -131,21 +127,12 @@ export class LogParserService {
       } else if (trimmedLine.includes("Ссылка:")) {
         const linkMatch = trimmedLine.match(/Ссылка:\s*(.+)$/);
         if (linkMatch) entry.messageLink = linkMatch[1].trim();
-      } else if (
-        trimmedLine.includes("Содержание:") &&
-        !trimmedLine.includes("(")
-      ) {
+      } else if (trimmedLine.includes("Содержание:") && !trimmedLine.includes("(")) {
         const contentValue = trimmedLine.replace("Содержание:", "").trim();
         if (contentValue) entry.content = contentValue;
-      } else if (
-        trimmedLine.includes("Старая версия:") &&
-        !trimmedLine.includes("Пусто")
-      ) {
+      } else if (trimmedLine.includes("Старая версия:") && !trimmedLine.includes("Пусто")) {
         entry.oldContent = trimmedLine.replace("Старая версия:", "").trim();
-      } else if (
-        trimmedLine.includes("Новая версия:") &&
-        !trimmedLine.includes("Пусто")
-      ) {
+      } else if (trimmedLine.includes("Новая версия:") && !trimmedLine.includes("Пусто")) {
         entry.newContent = trimmedLine.replace("Новая версия:", "").trim();
       } else if (trimmedLine === "Старая версия") {
         isCollectingOld = true;
@@ -199,8 +186,7 @@ export class LogParserService {
 
     const lowerQuery = query.toLowerCase();
     for (const field of fields) {
-      if (field && String(field).toLowerCase().includes(lowerQuery))
-        return true;
+      if (field && String(field).toLowerCase().includes(lowerQuery)) return true;
     }
     return false;
   }

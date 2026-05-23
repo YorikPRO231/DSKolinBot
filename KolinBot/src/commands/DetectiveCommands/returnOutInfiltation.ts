@@ -30,13 +30,6 @@ async function fetchSendableChannel(client: any, channelId: string): Promise<Sen
     }
 }
 
-function getNameLogsChannel(faction: string): string {
-    if (faction in DETECTIVES_INFO) {
-        return DETECTIVES_INFO[faction as FactionType].name_logs_id;
-    }
-    return 'nn';
-}
-
 export async function execute(inter: ChatInputCommandInteraction) {
     const targetUser = inter.options.getUser('игрок', true);
     const targetMember = await inter.guild?.members.fetch(targetUser.id).catch(() => null);

@@ -1,16 +1,21 @@
 import { Router } from 'express';
 import { ensureAuthenticatedAndAuthorized } from '../../middleware/auth.middleware';
-import { fetchChannel, fetchRole, fetchGuild, getUserDisplayName, getChannelName } from '../../services/discord.service';
-import { ChannelType } from 'discord.js';
+import { fetchChannel, fetchRole, fetchGuild, getChannelName } from '../../services/discord.service';
+import { getUserNicknameWithFallback, getUserAvatarWithFallback  } from '../../../utils/discord';
+
 
 const router = Router();
 
 router.get('/user/nickname/:userId', ensureAuthenticatedAndAuthorized, async (req, res) => {
   const userId = req.params.userId as string;
-  const guildId = process.env.GUILD_ID || '';
   
-  const nickname = await getUserDisplayName(userId, guildId);
-  res.json({ success: true, nickname });
+  try {
+    const nickname = await getUserNicknameWithFallback(userId);
+    res.json({ success: true, nickname });
+  } catch (error) {
+    console.error(`Ошибка получения никнейма для ${userId}:`, error);
+    res.json({ success: true, nickname: userId });
+  }
 });
 
 router.get('/channel/:channelId/name', ensureAuthenticatedAndAuthorized, async (req, res) => {
@@ -65,6 +70,18 @@ router.get('/role/:guildId/:roleId/name', ensureAuthenticatedAndAuthorized, asyn
   const roleId = req.params.roleId as string;
   const role = await fetchRole(guildId, roleId);
   res.json({ success: true, name: role?.name || roleId });
+});
+
+router.get('/user/avatar/:userId', ensureAuthenticatedAndAuthorized, async (req, res) => {
+  const userId = req.params.userId as string;
+  
+  try {
+    const avatarUrl = await getUserAvatarWithFallback(userId);
+    res.json({ success: true, avatarUrl });
+  } catch (error) {
+    console.error(`Ошибка получения аватара для ${userId}:`, error);
+    res.json({ success: false, avatarUrl: null });
+  }
 });
 
 router.get('/guild/:guildId/name', ensureAuthenticatedAndAuthorized, async (req, res) => {

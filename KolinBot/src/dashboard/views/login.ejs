@@ -14,8 +14,12 @@
             --bg: #0b0d0e;
             --card: #15181b;
             --accent: #FF6B00;
+            --accent-glow: rgba(255, 107, 0, 0.15);
             --discord: #5865F2;
             --border: #2d3238;
+            --text: #ffffff;
+            --text-dim: #9ba1a6;
+            --danger: #e63946;
         }
 
         * {
@@ -27,7 +31,7 @@
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
             background: var(--bg);
-            color: #fff;
+            color: var(--text);
             height: 100vh;
             display: flex;
             align-items: center;
@@ -36,121 +40,166 @@
             position: relative;
         }
 
+        body::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(255, 107, 0, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 107, 0, 0.02) 1px, transparent 1px);
+            background-size: 40px 40px;
+            background-position: center;
+            mask-image: radial-gradient(circle at center, black 40%, transparent 80%);
+            -webkit-mask-image: radial-gradient(circle at center, black 40%, transparent 80%);
+            z-index: 0;
+        }
+
+        .bg-glow {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
         .bg-particles {
             position: absolute;
             width: 100%;
             height: 100%;
             overflow: hidden;
-            z-index: 0;
+            z-index: 1;
         }
 
         .particle {
             position: absolute;
-            background: rgba(255, 107, 0, 0.3);
+            background: var(--accent);
             border-radius: 50%;
             pointer-events: none;
-            animation: float 20s infinite ease-in-out;
+            will-change: transform, opacity;
         }
 
         @keyframes float {
-            0%, 100% {
-                transform: translateY(0) translateX(0) scale(1);
-                opacity: 0.3;
-            }
-            25% {
-                transform: translateY(-30px) translateX(15px) scale(1.1);
-                opacity: 0.5;
-            }
-            50% {
-                transform: translateY(10px) translateX(-20px) scale(0.9);
-                opacity: 0.2;
-            }
-            75% {
-                transform: translateY(-15px) translateX(10px) scale(1.05);
-                opacity: 0.4;
-            }
+            0% { transform: translateY(100vh) scale(0); opacity: 0; }
+            10% { opacity: 0.4; }
+            90% { opacity: 0.4; }
+            100% { transform: translateY(-10vh) scale(1); opacity: 0; }
         }
 
         .login-card {
             position: relative;
-            z-index: 1;
-            background: rgba(21, 24, 27, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--border);
-            padding: 3rem;
-            border-radius: 32px;
+            z-index: 2;
+            background: rgba(21, 24, 27, 0.65);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(45, 50, 56, 0.6);
+            padding: 3.5rem 3rem;
+            border-radius: 24px; 
             width: 100%;
-            max-width: 440px;
+            max-width: 460px;
             text-align: center;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 107, 0, 0.1);
-            animation: slideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
-            transition: all 0.3s ease;
+            box-shadow: 
+                0 30px 70px rgba(0, 0, 0, 0.8),
+                0 0 100px rgba(255, 107, 0, 0.03),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), 
+                        border-color 0.4s ease, 
+                        box-shadow 0.4s ease;
+        }
+
+        .login-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            border-radius: 24px 24px 0 0;
+            opacity: 0.5;
+            transition: opacity 0.4s ease;
         }
 
         .login-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.6), 0 0 0 2px rgba(255, 107, 0, 0.2);
+            transform: translateY(-4px);
             border-color: rgba(255, 107, 0, 0.3);
+            box-shadow: 
+                0 40px 80px rgba(0, 0, 0, 0.9),
+                0 0 120px rgba(255, 107, 0, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .login-card:hover::before {
+            opacity: 1;
+        }
+
+        .logo-container {
+            position: relative;
+            width: 90px;
+            height: 90px;
+            margin: 0 auto 2rem;
+        }
+
+        .logo-glow-ring {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 2px dashed rgba(255, 107, 0, 0.2);
+            animation: rotateRing 20s linear infinite;
+        }
+
+        @keyframes rotateRing {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
 
         .logo-box {
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(135deg, rgba(255, 107, 0, 0.15), rgba(255, 107, 0, 0.05));
+            width: 72px;
+            height: 72px;
+            background: #1a1e22;
+            border: 1px solid var(--border);
             color: var(--accent);
-            border-radius: 24px;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2.2rem;
-            margin: 0 auto 1.5rem;
-            position: relative;
-            animation: pulseGlow 2s infinite;
-            transition: transform 0.3s ease;
+            font-size: 2rem;
+            position: absolute;
+            top: 9px;
+            left: 9px;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.5), 0 10px 20px rgba(0,0,0,0.3);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        .logo-box:hover {
-            transform: scale(1.05) rotate(5deg);
-        }
-
-        @keyframes pulseGlow {
-            0%, 100% {
-                box-shadow: 0 0 0 0 rgba(255, 107, 0, 0.4);
-            }
-            50% {
-                box-shadow: 0 0 0 10px rgba(255, 107, 0, 0);
-            }
-        }
-
-        .logo-box i {
-            animation: iconPulse 2s infinite;
-        }
-
-        @keyframes iconPulse {
-            0%, 100% {
-                transform: scale(1);
-            }
-            50% {
-                transform: scale(1.1);
-            }
+        .login-card:hover .logo-box {
+            transform: scale(1.05);
+            border-color: rgba(255, 107, 0, 0.4);
+            color: #fff;
+            background: var(--accent);
+            box-shadow: 0 0 30px var(--accent-glow);
         }
 
         h1 {
-            font-size: 1.75rem;
+            font-size: 2rem;
             font-weight: 800;
             margin-bottom: 0.75rem;
-            background: linear-gradient(135deg, #fff 0%, #9ba1a6 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            animation: fadeInDown 0.5s ease 0.2s both;
+            color: #fff;
+            letter-spacing: -0.75px;
         }
 
-        p {
-            color: #9ba1a6;
-            font-size: 0.9rem;
+        p.subtitle {
+            color: var(--text-dim);
+            font-size: 0.95rem;
             margin-bottom: 2.5rem;
-            animation: fadeInUp 0.5s ease 0.3s both;
+            line-height: 1.6;
+            padding: 0 10px;
         }
 
         .discord-btn {
@@ -158,196 +207,186 @@
             color: #fff;
             text-decoration: none;
             padding: 1rem 2rem;
-            border-radius: 16px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 12px;
-            font-weight: 700;
-            transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-            box-shadow: 0 4px 15px rgba(88, 101, 242, 0.3);
+            gap: 14px;
+            font-weight: 600;
+            font-size: 1rem;
+            width: 100%;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 6px 20px rgba(88, 101, 242, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             position: relative;
             overflow: hidden;
-            animation: fadeInUp 0.5s ease 0.4s both;
-        }
-
-        .discord-btn::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-        }
-
-        .discord-btn:hover::before {
-            width: 300px;
-            height: 300px;
         }
 
         .discord-btn:hover {
-            transform: translateY(-3px) scale(1.02);
-            background: #4752C4;
-            box-shadow: 0 8px 25px rgba(88, 101, 242, 0.5);
+            transform: translateY(-2px);
+            background: #4e5ad4;
+            box-shadow: 0 12px 30px rgba(88, 101, 242, 0.45);
+            border-color: rgba(255, 255, 255, 0.2);
         }
 
         .discord-btn:active {
-            transform: translateY(0) scale(0.98);
+            transform: translateY(1px);
         }
 
         .discord-btn i {
-            font-size: 1.3rem;
-            transition: transform 0.3s ease;
+            font-size: 1.4rem;
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .discord-btn:hover i {
-            transform: rotate(-10deg) scale(1.1);
+            transform: scale(1.15) rotate(-5deg);
+        }
+
+        .discord-btn::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -50%;
+            width: 20%;
+            height: 100%;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.15), transparent);
+            transform: skewX(-30deg);
+            transition: none;
+        }
+
+        .login-card:hover .discord-btn::after {
+            left: 150%;
+            transition: left 0.8s ease-in-out;
         }
 
         .info-text {
-            margin-top: 2rem;
-            font-size: 0.75rem;
+            margin-top: 2.5rem;
+            font-size: 0.8rem;
             color: #5a6066;
-            animation: fadeIn 0.5s ease 0.5s both;
+            transition: color 0.3s ease;
+        }
+
+        .login-card:hover .info-text {
+            color: var(--text-dim);
         }
 
         .info-text a {
             color: var(--accent);
             text-decoration: none;
-            transition: color 0.2s;
+            font-weight: 500;
+            padding-bottom: 2px;
+            border-bottom: 1px dashed transparent;
+            transition: all 0.2s ease;
         }
 
         .info-text a:hover {
-            text-decoration: underline;
             color: #ff8533;
-        }
-
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(40px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes fadeInDown {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .login-card {
-                margin: 1rem;
-                padding: 2rem;
-                max-width: calc(100% - 2rem);
-            }
-
-            .logo-box {
-                width: 65px;
-                height: 65px;
-                font-size: 1.8rem;
-            }
-
-            h1 {
-                font-size: 1.5rem;
-            }
+            border-bottom-color: #ff8533;
         }
 
         .error-message {
-            margin-top: 1rem;
-            padding: 0.75rem;
-            background: rgba(255, 68, 68, 0.1);
-            border: 1px solid rgba(255, 68, 68, 0.3);
+            margin-top: 1.5rem;
+            padding: 0.85rem 1.2rem;
+            background: rgba(230, 57, 70, 0.08);
+            border: 1px solid rgba(230, 57, 70, 0.25);
             border-radius: 12px;
-            color: #ff6b6b;
+            color: #ff5252;
             font-size: 0.85rem;
-            animation: shake 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: start;
+            gap: 12px;
+            text-align: left;
+            opacity: 0;
+            transform: scale(0.95) translateY(10px);
+            animation: errorIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
+        .error-message i {
+            font-size: 1.1rem;
+            color: var(--danger);
+            background: rgba(230, 57, 70, 0.15);
+            padding: 6px;
+            border-radius: 8px;
+        }
+
+        @keyframes errorIn {
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .animate-fade {
+            animation: easeFadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+        
+        .delay-1 { animation-delay: 0.1s; }
+        .delay-2 { animation-delay: 0.2s; }
+        .delay-3 { animation-delay: 0.3s; }
+
+        @keyframes easeFadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 480px) {
+            .login-card { margin: 1.25rem; padding: 2.5rem 1.75rem; }
+            h1 { font-size: 1.75rem; }
         }
     </style>
 </head>
 <body>
+    <div class="bg-glow"></div>
     <div class="bg-particles" id="particles"></div>
 
-    <div class="login-card">
-        <div class="logo-box">
-            <i class="fas fa-bolt"></i>
+    <div class="login-card animate-fade">
+        <div class="logo-container animate-fade delay-1">
+            <div class="logo-glow-ring"></div>
+            <div class="logo-box">
+                <i class="fas fa-shield-halved"></i> 
+            </div>
         </div>
-        <h1>Blackberry Admin</h1>
-        <p>Авторизуйтесь через Discord для доступа к панели управления проектом</p>
         
-        <a href="/auth/discord" class="discord-btn">
-            <i class="fab fa-discord"></i>
-            Войти через Discord
-        </a>
+        <h1 class="animate-fade delay-2">Blackberry Admin</h1>
+        <p class="subtitle animate-fade delay-2">Авторизуйтесь через Discord для доступа к панели управления ботом</p>
         
-        <div class="info-text">
-            Не можете войти? <a href="#">Обратитесь к администратору</a>
+        <div class="animate-fade delay-3">
+            <a href="/auth/discord" class="discord-btn">
+                <i class="fab fa-discord"></i>
+                Войти через Discord
+            </a>
+        </div>
+        
+        <div class="info-text " style="animation-delay: 0.35s">
+            Возникли трудности? <a href="#">Обратитесь к администратору</a>
         </div>
     </div>
 
     <script>
         function createParticles() {
-            const particlesContainer = document.getElementById('particles');
-            const particleCount = 30;
+            const container = document.getElementById('particles');
+            if (!container) return;
             
-            for (let i = 0; i < particleCount; i++) {
+            const count = 20; 
+            const fragment = document.createDocumentFragment();
+            
+            for (let i = 0; i < count; i++) {
                 const particle = document.createElement('div');
                 particle.classList.add('particle');
                 
-                const size = Math.random() * 40 + 10;
+                const size = Math.random() * 3 + 1; 
+                const left = Math.random() * 100;
+                const duration = Math.random() * 10 + 8;
+                const delay = Math.random() * -15; 
+                
                 particle.style.width = size + 'px';
                 particle.style.height = size + 'px';
+                particle.style.left = left + '%';
+                particle.style.animation = `float ${duration}s linear infinite ${delay}s`;
+                particle.style.boxShadow = `0 0 8px var(--accent)`;
                 
-                particle.style.left = Math.random() * 100 + '%';
-                particle.style.top = Math.random() * 100 + '%';
-                
-                const duration = Math.random() * 20 + 15;
-                const delay = Math.random() * 5;
-                particle.style.animation = `float ${duration}s infinite ease-in-out ${delay}s`;
-                
-                particle.style.opacity = Math.random() * 0.3 + 0.1;
-                
-                particlesContainer.appendChild(particle);
+                fragment.appendChild(particle);
             }
+            container.appendChild(fragment);
         }
         
         function checkError() {
@@ -356,39 +395,48 @@
             
             if (error) {
                 const loginCard = document.querySelector('.login-card');
+                if (!loginCard) return;
+
                 const errorDiv = document.createElement('div');
                 errorDiv.className = 'error-message';
                 
                 let errorText = '';
                 switch(error) {
                     case 'auth_failed':
-                        errorText = 'Ошибка авторизации. Попробуйте снова.';
+                        errorText = 'Ошибка верификации аккаунта. Убедитесь в правильности данных Discord.';
                         break;
                     default:
-                        errorText = 'Произошла ошибка. Пожалуйста, попробуйте позже.';
+                        errorText = 'Внутренний сбой системы авторизации. Попробуйте позже.';
                 }
                 
-                errorDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${errorText}`;
+                errorDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> <span></span>`;
+                errorDiv.querySelector('span').textContent = errorText;
+                
                 loginCard.appendChild(errorDiv);
                 
                 setTimeout(() => {
                     errorDiv.style.opacity = '0';
-                    setTimeout(() => errorDiv.remove(), 500);
-                }, 5000);
+                    errorDiv.style.transform = 'scale(0.95) translateY(-10px)';
+                    setTimeout(() => errorDiv.remove(), 400);
+                }, 6000);
             }
         }
         
-        createParticles();
-        checkError();
+        document.addEventListener('DOMContentLoaded', () => {
+            createParticles();
+            checkError();
+        });
         
         let resizeTimeout;
         window.addEventListener('resize', () => {
             clearTimeout(resizeTimeout);
             resizeTimeout = setTimeout(() => {
                 const container = document.getElementById('particles');
-                container.innerHTML = '';
-                createParticles();
-            }, 250);
+                if (container) {
+                    container.innerHTML = '';
+                    createParticles();
+                }
+            }, 300);
         });
     </script>
 </body>

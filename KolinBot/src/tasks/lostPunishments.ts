@@ -4,10 +4,11 @@ import { PUNISHMENT_ADMINS_CHANNEL_ID } from "../utils/config";
 import { TIME_PATTERN, SIMPLE_PATTERN } from "../utils/punishChecker";
 
 const URL_PATTERN = /^(https?:\/\/)[^\s$.?#].[^\s]*$/i;
-const DAYS_THRESHOLD = 3;
+const DAYS_THRESHOLD = 21;
+const RECENT_HOURS_THRESHOLD = 6; 
 
 export function startLostPunishmentsChecker(client: Client): void {
-    cron.schedule("0 9,22 * * *", () => checkLostPunishments(client));
+    cron.schedule("0 23 * * *", () => checkLostPunishments(client));
 }
 
 async function checkLostPunishments(client: Client): Promise<void> {
@@ -19,14 +20,21 @@ async function checkLostPunishments(client: Client): Promise<void> {
         }
 
         const now = Date.now();
-        const threshold = now - DAYS_THRESHOLD * 24 * 60 * 60 * 1000;
+        const twentyOneDaysAgo = now - DAYS_THRESHOLD * 24 * 60 * 60 * 1000;
+        const recentThreshold = now - RECENT_HOURS_THRESHOLD * 60 * 60 * 1000; 
 
-        const allMessages = await fetchAllMessages(channel, 1000, threshold);
+        const allMessages = await fetchAllMessages(channel, 1000, twentyOneDaysAgo);
 
         const lostMessages = allMessages.filter(msg => {
             if (msg.author.bot) return false;
             if (msg.reactions.cache.size > 0) return false;
-            if (msg.createdTimestamp > threshold) return false;
+            
+            if (msg.hasThread) return false;
+            
+            if (msg.createdTimestamp > recentThreshold) return false;
+            
+            if (msg.createdTimestamp < twentyOneDaysAgo) return false;
+            
             return isPunishmentMessage(msg.content);
         });
 

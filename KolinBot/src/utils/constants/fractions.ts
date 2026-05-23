@@ -256,7 +256,7 @@ export const FRACTION_INFO: Record<
   },
   TEST_SERVER: {
     label: "Test Server",
-    discord_id: "1467227742037741846",
+    discord_id: "1405927487095181322",
     state: false,
     emoji_id: "TEST_SERVER",
     chp_role_id: "",

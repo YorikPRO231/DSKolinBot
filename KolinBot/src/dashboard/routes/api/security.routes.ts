@@ -10,5 +10,7 @@ router.post('/alerts/add', ensureAuthenticatedAndAuthorized, validateSecurityAle
 router.post('/alerts/:id/close', ensureAuthenticatedAndAuthorized, SecurityController.closeAlert);
 router.get('/logs', ensureAuthenticatedAndAuthorized, SecurityController.getLogs);
 router.post('/request', ensureAuthenticatedAndAuthorized, SecurityController.addSecurityRequest);
+router.get('/alerts/:id', ensureAuthenticatedAndAuthorized, SecurityController.getAlertById);
+
 
 export default router;

@@ -26,6 +26,7 @@ export const PermissionsRepository = {
       { key: 'view_admin_logs', name: 'Просмотр админ-логов', desc: 'Доступ к логам' },
       { key: 'manage_roles', name: 'Управление ролями', desc: 'Настройка прав доступа' },
       { key: 'manage_users', name: 'Управление пользователями', desc: 'Выдача прав пользователям' },
+      { key: 'view_logs_systeminformer', name: 'Выгрузка System Informer', desc: 'Выгрузка логов System Infromer' },
     ];
     
     const stmt = db.prepare(`INSERT OR IGNORE INTO permissions (permission_key, permission_name, description) VALUES (?, ?, ?)`);

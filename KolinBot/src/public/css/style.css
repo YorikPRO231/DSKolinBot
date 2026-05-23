@@ -1,0 +1,230 @@
+:root {
+    --bg-main: #0b0d0e;
+    --bg-card: #15181b;
+    --accent: #FF6B00;
+    --text-main: #e1e1e1;
+    --text-dim: #9ba1a6;
+    --border: #2d3238;
+    --danger: #ff4d4d;
+    --success: #00c853;
+}
+
+* { 
+    margin: 0; 
+    padding: 0; 
+    box-sizing: border-box;
+}
+
+body { 
+    font-family: 'Inter', system-ui, sans-serif; 
+    background: var(--bg-main); 
+    color: var(--text-main); 
+    line-height: 1.6;
+}
+
+.search-input:focus,
+.btn:focus-visible,
+.nav-link:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.3);
+}
+
+.navbar { 
+    background: rgba(21,24,27,0.8); 
+    backdrop-filter: blur(12px); 
+    border-bottom: 1px solid var(--border);
+    padding: 0.75rem 2rem; 
+    position: sticky; 
+    top: 0; 
+    z-index: 1000; 
+}
+
+.nav-container { 
+    max-width: 1400px;
+    margin: 0 auto; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+}
+
+.nav-brand { 
+    font-weight: 900;
+    font-size: 1.3rem; 
+    color: #fff; 
+    text-decoration: none; 
+}
+
+.nav-brand span { 
+    color: var(--accent);
+}
+
+.nav-links { 
+    display: flex; 
+    gap: 0.5rem;
+}
+
+.nav-link { 
+    color: var(--text-dim); 
+    text-decoration: none; 
+    padding: 0.6rem 1rem; 
+    border-radius: 8px;
+    font-size: 0.9rem; 
+    transition: 0.2s; 
+}
+
+.nav-link.active { 
+    color: var(--accent);
+}
+
+.container { 
+    max-width: 1400px; 
+    margin: 2rem auto; 
+    padding: 0 1.5rem;
+}
+
+.card, .stat-card { 
+    background: var(--bg-card); 
+    border: 1px solid var(--border); 
+    border-radius: 16px;
+    padding: 1.5rem; 
+}
+
+.btn { 
+    padding: 0.7rem 1.4rem; 
+    border-radius: 10px; 
+    font-weight: 600;
+    cursor: pointer; 
+    transition: 0.2s; 
+    border: none; 
+    display: inline-flex; 
+    align-items: center; 
+    gap: 8px; 
+    color: #fff; 
+    text-decoration: none; 
+    font-size: 0.85rem;
+}
+
+.btn-primary { 
+    background: var(--accent);
+}
+
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-top: 1rem;
+}
+
+.data-table { 
+    width: 100%; 
+    border-collapse: collapse; 
+}
+
+.data-table th { 
+    text-align: left; 
+    color: var(--text-dim); 
+    padding: 1rem;
+    border-bottom: 1px solid var(--border); 
+    font-size: 0.75rem; 
+    text-transform: uppercase; 
+}
+
+.data-table td { 
+    padding: 1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.03); 
+}
+
+.search-input { 
+    background: var(--bg-main); 
+    border: 1px solid var(--border); 
+    color: var(--text-main);
+    padding: 0.7rem 1rem; 
+    border-radius: 10px; 
+    font-size: 0.9rem; 
+}
+
+@media (hover: hover) {
+    .btn-primary:hover { 
+        background: #e66000; 
+        transform: translateY(-1px);
+    }
+    .nav-link:hover, .nav-link.active { 
+        color: #fff; 
+        background: rgba(255,107,0,0.1);
+    }
+}
+
+.global-toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 10005;
+    transform: translateY(20px);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.25s ease;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    min-width: 280px;
+    max-width: 400px;
+}
+
+.global-toast.show {
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+}
+
+.global-toast.error {
+    border-left: 4px solid #ff4d4d;
+}
+
+.global-toast i {
+    font-size: 1.2rem;
+}
+
+.global-toast-message {
+    font-size: 0.85rem;
+    color: var(--text-main);
+    flex: 1;
+}
+
+/* ========== ЕДИНЫЙ СТАНДАРТ ДЛЯ МОДАЛЬНЫХ ОКОН ========== */
+.modal,
+.modal-blur-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.modal.show,
+.modal-blur-overlay.show {
+    display: flex;
+}
+
+.modal-content,
+.modal-content-box {
+    animation: modalContentFadeIn 0.2s ease;
+}
+
+@keyframes modalContentFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
