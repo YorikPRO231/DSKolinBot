@@ -12,14 +12,18 @@ export class FormsController {
     const { formId, channelId, guildId, formName, pingRoleId, pingRoleId2 } =
       req.body;
 
+    if (!formId || !channelId || !guildId) {
+      throw AppError.badRequest("formId, channelId and guildId are required");
+    }
+
     const binding = bindingsManager.addBinding(
       'web',
       formId,
       channelId,
       guildId,
-      formName,
-      pingRoleId,
-      pingRoleId2,
+      formName || null,
+      pingRoleId || null,
+      pingRoleId2 || null,
     );
 
     res.json({ success: true, binding });
@@ -29,15 +33,24 @@ export class FormsController {
     const formId = req.params.formId as string;
     const { channelId, guildId, formName, pingRoleId, pingRoleId2 } = req.body;
 
+    if (!channelId || !guildId) {
+      throw AppError.badRequest("channelId and guildId are required");
+    }
+
+    const existingBinding = bindingsManager.getBinding(formId);
+    if (!existingBinding) {
+      throw AppError.notFound("Binding not found");
+    }
+
     bindingsManager.removeBinding(formId);
     const binding = bindingsManager.addBinding(
       'web',
       formId,
       channelId,
       guildId,
-      formName,
-      pingRoleId,
-      pingRoleId2,
+      formName || null,
+      pingRoleId || null,
+      pingRoleId2 || null,
     );
 
     res.json({ success: true, binding });

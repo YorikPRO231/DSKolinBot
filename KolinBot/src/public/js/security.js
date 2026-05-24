@@ -112,62 +112,92 @@ const SecurityModule = (function() {
     }
 
     async function loadAlerts(page = 1) {
-        currentPage = page;
-        const type = currentFilterValue;
-        const search = document.getElementById('alertSearch').value;
-        
-        let url = '/api/security/alerts';
-        const params = [];
-        if (type && type !== 'ALL') params.push('type=' + type);
-        if (search) params.push('suspect=' + encodeURIComponent(search));
-        params.push('page=' + currentPage);
-        params.push('limit=' + limit);
-        if (params.length) url += '?' + params.join('&');
-        
-        const tbody = document.getElementById('alertsList');
-        tbody.innerHTML = '<tr><td colspan="7" class="loading"><i class="fas fa-spinner fa-spin"></i> Загрузка...</td></tr>';
-        
-        try {
-            const response = await fetch(url);
-            const data = await response.json();
-            
-            if (data.success && data.alerts && data.alerts.length > 0) {
-                totalPages = data.totalPages || 1;
-                totalItems = data.total || data.alerts.length;
-                updatePagination();
-                
-                let html = '';
-                for (let i = 0; i < data.alerts.length; i++) {
-                    const alert = data.alerts[i];
-                    const typeClass = alert.type === 'Bots' ? 'text-bots' : 'text-cheats';
-                    const typeIcon = alert.type === 'Bots' ? 'fa-robot' : 'fa-gamepad';
-                    const typeText = alert.type === 'Bots' ? 'Боты' : 'Читы';
-                    
-                    let reason = alert.reason || '';
-                    let shortReason = reason.length > 60 ? reason.substring(0, 60) + '...' : reason;
-                    
-                    const adminNickname = await getNickname(alert.author_id);
-                    
-                    html += `<tr class="clickable-row" onclick="if(!event.target.closest('.btn-icon')) SecurityModule.showFullData(${alert.id}, 'alert')">` +
-                        '<td><strong>' + Utils.escapeHtml(alert.passport) + '</strong></td>' +
-                        '<td><span class="type-badge ' + typeClass + '"><i class="fas ' + typeIcon + '"></i> ' + typeText + '</span></td>' +
-                        '<td><div class="table-text-truncated">' + Utils.escapeHtml(shortReason) + ' <i class="fas fa-expand" style="font-size: 0.7rem; opacity: 0.5;"></i></div></td>' +
-                        '<td><span title="ID: ' + Utils.escapeHtml(alert.author_id || '-') + '">' + Utils.escapeHtml(adminNickname) + '</span></td>' +
-                        '<td style="text-align: center;"><span class="count-badge">' + (alert.count || 0) + '</span></td>' +
-                        '<td><small>' + Utils.formatDate(alert.created_at) + '</small></td>' +
-                        '<td><button class="btn-icon btn-delete" onclick="SecurityModule.confirmDeleteAlert(' + alert.id + ')" title="Удалить"><i class="fas fa-trash"></i></button></td>' +
-                    '</tr>';
-                }
-                tbody.innerHTML = html;
-            } else {
-                tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><i class="fas fa-folder-open"></i><br>Нет алертов</td></tr>';
-                document.getElementById('pagination').style.display = 'none';
-            }
-        } catch (error) {
-            console.error('Ошибка:', error);
-            tbody.innerHTML = '<tr><td colspan="7" class="error-message">Ошибка загрузки</td></tr>';
-        }
+    currentPage = page;
+    const type = currentFilterValue;
+    const search = document.getElementById('alertSearch').value;
+    
+    let url = '/api/security/alerts';
+    const params = [];
+    if (type && type !== 'ALL') params.push('type=' + type);
+    if (search) params.push('suspect=' + encodeURIComponent(search));
+    params.push('page=' + currentPage);
+    params.push('limit=' + limit);
+    if (params.length) url += '?' + params.join('&');
+    
+    const tbody = document.getElementById('alertsList');
+    
+    const skeletonRows = 8; 
+    let skeletonHtml = '';
+    for (let i = 0; i < skeletonRows; i++) {
+        skeletonHtml += `
+            <tr class="skeleton-row">
+                <td class="skeleton-cell">
+                    <div class="skeleton skeleton-text" style="width: ${80 + Math.random() * 40}px;"></div>
+                </td>
+                <td class="skeleton-cell">
+                    <div class="skeleton skeleton-badge" style="width: ${70 + Math.random() * 30}px;"></div>
+                </td>
+                <td class="skeleton-cell">
+                    <div class="skeleton skeleton-text" style="width: ${120 + Math.random() * 80}px;"></div>
+                </td>
+                <td class="skeleton-cell">
+                    <div class="skeleton skeleton-text" style="width: ${90 + Math.random() * 50}px;"></div>
+                </td>
+                <td class="skeleton-cell" style="text-align: center;">
+                    <div class="skeleton skeleton-badge" style="width: 32px; margin: 0 auto;"></div>
+                </td>
+                <td class="skeleton-cell">
+                    <div class="skeleton skeleton-text" style="width: ${60 + Math.random() * 30}px;"></div>
+                </td>
+                <td class="skeleton-cell">
+                    <div class="skeleton" style="width: 36px; height: 36px; border-radius: 6px;"></div>
+                </td>
+            </tr>
+        `;
     }
+    tbody.innerHTML = skeletonHtml;
+    
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (data.success && data.alerts && data.alerts.length > 0) {
+            totalPages = data.totalPages || 1;
+            totalItems = data.total || data.alerts.length;
+            updatePagination();
+            
+            let html = '';
+            for (let i = 0; i < data.alerts.length; i++) {
+                const alert = data.alerts[i];
+                const typeClass = alert.type === 'Bots' ? 'text-bots' : 'text-cheats';
+                const typeIcon = alert.type === 'Bots' ? 'fa-robot' : 'fa-gamepad';
+                const typeText = alert.type === 'Bots' ? 'Боты' : 'Читы';
+                
+                let reason = alert.reason || '';
+                let shortReason = reason.length > 60 ? reason.substring(0, 60) + '...' : reason;
+                
+                const adminNickname = await getNickname(alert.author_id);
+                
+                html += `<tr class="clickable-row" onclick="if(!event.target.closest('.btn-icon')) SecurityModule.showFullData(${alert.id}, 'alert')">` +
+                    '<td><strong>' + Utils.escapeHtml(alert.passport) + '</strong></td>' +
+                    '<td><span class="type-badge ' + typeClass + '"><i class="fas ' + typeIcon + '"></i> ' + typeText + '</span></td>' +
+                    '<td><div class="table-text-truncated">' + Utils.escapeHtml(shortReason) + ' <i class="fas fa-expand" style="font-size: 0.7rem; opacity: 0.5;"></i></div></td>' +
+                    '<td><span title="ID: ' + Utils.escapeHtml(alert.author_id || '-') + '">' + Utils.escapeHtml(adminNickname) + '</span></td>' +
+                    '<td style="text-align: center;"><span class="count-badge">' + (alert.count || 0) + '</span></td>' +
+                    '<td><small>' + Utils.formatDate(alert.created_at) + '</small></td>' +
+                    '<td><button class="btn-icon btn-delete" onclick="SecurityModule.confirmDeleteAlert(' + alert.id + ')" title="Удалить"><i class="fas fa-trash"></i></button></td>' +
+                '</tr>';
+            }
+            tbody.innerHTML = html;
+        } else {
+            tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><i class="fas fa-folder-open"></i><br>Нет алертов</td></tr>';
+            document.getElementById('pagination').style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Ошибка:', error);
+        tbody.innerHTML = '<tr><td colspan="7" class="error-message"><i class="fas fa-exclamation-circle"></i> Ошибка загрузки</td></tr>';
+    }
+}
 
     function changePage(delta) {
         const newPage = currentPage + delta;

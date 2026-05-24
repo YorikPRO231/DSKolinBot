@@ -214,28 +214,27 @@
             <i class="fas fa-chart-line" style="color: var(--accent); font-size: 1.2rem;"></i>
         </div>
         <div style="font-size: 2.2rem; font-weight: 800; margin-top: 0.5rem;">
-            <% 
-                const activeAlerts = stats.activeAlerts || 0;
-                const inspections = stats.inspections || 0;
-                let efficiency = 0;
-                let efficiencyClass = '';
-                
-                if (inspections > 0) {
-                    efficiency = Math.min(100, Math.round((activeAlerts / inspections) * 100));
-                } else if (activeAlerts > 0) {
-                    efficiency = 100;
-                }
-                
-                if (efficiency >= 70) {
-                    efficiencyClass = 'efficiency-high';
-                } else if (efficiency >= 40) {
-                    efficiencyClass = 'efficiency-medium';
-                } else {
-                    efficiencyClass = 'efficiency-low';
-                }
-            %>
-            <span class="<%= efficiencyClass %>"><%= efficiency %>%</span>
-        </div>
+    <% 
+        const activeAlerts = stats.activeAlerts || 0;
+        const inspections = stats.inspections || 0;
+        let efficiency = 0;
+        let efficiencyClass = '';
+        
+        if (inspections > 0) {
+            const resolvedInspections = inspections - activeAlerts;
+            efficiency = Math.min(100, Math.max(0, Math.round((resolvedInspections / inspections) * 100)));
+        }
+        
+        if (efficiency >= 70) {
+            efficiencyClass = 'efficiency-high';
+        } else if (efficiency >= 40) {
+            efficiencyClass = 'efficiency-medium';
+        } else {
+            efficiencyClass = 'efficiency-low';
+        }
+    %>
+    <span class="<%= efficiencyClass %>"><%= efficiency %>%</span>
+</div>
         <div style="color: var(--text-dim); font-size: 0.7rem; margin-top: 0.5rem;">алартов к проверкам</div>
     </div>
 </div>

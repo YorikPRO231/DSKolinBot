@@ -84,6 +84,10 @@ export async function execute(inter: ChatInputCommandInteraction) {
             if (serverMembers.has(memberId)) {
                 const [fType, serverFactionData] = factionByDiscordID(serverId);
 
+                if(serverId === FRACTION_INFO['MP_SERVER'].discord_id) {
+                    continue
+                }
+
                 if (inter.guildId === FRACTION_INFO['WN'].discord_id) {
                     const serverMember = await wnServer?.members?.fetch(memberId);
                     if (serverMember && !serverMember.roles.cache.has(FRACTION_INFO['WN'].faction_role_id)) {

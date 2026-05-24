@@ -195,7 +195,6 @@ body {
     flex: 1;
 }
 
-/* ========== ЕДИНЫЙ СТАНДАРТ ДЛЯ МОДАЛЬНЫХ ОКОН ========== */
 .modal,
 .modal-blur-overlay {
     display: none;
