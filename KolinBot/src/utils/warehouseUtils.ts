@@ -1,4 +1,5 @@
 export interface ItemData {
+    soldPrice: number;
     vehicle: number,
     family: number,
     inventory: number,
@@ -6,6 +7,7 @@ export interface ItemData {
     house: number,
     faction: number,
     sold: number,
+    lot: number,
     status: string,
     serial: string | undefined,
     name: string
@@ -16,6 +18,21 @@ export interface ItemData {
     camper: number,
 }
 
+export interface ItemGroup {
+    name: string;
+    soldAmount: number;
+    soldPrice: number;
+    traded: number;
+    camper: number;
+    vehicle: number;
+    family: number;
+    apartment: number;
+    house: number;
+    faction: number;
+    customWarehouse: number;
+    lot: number;
+}
+
 export interface LogLine {
     date: string;
     type: string;
@@ -24,20 +41,70 @@ export interface LogLine {
 
 export class WarehouseData {
     items: ItemData[] = []
+    groups: Map<string, ItemGroup> = new Map<string, ItemGroup>()
     status: string = 'Processing'
     name: string | undefined;
     surname: string | undefined;
     passport: string | undefined;
+
+    pushGroup(
+        name: string,
+        totalLeak: number,
+        type: "sold" | "traded" | "camper" | "vehicle" | "family" | "apartment" | "house" | "faction" | "customWarehouse" | "lot",
+        price?: number
+    ) {
+        if (!this.groups.has(name)) {
+            this.groups.set(name, {
+                    apartment: 0,
+                    camper: 0,
+                    customWarehouse: 0,
+                    faction: 0,
+                    family: 0,
+                    house: 0,
+                    traded: 0,
+                    vehicle: 0,
+                    lot: 0,
+                    name: name,
+                    soldAmount: 0,
+                    soldPrice: 0,
+                }
+            )
+        }
+        const group = this.groups.get(name)!;
+        switch (type) {
+            case 'sold':
+                if (price) {
+                    group.soldAmount += totalLeak;
+                    group.soldPrice += price;
+                }
+                break;
+            case 'traded':
+            case 'camper':
+            case 'vehicle':
+            case 'family':
+            case 'apartment':
+            case 'house':
+            case 'faction':
+            case "lot":
+            case 'customWarehouse':
+                group[type] += totalLeak;
+                break;
+        }
+    }
 }
+
 
 const factionPrefixes = ['LSPD', 'FIB', 'LSSD', 'MAY', 'PRIS', 'ARMY']
 const weaponNames = ["Бита", "Резиновая дубинка", "Пистолет", "Тяжелый пистолет", "Кольт", "Револьвер", "Старинный пистолет", "AP пистолет",
-    "Pump Shotgun", "Pump Shotgun", "Pump Shotgun MK2", "Combat Shotgun", "Assault Shotgun", "Heavy Shotgun", "Tactical SMG", "Assault SMG",
+    "Pump Shotgun", "Pump Shotgun MK2", 'Pump Shothun', "Combat Shotgun", "Assault Shotgun", "Heavy Shotgun", "Tactical SMG", "Assault SMG",
     "Micro SMG", "SMG", "SMG-MK2", "Carbine Rifle", "Service Carbine", "Battle Rifle", "Military Rifle", "Compact Rifle", "Gusenberg Sweeper",
-    "Тазер", "Сигнальная ракетница", "Дымовой гранатомет", "Коктейль Молотова", "Обрез", "Special Rifle", "Assault Rifle", "Special Rifle",
-    "Assault Rifle", "Carbine Rifle"]
-const stackableItems = ["7.62mm", "5.56mm", "11.43mm", "11.43mm", "12mm", "7.62mm", "5.56mm", "Аптечка", "Аптечка ПП",
-    "Аптечка EMS", "Бинты", "Анальгетик", "Боевой стимулятор", "Броня", "Стаб-пак", "SPANK", "Косяк", "Материалы",]
+    "Тазер", "Сигнальная ракетница", "Дымовой гранатомет", "Обрез", "Special Rifle", "Assault Rifle",
+    "Assault Rifle"]
+const stackableItems = ["7.62mm", "5.56mm", "11.43mm", "12mm", "7.62mm", "5.56mm", "Аптечка", "Аптечка ПП",
+    "Аптечка EMS", "Бинты", "Анальгетик", "Боевой стимулятор", "Броня", "Стаб-пак", "SPANK", "Косяк", "Материалы",
+    'Коктейль Молотова', "Бумбокс", "Бургер", "Записка", "Канистра с бензином", "Кола", "Набор для костра", "Овощной салат", "Овощной смузи", "Палатка", "Пицца", 'Рагу', "Ремонтный набор",
+    "Фонарик"
+]
 
 const weaponsPattern = weaponNames.join('|')
 const factionsPattern = factionPrefixes.join('|')
@@ -98,7 +165,9 @@ export function analyzeLogData(logData: string): WarehouseData {
             location: 'Unknown',
             status: 'Processing',
             name: name,
-            totalLeak: 0
+            totalLeak: 0,
+            soldPrice: 0,
+            lot: 0
         };
         data.set(name + ' ' + id, d)
         return d
@@ -135,7 +204,7 @@ export function analyzeLogData(logData: string): WarehouseData {
             actionQuantity = 1;
         } else if (stackableMatch) {    
             if (['Фракционный транспорт', 'Транспорт', 'Фракционный бот', 'Фракционный крафт',
-                'Квартира', 'Дом', 'Фракционный склад', 'Арендованный склад', 'Посылка', 'Шкаф кемпера', 'DarkVito'].includes(line.type)) {
+                'Квартира', 'Дом', 'Фракционный склад', 'Арендованный склад', 'Посылка', 'Шкаф кемпера'].includes(line.type)) {
                 const m = line.action.match(count_patterns[0])
                 if (m) {
                     actionQuantity = parseInt(m[1])
@@ -145,6 +214,11 @@ export function analyzeLogData(logData: string): WarehouseData {
                 if (m) {
                     actionQuantity = parseInt(m[1])
                 }
+            } else if (line.type === 'DarkVito') {
+                const m = [...line.action.matchAll(/([0-9]+) шт/g)]
+                actionQuantity = m[0] ? Number(m[0][1]) : 0;
+                const soldQuantity = m[1] ? Number(m[1][1]) : 0;
+                item.sold += soldQuantity;
             }
 
             if (actionQuantity === 0) {
@@ -191,7 +265,14 @@ export function analyzeLogData(logData: string): WarehouseData {
                 item.house += sign * actionQuantity
                 break;
             case 'DarkVito':
-                item.sold += sign * actionQuantity
+                item.lot += sign * actionQuantity
+                const mappedLine = line.action.replaceAll(/(?<=\d),(?=\d)/g, '');
+                const amountMatch = mappedLine.match(/за \$(\d+)/)
+                item.soldPrice += amountMatch ? Number(amountMatch[1]) : 0;
+                if (mappedLine.includes('из машины')) {
+                    item.vehicle -= actionQuantity
+                    item.inventory += actionQuantity
+                }
                 break;
             case 'Арендованный склад':
                 item.customWarehouse += sign * actionQuantity
@@ -214,9 +295,11 @@ export function analyzeLogData(logData: string): WarehouseData {
             itemsLost += item.vehicle;
             mx = item.vehicle;
             item.location = 'Машина'
+            report.pushGroup(item.name, item.vehicle, 'vehicle')
         }
         if (item.family > 0) {
             itemsLost += item.family
+            report.pushGroup(item.name, item.family, 'family')
             if (item.family > mx) {
                 mx = item.family
                 item.location = 'Семья'
@@ -224,6 +307,7 @@ export function analyzeLogData(logData: string): WarehouseData {
         }
         if (item.apartment > 0) {
             itemsLost += item.apartment
+            report.pushGroup(item.name, item.apartment, 'apartment')
             if (item.apartment > mx) {
                 mx = item.apartment
                 item.location = 'Квартира'
@@ -231,20 +315,15 @@ export function analyzeLogData(logData: string): WarehouseData {
         }
         if (item.house > 0) {
             itemsLost += item.house;
+            report.pushGroup(item.name, item.house, 'house')
             if (item.house > mx) {
                 mx = item.house
                 item.location = 'Дом'
             }
         }
-        if (item.sold > 0) {
-            itemsLost += item.sold
-            if (item.sold > mx) {
-                mx = item.sold
-                item.location = 'Продано'
-            }
-        }
         if (item.customWarehouse > 0) {
             itemsLost += item.customWarehouse
+            report.pushGroup(item.name, item.customWarehouse, 'customWarehouse')
             if (item.customWarehouse > mx) {
                 mx = item.customWarehouse;
                 item.location = 'Арендованный склад'
@@ -252,21 +331,29 @@ export function analyzeLogData(logData: string): WarehouseData {
         }
         if (item.traded > 0) {
             itemsLost += item.traded
+            report.pushGroup(item.name, item.traded, 'traded')
             if (item.traded > mx) {
                 mx = item.traded
                 item.location = 'Передано'
             }
         }
-        if (item.sold > 0 || (item.faction < 0 && itemsLost > 0)) {
+        if (item.lot - item.sold > 0) {
+            itemsLost += item.lot - item.sold
+            report.pushGroup(item.name, item.lot - item.sold, 'lot')
+            if (item.lot - item.sold > mx) {
+                mx = item.lot - item.sold
+                item.location = 'Выставлено'
+            }
+        }
+        if (item.sold > 0) {
+            itemsLost += item.sold
+            report.pushGroup(item.name, item.sold, 'sold', item.soldPrice)
+            item.location = 'Продано'
+        }
+        if (item.sold > 0 || item.lot > 0 || (item.faction < 0 && itemsLost > 0)) {
             item.status = 'LEAK'
             report.status = 'LEAKS'
-            item.totalLeak = item.sold
-            if (item.faction < 0) {
-                item.totalLeak -= item.faction
-            }
-            if (item.inventory > 0) {
-                item.totalLeak = Math.max(0, item.totalLeak - item.inventory)
-            }
+            item.totalLeak = itemsLost
             report.items.push(item)
         }
     }
@@ -277,16 +364,8 @@ export function analyzeLogData(logData: string): WarehouseData {
 }
 
 export function formReportData(report: WarehouseData): [string, string] {
-    let data = `${report.name}_${report.surname} ${report.passport}\nStatus: ${report.status}\nИнформация о нарушениях:\n`
-    let footer = `Итоговая сводка по нарушению: \n`
-    const vehicle = []
-    const family = []
-    const apartment = []
-    const house = []
-    const customWarehouse = []
-    const sold = []
-    const traded = []
-    data += '----------------------------\n'
+    let data = `──────────────────────────────────────────────────\n${report.name}_${report.surname} ${report.passport}\nStatus: ${report.status}\nИнформация о нарушениях:\n`
+    data += '──────────────────────────────────────────────────\n'
     for (const item of report.items) {
         let cur = '';
         cur += `${item.name}` + (item.serial ? `(${item.serial})` : '') + `, Скопление обнаружено в: ${item.location}\n`
@@ -296,97 +375,63 @@ export function formReportData(report: WarehouseData): [string, string] {
         }
         if (item.vehicle) {
             cur += `Машина: ${item.vehicle}, `;
-            if (item.vehicle > 0) {
-                vehicle.push(`${item.name}` + (item.serial ? `(${item.serial})` : '') + `, ${item.vehicle} шт\n`)
-            }
         }
         if (item.family) {
             cur += `Семья: ${item.family}, `;
-            if (item.family > 0) {
-                family.push(`${item.name}` + (item.serial ? `(${item.serial})` : '') + `, ${item.family} шт\n`)
-            }
         }
         if (item.apartment) {
             cur += `Квартира: ${item.apartment}, `;
-            if (item.apartment > 0) {
-                apartment.push(`${item.name}` + (item.serial ? `(${item.serial})` : '') + `, ${item.apartment} шт\n`)
-            }
         }
         if (item.house) {
             cur += `Дом: ${item.house}, `;
-            if (item.house > 0) {
-                house.push(`${item.name}` + (item.serial ? `(${item.serial})` : '') + `, ${item.house} шт\n`)
-            }
         }
         if (item.customWarehouse) {
             cur += `Арендованный склад: ${item.customWarehouse}, `;
-            if (item.customWarehouse > 0) {
-                customWarehouse.push(`${item.name}` + (item.serial ? `(${item.serial})` : '') + `, ${item.customWarehouse} шт\n`)
-            }
         }
         if (item.sold) {
-            cur += `Продано: ${item.sold}, `;
-            sold.push(`${item.name}` + (item.serial ? `(${item.serial})` : '') + `, ${item.sold} шт\n`)
+            cur += `Продано DarkVito: ${item.sold} на ${item.soldPrice}$, `;
+        }
+        if (item.lot) {
+            cur += `Выставлено на DarkVito: ${item.lot}, `;
         }
         if (item.traded) {
             const st = item.traded > 0 ? 'Передано' : 'Получено'
             cur += `${st}: ${Math.abs(item.traded)}, `;
-            traded.push(`${item.name}` + (item.serial ? `(${item.serial})` : '') + `, ${item.traded} шт\n`)
         }
-        cur += '\n----------------------------\n'
+        cur += '\n──────────────────────────────────────────────────\n'
         data += cur
-        footer += ` ${item.name}` + (item.serial ? `(${item.serial})` : '') + `, ${item.totalLeak} шт, ${item.location}\n`
     }
-    data += footer
-    let second = ''
-    if (vehicle.length > 0) {
-        second += 'В личном Т/С:\n'
-        for (const item of vehicle) {
-            second += '     ' + item;
+    let second = '──────────────────────────────────────────────────\n';
+    let vehicle = 'В машинах:\n';
+    let sold = 'Продажи DarkVito:\n';
+    let lot = 'Выставлено DarkVito:\n';
+    let traded = 'Передано кому-то:\n';
+    let camper = 'В кемпере:\n';
+    let family = 'В семье:\n';
+    let apartment = 'В квартире:\n';
+    let house = 'В доме:\n';
+    let faction = 'С фракции:\n';
+    let customWarehouse = 'На своем складе:\n';
+    for (let [_, group] of report.groups) {
+        if (group.soldAmount > 0) {
+            sold += `  ${group.name} ${group.soldAmount} шт. за ${group.soldPrice}$\n`
         }
-        second += '\n'
+        const stats = {vehicle, lot, traded, camper, family, apartment, house, customWarehouse};
+        const keys = Object.keys(stats) as Array<keyof typeof stats>;
+        for (const key of keys) {
+            const value = group[key];
+            if (value > 0) {
+                stats[key] += `  ${group.name} ${value} шт.\n`;
+            }
+        }
+        ({vehicle, lot, traded, camper, family, apartment, house, customWarehouse} = stats);
     }
-    if (family.length > 0) {
-        second += 'В организации:\n'
-        for (const item of family) {
-            second += '     ' + item;
+    const stats = {vehicle, lot, sold, traded, camper, family, apartment, house, customWarehouse};
+    for (let statsKey in stats) {
+        const x = stats[statsKey as 'vehicle' | 'lot' | 'traded' | 'camper' | 'family' | 'apartment' | 'house' | 'customWarehouse' | 'sold'];
+        if (x.trim().length > 0) {
+            second += x + '\n'
         }
-        second += '\n'
-    }
-    if (apartment.length > 0) {
-        second += 'В квартире:\n'
-        for (const item of apartment) {
-            second += '     ' + item;
-        }
-        second += '\n'
-    }
-    if (house.length > 0) {
-        second += 'В доме:\n'
-        for (const item of house) {
-            second += '     ' + item;
-        }
-        second += '\n'
-    }
-    if (customWarehouse.length > 0) {
-        second += 'В своем складе:\n'
-        for (const item of customWarehouse) {
-            second += '     ' + item;
-        }
-        second += '\n'
-    }
-    if (sold.length > 0) {
-        second += 'Продано DarkVito:\n'
-        for (const item of sold) {
-            second += '     ' + item;
-        }
-        second += '\n'
-    }
-    if (traded.length > 0) {
-        second += 'Получено(-)/Передано(+):\n'
-        for (const item of traded) {
-            second += '     ' + item;
-        }
-        second += '\n'
     }
     return [data, second];
 }
