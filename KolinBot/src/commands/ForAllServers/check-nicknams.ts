@@ -8,7 +8,7 @@ import {
     SlashCommandBuilder,
     TextChannel
 } from 'discord.js';
-import {CAPTERS_ROLES_ID} from "../../utils/config";
+import { getSystemRole } from '../../config/settings-loader';
 
 export const data = new SlashCommandBuilder()
     .setName("check-nicknames")
@@ -51,7 +51,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
         if ([member.user.displayName, member.user.username, member.user.globalName].includes(member.displayName)) {
             reason = 'Отсутствие ника в дискорде.';
         }
-        if (member.roles.cache.some(r => CAPTERS_ROLES_ID.includes(r.id))) {
+        if (member.roles.cache.some(r => getSystemRole('capters').includes(r.id))) {
             const m = /capt|biz \w+ \w+ \d+/.test(member.displayName)
             if (!m) {
                 reason = 'Неверная форма ника для капт/биз состава.'

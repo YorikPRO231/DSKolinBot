@@ -65,6 +65,11 @@
        </i> Выгрузка
     </a>
 <% } %>
+<% if (hasP('edit_settings')) { %>
+    <a href="/admin/settings" class="nav-link <%= currentPage === 'settings' ? 'active' : '' %>">
+        Настройки
+    </a>
+<% } %>
             </div>
             <div style="display:flex; align-items:center; gap:15px;">
                 <span style="font-size:0.85rem; font-weight:600;">

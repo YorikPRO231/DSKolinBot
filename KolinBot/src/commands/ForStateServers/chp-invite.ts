@@ -3,14 +3,11 @@ import {
     MessageFlags,
     SlashCommandBuilder, TextChannel
 } from 'discord.js';
-import {factionByDiscordID, FRACTION_INFO} from "../../utils/constants/fractions";
-import { CHP_INVITE_CHANNEL_ID } from "../../utils/config";
-
+import { getFactionByDiscordId, getServers, getSystemChannel } from '../../config/settings-loader';
 
 export const data = new SlashCommandBuilder()
     .setName("чп-приглашение")
     .setDescription('Создает уникальную одноразовую ссылку для получения приглашения в ЧП')
-
 
 export async function execute(inter: ChatInputCommandInteraction) {
     const member = inter.guild ? await inter.guild.members.fetch(inter.user.id).catch(() => null) : null;
@@ -18,18 +15,21 @@ export async function execute(inter: ChatInputCommandInteraction) {
         return inter.reply({content: '❌ Данную команду можно использовать только в фракционных каналах.', flags: MessageFlags.Ephemeral});
     }
 
-    const [serverType, factionInfo] = factionByDiscordID(inter.guild.id);
-    if (serverType === 'TEST_SERVER' || !factionInfo?.state) {
+    const factionResult = getFactionByDiscordId(inter.guild.id);
+    if (!factionResult || factionResult[1].type !== 'government') {
         return inter.reply({content: '❌ Данную команду можно использовать только в каналах гос. фракций.', flags: MessageFlags.Ephemeral});
     }
 
-    const chpServer = inter.client.guilds.cache.get(FRACTION_INFO['CHP_SERVER'].discord_id);
-    const inviteChannel = chpServer ? await chpServer.channels.fetch(CHP_INVITE_CHANNEL_ID).catch(() => null) : null;
+    const chpServerId = getServers().chp;
+    const inviteChannelId = getSystemChannel('chp_invite');
+
+    const chpServer = inter.client.guilds.cache.get(chpServerId);
+    const inviteChannel = chpServer ? await chpServer.channels.fetch(inviteChannelId).catch(() => null) : null;
     if (!chpServer || !inviteChannel?.isTextBased() || inviteChannel.isThread()) {
         return inter.reply({content: '⚠️ Не удалось определить сервер/канал ЧП. Обратитесь к ст. составу.', flags: MessageFlags.Ephemeral});
     }
 
-    const invite = await chpServer.invites.create(inviteChannel, {
+    const invite = await chpServer.invites.create(inviteChannel as TextChannel, {
         maxUses: 1,
         maxAge: 30 * 60,
         reason: `Запрос пользователем ${inter.user.displayName} (${inter.user.id})`

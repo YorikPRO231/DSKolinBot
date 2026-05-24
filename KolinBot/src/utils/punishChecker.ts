@@ -1,5 +1,5 @@
 import {Client, EmbedBuilder, Message} from "discord.js";
-import {ADMINS_SERVER_ID, PUNISHMENT_ADMINS_CHANNEL_ID} from "./config";
+import { getSystemChannel, getServers } from "../config/settings-loader";
 
 const COMMAND_PATTERNS = {
     TIME_COMMANDS:  ['offprison', 'offban', 'offmute', 'offvehicle_ban', 'offweapon_ban', 'sban', 'offsban'],
@@ -29,11 +29,11 @@ interface OnlineOnlyResult {
 
 export async function punishChecker(client: Client, message: Message): Promise<void> {
     if (!message.inGuild() || 
-        message.channelId !== PUNISHMENT_ADMINS_CHANNEL_ID || 
+        message.channelId !== getSystemChannel('punishment_admins') || 
         message.author.bot) {
         return;
     }
-    const gm = client.guilds.cache.get(ADMINS_SERVER_ID[0])?.members.cache.get(message.author.id)
+    const gm = client.guilds.cache.get(getServers().admins[0])?.members.cache.get(message.author.id)
     if (gm && gm.roles.cache.some(r => SENIOR_ROLES_ID.includes(r.id))) {
         return;
     }

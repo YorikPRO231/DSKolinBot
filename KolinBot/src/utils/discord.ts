@@ -1,8 +1,8 @@
 import { getUserDisplayName } from '../dashboard/services/discord.service'; 
-import { getCrimeServerIds, ADMINS_SERVER_ID} from '../utils/config'; 
+import { getCrimeServerIds, getServers} from '../config/settings-loader'; 
 
 export async function getUserNicknameWithFallback(userId: string): Promise<string> {
-  const adminServerIds = ADMINS_SERVER_ID[0].split(',').filter(id => id.trim());
+  const adminServerIds = getServers().admins[0].split(',').filter(id => id.trim());
   
   for (const guildId of adminServerIds) {
     try {

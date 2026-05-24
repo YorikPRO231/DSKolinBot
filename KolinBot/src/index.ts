@@ -3,8 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 import {getAllFiles} from './utils/fileUtils';
-import * as config from "./utils/config";
-import {DETECTIVES_INFO, FRACTION_INFO} from './utils/constants/fractions';
+import {loadSettings, getStateServerIds, getCrimeServerIds, getAllServerIds} from './config/settings-loader';
 import {createDashboardApp} from './dashboard/app';
 import {setDiscordClient as setAuthDiscordClient} from './dashboard/middleware/auth.middleware';
 import {setDiscordClient as setServiceDiscordClient} from './dashboard/services/discord.service';
@@ -43,17 +42,19 @@ client.commands = new Collection();
 function shouldLoadCommandForServer(commandPath: string, serverId?: string): boolean {
     if (!serverId) return false;
     
+    const config = loadSettings();
+    
     const normalizedPath = commandPath.replace(/\\/g, '/');
-    const CHP = [FRACTION_INFO['CHP_SERVER'].discord_id];
-    const detectivesId = Object.values(DETECTIVES_INFO).map(info => info.discord_id);
+    const CHP = [config.servers.chp];
+    const detectivesId = Object.values(config.detectives).map(info => info.discord_id);
 
     const folderToEnvMap: Record<string, string[] | undefined> = {
-        'SpecialForHennesy': config.CHECK_SERVER_ID,
-        'AdminsCommands': config.ADMINS_SERVER_ID,
+        'SpecialForHennesy': config.servers.check,
+        'AdminsCommands': config.servers.admins,
         'ForServer': CHP,
-        'ForStateServers': [...config.getStateServerIds(), ...Object.values(DETECTIVES_INFO).map(i => i.discord_id)],
+        'ForStateServers': [...getStateServerIds(), ...Object.values(config.detectives).map(i => i.discord_id)],
         'DetectiveCommands': detectivesId,
-        'CrimeCommands': [...config.getCrimeServerIds()]
+        'CrimeCommands': [...getCrimeServerIds()]
     };
 
     if (normalizedPath.includes('/ForAllServers/')) {
@@ -143,7 +144,7 @@ async function registerGuildCommands(commands: any[]) {
         console.warn('Загрузка девелоп серверов....');
         devServers.forEach(id => guildIds.add(id));
     } else {
-        config.getAllServerIds().forEach(id => guildIds.add(id));
+        getAllServerIds().forEach(id => guildIds.add(id));
     }
     console.log(`🎯 Серверы для регистрации: ${Array.from(guildIds).join(', ')}`);
     

@@ -27,6 +27,7 @@ export const PermissionsRepository = {
       { key: 'manage_roles', name: 'Управление ролями', desc: 'Настройка прав доступа' },
       { key: 'manage_users', name: 'Управление пользователями', desc: 'Выдача прав пользователям' },
       { key: 'view_logs_systeminformer', name: 'Выгрузка System Informer', desc: 'Выгрузка логов System Infromer' },
+      { key: "edit_settings", name: "Управление конфигом бота", desc: "Настройки конфига JSON"}
     ];
     
     const stmt = db.prepare(`INSERT OR IGNORE INTO permissions (permission_key, permission_name, description) VALUES (?, ?, ?)`);

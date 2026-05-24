@@ -2,7 +2,7 @@ import { Client, EmbedBuilder, VoiceState } from "discord.js";
 import { formatMembersList, formatModerator } from "../helpers/formatters";
 import { sendFullLog, sendLogToGuild } from "../helpers/senders";
 import { getVoiceMoveAudit, getVoiceDisconnectAudit } from "../helpers/audit";
-import { getAdminLogServerIds } from "../../utils/config";
+import { getAdminLogServerIds } from "../../config/settings-loader";
 
 export async function logVoiceStateUpdate(
   client: Client,

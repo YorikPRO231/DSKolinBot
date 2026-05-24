@@ -1,0 +1,331 @@
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+}
+
+.faction-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+}
+
+.faction-card:hover {
+    border-color: var(--accent);
+}
+
+.faction-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid var(--border);
+}
+
+.faction-key {
+    font-family: monospace;
+    font-weight: 600;
+    color: var(--accent);
+    font-size: 0.9rem;
+}
+
+.faction-badge {
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-left: 0.5rem;
+}
+
+.faction-badge.government {
+    background: rgba(52, 199, 89, 0.15);
+    color: #34c759;
+}
+
+.faction-badge.criminal {
+    background: rgba(255, 59, 48, 0.15);
+    color: #ff3b30;
+}
+
+.faction-card-actions {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.faction-card-body {
+    padding: 1rem;
+}
+
+.faction-card-body strong {
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.faction-id {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    font-family: monospace;
+    margin-bottom: 0.25rem;
+}
+
+.factions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-bottom: 0.5rem;
+}
+
+.form-group label {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    font-weight: 500;
+}
+
+.history-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.history-item:last-child {
+    border-bottom: none;
+}
+
+.btn-sm {
+    padding: 0.35rem 0.7rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: all 0.2s;
+}
+
+.custom-select {
+    position: relative;
+    user-select: none;
+}
+
+.custom-select-trigger {
+    background: #1a1a1e;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    padding: 0.6rem 1rem;
+    color: #ffffff;
+    font-size: 0.85rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.custom-select-trigger:hover {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: #1e1e22;
+}
+
+.custom-select-trigger .arrow {
+    font-size: 0.7rem;
+    color: #808191;
+    transition: transform 0.2s;
+}
+
+.custom-select.open .custom-select-trigger {
+    border-color: #ff6b00;
+    background: #1e1e22;
+}
+
+.custom-select.open .custom-select-trigger .arrow {
+    transform: rotate(180deg);
+    color: #ff6b00;
+}
+
+.custom-select-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    width: 100%;
+    background: #141416;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-4px);
+    transition: all 0.2s;
+    overflow: hidden;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.custom-select.open .custom-select-dropdown {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.custom-select-option {
+    padding: 0.6rem 1rem;
+    font-size: 0.85rem;
+    color: #ffffff;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.custom-select-option:hover {
+    background: #1a1a1e;
+}
+
+
+.custom-select-option.selected {
+    background: rgba(255, 107, 0, 0.1);
+    color: #ff6b00;
+    font-weight: 500;
+}
+
+.custom-select-dropdown::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-select-dropdown::-webkit-scrollbar-track {
+    background: var(--bg-main, #1e1e22);
+    border-radius: 0 8px 8px 0;
+}
+
+.custom-select-dropdown::-webkit-scrollbar-thumb {
+    background: var(--accent, #ff6b00);
+    border-radius: 4px;
+}
+
+.custom-select-dropdown::-webkit-scrollbar-thumb:hover {
+    filter: brightness(1.2);
+}
+
+.modal-content-box::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modal-content-box::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 0 8px 8px 0;
+}
+
+.modal-content-box::-webkit-scrollbar-thumb {
+    background: var(--accent, #ff6b00);
+    border-radius: 4px;
+}
+
+.modal-content-box::-webkit-scrollbar-thumb:hover {
+    filter: brightness(1.2);
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.toggle-switch input {
+    display: none;
+}
+
+.toggle-track {
+    width: 42px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    position: relative;
+    transition: background 0.25s;
+    flex-shrink: 0;
+}
+
+.toggle-switch input:checked ~ .toggle-track {
+    background: var(--accent, #ff6b00);
+}
+
+.toggle-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.toggle-switch input:checked ~ .toggle-track .toggle-thumb {
+    transform: translateX(18px);
+}
+
+.toggle-label {
+    font-size: 0.85rem;
+    color: var(--text-dim, #808191);
+    transition: color 0.2s;
+}
+
+.toggle-switch input:checked ~ .toggle-label {
+    color: var(--text-main, #fff);
+}

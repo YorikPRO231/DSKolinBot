@@ -11,8 +11,8 @@ import {
     NewsChannel,
     ThreadChannel
 } from 'discord.js';
-import {GOV_NICKNAME_REQUESTS_CHANNEL_ID, GOV_NICKNAME_REQUESTS_ROLES_ID} from "../../utils/config";
 import { InfiltrationsRepository } from "../../databases/index";
+import { getSystemChannel, getSystemRole } from '../../config/settings-loader';
 
 type SendableChannel = TextChannel | NewsChannel | ThreadChannel;
 
@@ -115,7 +115,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
             .setTimestamp()
             .setColor(Colors.DarkRed);
 
-        const govChannel = await inter.client.channels.fetch(GOV_NICKNAME_REQUESTS_CHANNEL_ID).catch(() => null);
+        const govChannel = await inter.client.channels.fetch(getSystemChannel('gov_nickname_requests')).catch(() => null);
         
         if (!govChannel || !isSendableChannel(govChannel)) {
             return inter.reply({
@@ -131,7 +131,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
                 .setStyle(ButtonStyle.Primary)
         );
 
-        const mentions = GOV_NICKNAME_REQUESTS_ROLES_ID.map(id => `<@&${id}>`).join(' ');
+        const mentions = getSystemRole('gov_nickname_requests').map(id => `<@&${id}>`).join(' ');
         
         await govChannel.send({
             embeds: [govRequestEmbed], 

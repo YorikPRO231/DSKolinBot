@@ -54,13 +54,28 @@ export class LogParserService {
 
       if (trimmedLine.includes("Время события:")) {
         const timeValue = trimmedLine.replace("Время события:", "").trim();
-        entry.utcTimestamp = timeValue;
-        entry.timestamp = timeValue;
-        
-        const dateMatch = timeValue.match(/(\d{2})\.(\d{2})\.(\d{4})/);
-        if (dateMatch) {
-          const [_, day, month, year] = dateMatch;
-          entry.utcDate = `${year}-${month}-${day}`;
+        const match = timeValue.match(/(\d{2})\.(\d{2})\.(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
+        if (match) {
+          const [, day, month, year, hours, minutes, seconds] = match;
+          const utcDate = new Date(Date.UTC(
+            parseInt(year),
+            parseInt(month) - 1,
+            parseInt(day),
+            parseInt(hours),
+            parseInt(minutes),
+            parseInt(seconds)
+          ));
+          entry.utcTimestamp = utcDate.toISOString();
+          entry.timestamp = utcDate.toISOString();
+          entry.utcDate = utcDate.toISOString().split('T')[0];
+        } else {
+          entry.utcTimestamp = timeValue;
+          entry.timestamp = timeValue;
+          const dateMatch = timeValue.match(/(\d{2})\.(\d{2})\.(\d{4})/);
+          if (dateMatch) {
+            const [, day, month, year] = dateMatch;
+            entry.utcDate = `${year}-${month}-${day}`;
+          }
         }
       } else if (trimmedLine.includes("Событие:")) {
         entry.event = trimmedLine.replace("Событие:", "").trim();

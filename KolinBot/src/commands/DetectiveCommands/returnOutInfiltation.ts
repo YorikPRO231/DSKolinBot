@@ -1,10 +1,10 @@
 import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder, TextChannel, NewsChannel, ThreadChannel} from 'discord.js';
 import { InfiltrationsRepository } from "../../databases/index";
-import {DETECTIVES_INFO} from "../../utils/constants/fractions";
-import {ADMIN_NICKNAME_LOGS_CHANNEL_ID} from "../../utils/config";
+import { getDetectives, getSystemChannel } from '../../config/settings-loader';
+
 
 type SendableChannel = TextChannel | NewsChannel | ThreadChannel;
-type FactionType = keyof typeof DETECTIVES_INFO;
+type FactionType = keyof ReturnType<typeof getDetectives>;
 
 export const data = new SlashCommandBuilder()
     .setName("вернуть-из-внедрения")
@@ -87,7 +87,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
             .setColor(0x9003fc);
     }
 
-    const adminLogsChannel = await fetchSendableChannel(inter.client, ADMIN_NICKNAME_LOGS_CHANNEL_ID);
+    const adminLogsChannel = await fetchSendableChannel(inter.client, getSystemChannel('admin_nickname_logs'));
     if (adminLogsChannel && adminEmbed) {
         await adminLogsChannel.send({ embeds: [adminEmbed], content: "<@&796471733057880174>" });
     }

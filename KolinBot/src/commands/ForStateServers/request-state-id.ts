@@ -1,8 +1,7 @@
 import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder} from 'discord.js';
 import { PatchesRepository } from "../../databases/index";
 import type {StatePatch, PatchHistory} from "../../databases";
-import { GOV_ACCESS_PATCH_REQUEST, DETECTIVE_PATCH_ACCESS_ROLES_ID } from '../../utils/config';
-import { DETECTIVES_INFO } from '../../utils/constants/fractions';
+import { getSystemRole, getDetectives } from '../../config/settings-loader';
 
 export const data = new SlashCommandBuilder()
     .setName("поиск-нашивки")
@@ -23,7 +22,8 @@ export async function execute(inter: ChatInputCommandInteraction) {
     const patch = inter.options.getString('нашивка');
 
     const gm = await inter.guild?.members.fetch(inter.user.id).catch(() => null);
-    const hasRole = gm?.roles?.cache?.some((r: any) => GOV_ACCESS_PATCH_REQUEST.includes(r.id));
+    const govAccessRoles = getSystemRole('gov_access_patch_request');
+    const hasRole = gm?.roles?.cache?.some((r: any) => govAccessRoles.includes(r.id));
     if (!hasRole) {
         return inter.reply({
             content:'Данную команду можно использовать только в дискорде правительства с соответствующим доступом.', flags: MessageFlags.Ephemeral
@@ -124,12 +124,14 @@ export async function execute(inter: ChatInputCommandInteraction) {
 }
 
 function isDetectivePatch(faction: string): boolean {
-    return Object.keys(DETECTIVES_INFO).includes(faction);
+    const detectives = getDetectives();
+    return Object.keys(detectives).includes(faction);
 }
 
 function hasDetectiveAccess(member: any): boolean {
     if (!member) return false;
-    return member.roles?.cache?.some((r: any) => DETECTIVE_PATCH_ACCESS_ROLES_ID.includes(r.id)) || false;
+    const detectiveAccessRoles = getSystemRole('detective_patch_access');
+    return member.roles?.cache?.some((r: any) => detectiveAccessRoles.includes(r.id)) || false;
 }
 
 function formatPatchResult(title: string, ps: StatePatch): string {

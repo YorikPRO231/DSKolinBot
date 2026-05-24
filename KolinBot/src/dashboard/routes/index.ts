@@ -9,8 +9,12 @@ import discordRoutes from './api/discord.routes';
 import webhookRoutes from './webhook.routes';
 import permissionsRoutes from './admin/permissions.routes';
 import uploadRoutes from '../routes/upload.routes';
+import  settingsRouter  from '../routes/admin/settings.routes'
+import { initSettings } from '../../config/settings-loader';
+
 
 const router = Router();
+initSettings();
 
 router.use('/auth', authRoutes);
 router.use('/dashboard', dashboardRoutes);
@@ -24,6 +28,7 @@ router.use('/api/discord', discordRoutes);
 router.use('/admin/permissions', permissionsRoutes);
 router.use('/upload', uploadRoutes)
 router.use('/webhook', webhookRoutes);
+router.use('/admin/settings', settingsRouter);
 
 router.get('/', (req, res) => {
   if (req.isAuthenticated && req.isAuthenticated()) {

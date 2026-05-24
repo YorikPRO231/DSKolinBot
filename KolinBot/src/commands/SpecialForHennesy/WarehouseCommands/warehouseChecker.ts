@@ -18,16 +18,24 @@ import {
     TextInputStyle
 } from 'discord.js';
 import { AdminsRepository, WarehouseRepository } from '../../../databases/index';
-import {FRACTION_INFO, FRACTION_TYPES, FractionType} from "../../../utils/constants/fractions";
+import { getFactionByKey } from "../../../config/settings-loader";
 import axios from "axios";
 import {analyzeLogData, formReportData, WarehouseData} from "../../../utils/warehouseUtils";
 import * as logger from "../../../logging";
 import {ButtonStyle, ComponentType} from "discord-api-types/v10";
 import {PUNISHMENT_TYPES} from "../../../utils/constants/punishments";
 
+const FRACTION_TYPES = {
+    MM: "MM", RM: "RM", LCN: "LCN", YAK: "YAK", AM: "AM",
+    LSPD: "LSPD", LSSD: "LSSD", FIB: "FIB", GOV: "GOV",
+    ARMY: "ARMY", SASPA: "SASPA", FAM: "FAM", MG: "MG-13",
+    LSV: "LSV", ESB: "ESB", BSG: "BSG", WN: "WN"
+} as const;
+
+type FractionType = keyof typeof FRACTION_TYPES;
+
 export const data = new SlashCommandBuilder()
     .setName("проверить-склад")
-    .setDescription("Проверить склад")
     .setDescription("Анализ логов и фиксация нарушения")
     .addAttachmentOption(option => option.setName("лог-файл").setDescription("Файл логов").setRequired(true))
     .addStringOption(option => option.setName("фракция").setDescription("Фракция игрока").setRequired(true)
@@ -55,6 +63,11 @@ export const data = new SlashCommandBuilder()
 function getAdminDisplayName(inter: ChatInputCommandInteraction): string {
     const member = inter.guild?.members.cache.get(inter.user.id);
     return member?.nickname || inter.user.globalName || inter.user.displayName || inter.user.username;
+}
+
+function getFactionLabel(factionKey: FractionType): string {
+    const faction = getFactionByKey(factionKey);
+    return faction?.label || factionKey;
 }
 
 export async function execute(inter: ChatInputCommandInteraction) {
@@ -189,7 +202,7 @@ async function preparePunishment(
         .addOptions(selectOptions);
     const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(punishmentSelect);
     const selectMsg = await btnInter.followUp({
-        content: `**Выберите тип наказания для #${passport}**\nФракция: ${FRACTION_INFO[faction]?.label || faction}`,
+        content: `**Выберите тип наказания для #${passport}**\nФракция: ${getFactionLabel(faction)}`,
         components: [row],
         flags: [MessageFlags.Ephemeral]
     });

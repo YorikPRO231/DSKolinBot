@@ -1,8 +1,7 @@
 import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder, TextChannel,} from "discord.js";
 import { PatchesRepository } from "../../databases/index";
 import {generatePatch, getFaction} from "../../utils/utilsState";
-import {DETECTIVES_HIGH_ROLES_ID, getStateHighRoles, GOV_PATCH_LOG_CHANNEL_ID,} from "../../utils/config";
-import {DETECTIVES_INFO} from "../../utils/constants/fractions";
+import { getStateHighRoles, getSystemChannel, getSystemRole, getDetectives } from "../../config/settings-loader";
 
 export const data = new SlashCommandBuilder()
   .setName("новая-нашивка")
@@ -37,7 +36,8 @@ export async function execute(inter: ChatInputCommandInteraction) {
   const nickname = inter.options.getString("ник", true).trim();
   const member = inter.member as any;
   const stateHighRoles = getStateHighRoles();
-  const allAllowedRoles = [...stateHighRoles, ...(DETECTIVES_HIGH_ROLES_ID)];
+  const detectivesHighRoles = getSystemRole('detectives_high');
+  const allAllowedRoles = [...stateHighRoles, ...detectivesHighRoles];
 
   const hasRole = member?.roles?.cache?.some((r: any) =>
     allAllowedRoles.includes(r.id),
@@ -82,7 +82,8 @@ export async function execute(inter: ChatInputCommandInteraction) {
     });
   }
 
-  const isDetectiveFaction = Object.values(DETECTIVES_INFO).some(
+  const detectives = getDetectives();
+  const isDetectiveFaction = Object.values(detectives).some(
     (info) => info.discord_id === inter.guild?.id,
   );
   const level = isDetectiveFaction ? 'detective' : 'casual'
@@ -125,6 +126,8 @@ export async function execute(inter: ChatInputCommandInteraction) {
       .setFooter({ text: `ID: ${userID.id} | Паспорт: ${passport}` });
 
     if (level !== "detective") {
+      const govPatchLogChannelId = getSystemChannel('gov_patch_log');
+      
       const embedGov = new EmbedBuilder()
         .setColor(0x2b2d31)
         .setTitle(`${faction.fullName} | Лог нашивок`)
@@ -146,7 +149,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
         .setFooter({ text: `ID: ${userID.id} | Паспорт: ${passport}` });
 
       const gov_log = inter.client.channels.cache.get(
-        GOV_PATCH_LOG_CHANNEL_ID,
+        govPatchLogChannelId,
       ) as TextChannel;
       if (gov_log) {
         await gov_log.send({ embeds: [embedGov] });

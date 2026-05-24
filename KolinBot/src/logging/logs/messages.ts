@@ -9,7 +9,7 @@ import { shouldCreateFile } from "../config";
 import { formatDate } from "../helpers/dates";
 import { createTextAttachment, formatSize, createAttachmentBuilder } from "../helpers/formatters";
 import { sendFullLog } from "../helpers/senders";
-import { getAdminLogServerIds } from "../../utils/config";
+import { getServers, getAdminLogServerIds } from "../../config/settings-loader";
 
 export async function logMessageDelete(
   client: Client,
@@ -127,7 +127,7 @@ export async function logMessageDelete(
     message.guild,
     embed,
     attachment,
-    getAdminLogServerIds(),
+    getServers().admins,
   );
 }
 

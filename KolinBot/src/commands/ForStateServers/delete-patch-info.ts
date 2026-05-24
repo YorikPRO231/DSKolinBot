@@ -1,9 +1,6 @@
 import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder} from 'discord.js';
-import {
-    GOV_DELETE_PATCH_ACCESS_ROLE_ID,
-    GOV_DELETE_PATCH_CHANNEL_ID
-} from "../../utils/config";
 import { PatchesRepository } from "../../databases/index";
+import { getSystemChannel, getSystemRole } from '../../config/settings-loader';
 
 export const data = new SlashCommandBuilder()
     .setName("удалить-нашивку")
@@ -25,8 +22,8 @@ export async function execute(inter: ChatInputCommandInteraction) {
         })
     }
 
-    const hasRole = gm.roles?.cache?.some((r: any) => GOV_DELETE_PATCH_ACCESS_ROLE_ID.includes(r.id));
-    if (!hasRole || inter.channelId != GOV_DELETE_PATCH_CHANNEL_ID) {
+    const hasRole = gm.roles?.cache?.some((r: any) => getSystemRole('gov_delete_patch').includes(r.id));
+    if (!hasRole || inter.channelId != getSystemChannel('gov_delete_patch')) {
         return inter.reply({
             content:'Доступ к данной команде имеется только у администрации и губернатора штата.',
             flags: MessageFlags.Ephemeral

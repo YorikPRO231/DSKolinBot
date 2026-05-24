@@ -1,6 +1,6 @@
 import { Client, TextChannel, Message } from "discord.js";
 import cron from "node-cron";
-import { PUNISHMENT_ADMINS_CHANNEL_ID } from "../utils/config";
+import { getSystemChannel } from "../config/settings-loader";
 import { TIME_PATTERN, SIMPLE_PATTERN } from "../utils/punishChecker";
 
 const URL_PATTERN = /^(https?:\/\/)[^\s$.?#].[^\s]*$/i;
@@ -13,9 +13,9 @@ export function startLostPunishmentsChecker(client: Client): void {
 
 async function checkLostPunishments(client: Client): Promise<void> {
     try {
-        const channel = await client.channels.fetch(PUNISHMENT_ADMINS_CHANNEL_ID) as TextChannel | null;
+        const channel = await client.channels.fetch(getSystemChannel('punishment_admins')) as TextChannel | null;
         if (!channel) {
-            console.warn(`[LostPunishments] Канал ${PUNISHMENT_ADMINS_CHANNEL_ID} не найден`);
+            console.warn(`[LostPunishments] Канал ${getSystemChannel('punishment_admins')} не найден`);
             return;
         }
 

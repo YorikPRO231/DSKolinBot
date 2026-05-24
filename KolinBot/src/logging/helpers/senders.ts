@@ -1,7 +1,7 @@
 import {AttachmentBuilder, Client, EmbedBuilder, Guild, TextChannel,} from "discord.js";
 import {classifyLogCategory, DEFAULT_RETRY_COUNT, RetryOptions} from "../config";
 import {embedToFileEntry, saveLogToFile} from "./files";
-import {factionByDiscordID} from "../../utils/constants/fractions";
+import { getFactionByDiscordId } from "../../config/settings-loader";
 
 export async function withRetry<T>(
   fn: () => Promise<T>,
@@ -37,14 +37,16 @@ export async function withRetry<T>(
 }
 
 export async function getLogChannelInGuild(guild: Guild): Promise<TextChannel | null> {
-  const factionInfo = factionByDiscordID(guild.id);
-  if (factionInfo[0] === 'TEST_SERVER') {
+  const factionInfo = getFactionByDiscordId(guild.id);
+  if (!factionInfo || factionInfo[0] === "TEST_SERVER") {
     return null;
   }
 
+  const logsChannelId = factionInfo[1].channels.logs;
+
   let logChannel = guild.channels.cache.find(
     (channel): channel is TextChannel =>
-        channel.id === factionInfo[1].logs_channel && channel.isTextBased() && !channel.isThread(),
+        channel.id === logsChannelId && channel.isTextBased() && !channel.isThread(),
   ) ?? null;
 
   if (!logChannel) {
@@ -52,13 +54,12 @@ export async function getLogChannelInGuild(guild: Guild): Promise<TextChannel | 
       await guild.channels.fetch();
       logChannel = guild.channels.cache.find(
         (channel): channel is TextChannel =>
-            channel.id === factionInfo[1].logs_channel && channel.isTextBased() && !channel.isThread(),
+            channel.id === logsChannelId && channel.isTextBased() && !channel.isThread(),
       ) ?? null;
     } catch (error) {
       console.error(`Ошибка fetch каналов на ${guild.name}:`, error);
     }
   }
-
 
   return logChannel;
 }

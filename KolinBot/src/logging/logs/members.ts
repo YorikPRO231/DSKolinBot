@@ -9,7 +9,6 @@ import { formatDate } from "../helpers/dates";
 import { formatMembersList, formatModerator } from "../helpers/formatters";
 import { sendFullLog, sendLogToGuild } from "../helpers/senders";
 import { getAuditExecutor, getNicknameChangeAudit } from "../helpers/audit";
-import { getAdminLogServerIds, getStateServerIds } from "../../utils/config";
 import { AuditLogEvent } from "discord.js";
 import {
   syncFactionRolesOnJoin,

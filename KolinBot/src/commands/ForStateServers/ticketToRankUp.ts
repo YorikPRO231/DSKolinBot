@@ -1,5 +1,6 @@
 import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder, TextChannel} from 'discord.js';
-import {factionByDiscordID} from "../../utils/constants/fractions";
+import { getFactionByDiscordId } from '../../config/settings-loader';
+
 
 export const data = new SlashCommandBuilder()
     .setName("отчет-повышение")
@@ -41,7 +42,8 @@ export async function execute(inter: ChatInputCommandInteraction) {
     const rank = inter.options.getInteger('ранг', true);
     const militaryCardOption = inter.options.getString('билет');
     
-    const [factionName] = factionByDiscordID(inter.guild?.id) || [];
+    const factionResult = getFactionByDiscordId(inter.guild?.id || '');
+    const factionName: string = factionResult ? factionResult[0] : '';
     const noMilitaryBonusFactions = ['WN', 'EMS'];
     const militaryCard = militaryCardOption === 'yes' && !noMilitaryBonusFactions.includes(factionName) ? 1 : 0;
     

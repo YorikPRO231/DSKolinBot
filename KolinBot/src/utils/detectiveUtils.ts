@@ -18,12 +18,10 @@ import {
     APIEmbed
 } from "discord.js";
 import { InfiltrationsRepository, PatchesRepository} from "../databases";
-import { GOV_NICKNAME_REQUESTS_CHANNEL_ID, GOV_NICKNAME_REQUESTS_ROLES_ID, ADMIN_NICKNAME_LOGS_CHANNEL_ID, GOV_PATCH_LOG_CHANNEL_ID } from "./config";
-import { DETECTIVES_INFO, FRACTION_INFO } from "./constants/fractions";
+import { getSystemChannel, getSystemRole, getFactionByDiscordId, loadSettings } from "../config/settings-loader";
 import { getFaction, generatePatch } from "./utilsState";
 
-// --- Типизация ---
-type FactionType = keyof typeof DETECTIVES_INFO;
+type FactionType = string;
 type SendableChannel = TextChannel | NewsChannel | ThreadChannel;
 
 interface IInfiltration {
@@ -43,7 +41,6 @@ interface CustomIdData {
     answerMessageId?: string;
 }
 
-// --- Утилиты ---
 function parseCustomId(customId: string): CustomIdData {
     const [prefix, detectivesChannel, detectiveId, stage, messageId, answerMessageId] = customId.split("_");
     return { 
@@ -56,7 +53,8 @@ function parseCustomId(customId: string): CustomIdData {
 }
 
 function getHighRole(faction: string): string {
-    return DETECTIVES_INFO[faction as FactionType]?.high_role_id || 'nn';
+    const detectives = loadSettings().detectives;
+    return detectives[faction]?.high_role_id || 'nn';
 }
 
 async function fetchChannel<T = SendableChannel>(client: Client, channelId: string): Promise<T | null> {
@@ -73,8 +71,6 @@ async function safeReply(inter: ButtonInteraction | ModalSubmitInteraction, mess
         await inter.reply({ content: message, flags: MessageFlags.Ephemeral });
     }
 }
-
-// --- Основные хендлеры ---
 
 export async function handleButton(inter: ButtonInteraction, member: GuildMember) {
     const customId = inter.customId;
@@ -104,16 +100,17 @@ export async function handleButton(inter: ButtonInteraction, member: GuildMember
 
 function hasPatchPermission(member: GuildMember, guildId: string): boolean {
     const memberRoleIds = new Set(member.roles.cache.map(r => r.id));
+    const config = loadSettings();
     
-    for (const [, detectiveInfo] of Object.entries(DETECTIVES_INFO)) {
+    for (const [, detectiveInfo] of Object.entries(config.detectives)) {
         if (detectiveInfo.discord_id === guildId) {
             return memberRoleIds.has(detectiveInfo.high_role_id);
         }
     }
     
-    for (const [, factionInfo] of Object.entries(FRACTION_INFO)) {
+    for (const [, factionInfo] of Object.entries(config.factions)) {
         if (factionInfo.discord_id === guildId) {
-            return factionInfo.state_high_role_id.some(roleId => memberRoleIds.has(roleId));
+            return factionInfo.roles.high.some(roleId => memberRoleIds.has(roleId));
         }
     }
     
@@ -164,7 +161,8 @@ async function handlePatchRequest(inter: ButtonInteraction, member: GuildMember)
         return safeReply(inter, '❌ **Ошибка:** Неполные данные запроса.');
     }
 
-    const isDetectiveFaction = Object.values(DETECTIVES_INFO).some(
+    const config = loadSettings();
+    const isDetectiveFaction = Object.values(config.detectives).some(
         (info) => info.discord_id === inter.guild?.id,
     );
     const faction = getFaction(inter.guild?.id, inter.guild?.name);
@@ -209,6 +207,8 @@ async function handlePatchRequest(inter: ButtonInteraction, member: GuildMember)
     await logChannel.send({ embeds: [embedLog], content: `<@${requesterId}>` });
 
     if (level !== "detective") {
+        const govPatchLogChannelId = getSystemChannel('gov_patch_log');
+        
         const embedGov = new EmbedBuilder()
             .setColor(0x2b2d31)
             .setTitle(`${faction.fullName} | Лог нашивок`)
@@ -225,7 +225,7 @@ async function handlePatchRequest(inter: ButtonInteraction, member: GuildMember)
             .setTimestamp()
             .setFooter({ text: `ID: ${requesterId} | Паспорт: ${passport}` });
 
-        const govLog = inter.client.channels.cache.get(GOV_PATCH_LOG_CHANNEL_ID) as TextChannel;
+        const govLog = inter.client.channels.cache.get(govPatchLogChannelId) as TextChannel;
         if (govLog) {
             await govLog.send({ embeds: [embedGov] });
         }
@@ -269,7 +269,8 @@ async function handleAdminsStage(
     infiltration: IInfiltration, 
     data: CustomIdData
 ) {
-    const adminChannel = await fetchChannel(inter.client, ADMIN_NICKNAME_LOGS_CHANNEL_ID);
+    const adminNicknameLogsChannelId = getSystemChannel('admin_nickname_logs');
+    const adminChannel = await fetchChannel(inter.client, adminNicknameLogsChannelId);
     if (adminChannel) {
         const adminEmbed = new EmbedBuilder()
             .setTitle(`Запрос на смену имени | ${infiltration.detectivefaction}`)
@@ -324,8 +325,9 @@ export async function handleModal(inter: ModalSubmitInteraction, member: GuildMe
     const infiltration = InfiltrationsRepository.retrieveInfiltration(data.detectiveId) as IInfiltration | undefined;
     if (!infiltration) return safeReply(inter, '❌ Внедренец не найден в БД.');
 
+    const govNicknameRequestsChannelId = getSystemChannel('gov_nickname_requests');
     const answerChannel = await fetchChannel(inter.client, data.detectivesChannel);
-    const govChannel = await fetchChannel(inter.client, GOV_NICKNAME_REQUESTS_CHANNEL_ID);
+    const govChannel = await fetchChannel(inter.client, govNicknameRequestsChannelId);
 
     if (!answerChannel || !govChannel) {
         return safeReply(inter, '❌ Ошибка: каналы не найдены.');
@@ -356,12 +358,14 @@ export async function handleModal(inter: ModalSubmitInteraction, member: GuildMe
     const originalMessage = await govChannel.messages.fetch(data.messageId!).catch(() => null);
     if (!originalMessage) return safeReply(inter, '❌ Оригинальное сообщение в GOV не найдено.');
 
+    const govNicknameRequestsRoles = getSystemRole('gov_nickname_requests');
+    
     const adminButton = new ButtonBuilder()
         .setCustomId(`dnames_${data.detectivesChannel}_${data.detectiveId}_admins_${data.messageId}_${answerMessage.id}`)
         .setLabel('Оплачено (Одобрить)')
         .setStyle(ButtonStyle.Success);
 
-    const mentions = GOV_NICKNAME_REQUESTS_ROLES_ID.map(id => `<@&${id}>`).join(' ');
+    const mentions = govNicknameRequestsRoles.map(id => `<@&${id}>`).join(' ');
     const updatedEmbed = EmbedBuilder.from(originalMessage.embeds[0] as APIEmbed)
         .setColor(Colors.Yellow)
         .setDescription(`**Статус:** Ожидание оплаты\n**Выставил счет:** <@${member.id}>`)

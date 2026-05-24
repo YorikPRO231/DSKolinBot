@@ -1,6 +1,5 @@
-import { DETECTIVES_INFO } from "./constants/fractions";
+import { loadSettings, getFactionByDiscordId } from "../config/settings-loader";
 import { PatchesRepository } from "../databases/index";
-import { factionByDiscordID } from "./constants/fractions";
 
 export function generatePatch(
   faction: string,
@@ -28,23 +27,25 @@ export function generatePatch(
 export function getFaction(
   guildId: string | undefined,
   guildName: string | undefined,
-): { abbreviation: string; fullName: string, logChannel: string } | undefined {
+): { abbreviation: string; fullName: string; logChannel: string } | undefined {
   if (!guildId) return undefined;
 
-  for (const [abbr, info] of Object.entries(DETECTIVES_INFO)) {
+  const config = loadSettings();
+
+  for (const [abbr, info] of Object.entries(config.detectives)) {
     if (info.discord_id === guildId) {
       return {
         abbreviation: abbr,
         fullName: `${abbr} | Blackberry`,
-        logChannel: `${info.patch_log_channel}`
+        logChannel: info.patch_log_channel,
       };
     }
   }
 
   if (guildName) {
     let factionAbbr = guildName.replace(/^GTA 5 RP\s*\|\s*/, "").trim();
-    const info = factionByDiscordID(guildId)
-    if (info[0] === 'TEST_SERVER') {
+    const info = getFactionByDiscordId(guildId);
+    if (!info || info[0] === "TEST_SERVER") {
       return undefined;
     }
     const factionMapping: Record<string, string> = {
@@ -59,7 +60,7 @@ export function getFaction(
       return {
         abbreviation: factionAbbr,
         fullName: `GTA 5 RP | ${factionAbbr}`,
-        logChannel: `${info[1].patch_log_channel}`
+        logChannel: info[1].channels.patch_log || "",
       };
     }
   }

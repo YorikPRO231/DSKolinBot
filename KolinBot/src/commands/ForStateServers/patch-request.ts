@@ -9,8 +9,7 @@ import {
   MessageFlags,
   SlashCommandBuilder,
 } from "discord.js";
-import { DETECTIVES_INFO } from "../../utils/constants/fractions";
-import { POSITIONS_STATE_INFO } from "../../utils/config";
+import { getStatePositions, getDetectives } from "../../config/settings-loader";
 
 const EXCLUDED_BRANCHES_FOR_ALL_POSITIONS = ["PA", "A", "FNA", "SA"];
 
@@ -18,8 +17,9 @@ function getFactionFromName(guildName?: string): string | null {
   if (!guildName) return null;
 
   const cleanName = guildName.replace("GTA 5 RP | ", "").trim();
+  const positions = getStatePositions();
 
-  for (const faction of Object.keys(POSITIONS_STATE_INFO)) {
+  for (const faction of Object.keys(positions)) {
     if (cleanName.includes(faction)) {
       return faction;
     }
@@ -65,21 +65,7 @@ function generateCompiledPositions(
         continue;
       }
 
-      if (
-        position === "Inst." ||
-        position === "Inst" ||
-        position === "St" ||
-        position === "S." ||
-        position === "St."
-      ) {
-        compiled.push(`${position} ${branch}`);
-      } else if (position === "D. Head") {
-        compiled.push(`${position} ${branch}`);
-      } else if (position === "Head") {
-        compiled.push(`${position} ${branch}`);
-      } else {
-        compiled.push(`${position} ${branch}`);
-      }
+      compiled.push(`${position} ${branch}`);
     }
   }
 
@@ -92,13 +78,11 @@ function generateCompiledPositions(
   return [...new Set(compiled)].sort();
 }
 
-for (const faction in POSITIONS_STATE_INFO) {
-  const info =
-    POSITIONS_STATE_INFO[faction as keyof typeof POSITIONS_STATE_INFO];
-  info.compiled_positions = generateCompiledPositions(
-    info.branches,
-    info.positions,
-  );
+function getCompiledPositions(faction: string): string[] {
+  const positions = getStatePositions();
+  const info = positions[faction];
+  if (!info) return [];
+  return generateCompiledPositions(info.branches, info.positions);
 }
 
 export const data = new SlashCommandBuilder()
@@ -135,15 +119,7 @@ export async function autocomplete(interaction: AutocompleteInteraction) {
     return;
   }
 
-  const factionState =
-    POSITIONS_STATE_INFO[faction as keyof typeof POSITIONS_STATE_INFO];
-
-  if (!factionState || !factionState.compiled_positions) {
-    await interaction.respond([]);
-    return;
-  }
-
-  const choices = factionState.compiled_positions;
+  const choices = getCompiledPositions(faction);
   const filtered = choices.filter((choice) =>
     choice.toLowerCase().includes(focusedValue.toLowerCase()),
   );
@@ -188,10 +164,9 @@ export async function execute(inter: ChatInputCommandInteraction) {
     });
   }
 
-  const factionState =
-    POSITIONS_STATE_INFO[faction as keyof typeof POSITIONS_STATE_INFO];
-  if (!factionState.compiled_positions.includes(position)) {
-    const possibleMatch = factionState.compiled_positions.find(
+  const compiledPositions = getCompiledPositions(faction);
+  if (!compiledPositions.includes(position)) {
+    const possibleMatch = compiledPositions.find(
       (p) =>
         p.toLowerCase() === position.toLowerCase() ||
         p.toLowerCase().includes(position.toLowerCase()),
@@ -207,7 +182,8 @@ export async function execute(inter: ChatInputCommandInteraction) {
     }
   }
 
-  const isDetectiveFaction = Object.values(DETECTIVES_INFO).some(
+  const detectives = getDetectives();
+  const isDetectiveFaction = Object.values(detectives).some(
     (info) => info.discord_id === inter.guild?.id,
   );
   const level = isDetectiveFaction ? "detective" : "casual";
@@ -238,23 +214,23 @@ export async function execute(inter: ChatInputCommandInteraction) {
       .setFooter({ text: `ID: ${userID.id} | Паспорт: ${passport}` });
 
     const customData = JSON.stringify({
-    u: inter.user.id,      // userId
-    p: position,           // position
-    n: name,               // name
-    s: surname,            // surname
-    pp: passport           // passport
-});
+      u: inter.user.id,
+      p: position,
+      n: name,
+      s: surname,
+      pp: passport,
+    });
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-    new ButtonBuilder()
+      new ButtonBuilder()
         .setCustomId(`apr_${customData}`)
-        .setLabel('Выдать нашивку')
+        .setLabel("Выдать нашивку")
         .setStyle(ButtonStyle.Success),
-    new ButtonBuilder()
-        .setCustomId('pdr')
-        .setLabel('Отказ в выдаче')
-        .setStyle(ButtonStyle.Danger)
-);
+      new ButtonBuilder()
+        .setCustomId("pdr")
+        .setLabel("Отказ в выдаче")
+        .setStyle(ButtonStyle.Danger),
+    );
 
     await inter.editReply({
       content: `${userID}`,

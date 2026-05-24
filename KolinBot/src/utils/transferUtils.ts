@@ -17,11 +17,10 @@ import {
   TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
-import {factionByDiscordID, FRACTION_INFO, TRANSFER_LOGS} from "./constants/fractions";
+import { getFactionByDiscordId, getFactionByKey, getServers, getSystemChannel, loadSettings } from "../config/settings-loader";
 import {ComponentType} from "discord-api-types/v10";
 import {TransferData, TransfersRepository} from "../databases/repositories/transfers.repository";
 import {TRANSFER_TABLE} from "./constants/transferData";
-import {TRANSFER_LOG_CHANNEL_ID} from "./config";
 
 
 async function safeReply(interaction: any, data: any) {
@@ -33,15 +32,13 @@ async function safeReply(interaction: any, data: any) {
 }
 
 
-/**
- * Получает список фракций игрока на основе его ролей на ЧП сервере
- */
 async function getFactionsFromRoles(
   member: GuildMember,
   client: Client,
 ): Promise<string[]> {
   const factions: string[] = [];
-  const chpGuild = client.guilds.cache.get(FRACTION_INFO.CHP_SERVER.discord_id);
+  const chpServerId = getServers().chp;
+  const chpGuild = client.guilds.cache.get(chpServerId);
   
   if (!chpGuild) return factions;
 
@@ -51,8 +48,9 @@ async function getFactionsFromRoles(
       return ['NOCHP'];
     }
     const chpRoleIds = new Set(chpMember.roles.cache.map((role) => role.id));
-    for (const [factionKey, factionInfo] of Object.entries(FRACTION_INFO)) {
-      if (factionInfo.chp_role_id && chpRoleIds.has(factionInfo.chp_role_id)) {
+    const config = loadSettings();
+    for (const [factionKey, factionInfo] of Object.entries(config.factions)) {
+      if (factionInfo.roles.chp && chpRoleIds.has(factionInfo.roles.chp)) {
         factions.push(factionKey);
       }
     }
@@ -63,9 +61,6 @@ async function getFactionsFromRoles(
   return factions;
 }
 
-/**
- * Проверяет, является ли пользователь лидером или заместителем
- */
 function isLeaderOfFaction(member: GuildMember, faction: string): boolean {
   const factionLower = faction.toLowerCase();
 
@@ -91,9 +86,6 @@ function isLeaderOfFaction(member: GuildMember, faction: string): boolean {
   return false;
 }
 
-/**
- * Проверка прав на одобрение/отклонение
- */
 async function userHasFactionPermission(
   member: GuildMember,
   faction: string,
@@ -108,16 +100,14 @@ async function userHasFactionPermission(
   return false;
 }
 
-/**
- * Поиск лидеров фракций (только лидеры/главы, без заместителей)
- */
 async function findLeaders(
   client: Client,
   ...factions: string[]
 ): Promise<string> {
   const leaders: string[] = [];
 
-  const chpGuild = client.guilds.cache.get(FRACTION_INFO.CHP_SERVER.discord_id);
+  const chpServerId = getServers().chp;
+  const chpGuild = client.guilds.cache.get(chpServerId);
   if (!chpGuild) {
     console.warn("CHP сервер не найден");
     return "Не найдено";
@@ -156,9 +146,6 @@ async function findLeaders(
     : "Не найдено";
 }
 
-//
-
-// ==================== ЭКСПОРТИРУЕМЫЕ ФУНКЦИИ ====================
 
 export async function showFactionSelectMenu(
   interaction: ChatInputCommandInteraction,
@@ -262,8 +249,10 @@ export async function createTransferRequest(interaction: ChatInputCommandInterac
           .setLabel("Отклонить")
           .setStyle(ButtonStyle.Danger),
   );
-  const chpGuild = interaction.client.guilds.cache.get(FRACTION_INFO.CHP_SERVER.discord_id);
-  const logChannel = chpGuild?.channels.cache.get(TRANSFER_LOG_CHANNEL_ID) as TextChannel;
+  
+  const transferLogChannelId = getSystemChannel('transfer_log');
+  const chpGuild = interaction.client.guilds.cache.get(getServers().chp);
+  const logChannel = chpGuild?.channels.cache.get(transferLogChannelId) as TextChannel;
 
   if (logChannel) {
     const msg = await logChannel.send({content: leaderMentions, embeds: [embed], components: [buttons]});
@@ -286,8 +275,9 @@ export async function createTransferRequest(interaction: ChatInputCommandInterac
 }
 
 async function findOriginal(msg: string, client: Client) {
-  const chpGuild = client.guilds.cache.get(FRACTION_INFO.CHP_SERVER.discord_id);
-  const logChannel = chpGuild?.channels.cache.get(TRANSFER_LOG_CHANNEL_ID) as TextChannel;
+  const chpGuild = client.guilds.cache.get(getServers().chp);
+  const transferLogChannelId = getSystemChannel('transfer_log');
+  const logChannel = chpGuild?.channels.cache.get(transferLogChannelId) as TextChannel;
   if (logChannel) {
     const cached = logChannel.messages.cache.get(msg);
     if (cached) return cached;
@@ -344,8 +334,9 @@ export async function processApproval(inter: ButtonInteraction, member: GuildMem
   });
 
   if (fromApprove !== 'ожидание' && toApprove !== 'ожидание') {
-    const [guildId, channelId] = TRANSFER_LOGS[data.destination];
-    const destChannel = await inter.client.channels.fetch(channelId);
+    const targetFaction = getFactionByKey(data.destination);
+    const transferLogChannel = targetFaction?.channels?.transfer_log;
+    const destChannel = transferLogChannel ? await inter.client.channels.fetch(transferLogChannel) : null;
     if (!destChannel || !destChannel.isSendable()) {
       return inter.update({content: `Не удалось определить целевой дискорд ${data.destination}.`, components: []})
     }
@@ -364,8 +355,8 @@ export async function processApproval(inter: ButtonInteraction, member: GuildMem
           value: `${data.current}: ${fromApprove} | ${data.destination}: ${toApprove}`,
         })
         .setFooter({text: `ID заявителя: ${data.user_id}`});
-    const highRole = factionByDiscordID(guildId)[1].state_high_role_id.map(id => `<@&${id}>`).join(' ');
-    await destChannel.send({content: highRole, embeds: [factionEmbed]});
+    const highRoleMentions = (targetFaction?.roles?.high || []).map(id => `<@&${id}>`).join(' ');
+    await destChannel.send({content: highRoleMentions, embeds: [factionEmbed]});
     const informStatus = await inform(data, inter.client);
     TransfersRepository.removeTransfer(data.passport);
     if (informStatus) {
@@ -499,13 +490,11 @@ export async function handleDenyModal(inter: any, member: GuildMember) {
   const oldEmbed = original.embeds[0];
   const authorId = data.user_id;
 
-  // Обновление Embed в канале
   const newEmbed = EmbedBuilder.from(oldEmbed)
       .setColor("#e74c3c")
       .setTitle("Заявление на перевод (Отклонено)")
       .setFields({name: "Причина отказа", value: `${reason} (${member.displayName})`});
   await original.edit({embeds: [newEmbed], components: []})
-  // Отправка уведомления автору
   if (authorId) {
     try {
       const user = await inter.client.users.fetch(authorId);

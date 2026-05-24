@@ -1,12 +1,12 @@
 import { Events, Message, EmbedBuilder, Colors } from 'discord.js';
-import { ADMINS_SERVER_ID } from "../utils/config"
+import { getServers } from '../config/settings-loader';
 
 export const name = Events.MessageCreate;
 
 const ALLOWED_CHANNEL_ID = "1316831634376364055"
 
 export async function execute(message: Message) {
-    if (!ADMINS_SERVER_ID.includes(message.guild?.id || '')) return;
+    if (!getServers().admins.includes(message.guild?.id || '')) return;
 
     if (message.channel.id !== ALLOWED_CHANNEL_ID) return;
     

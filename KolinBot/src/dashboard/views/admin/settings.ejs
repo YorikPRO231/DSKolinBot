@@ -1,0 +1,210 @@
+<%
+  title = 'Настройки бота';
+  currentPage = 'settings';
+  permissions = typeof permissions !== 'undefined' ? permissions : [];
+%>
+
+<%- include('../layout', { part: 'header', title: title, currentPage: currentPage, user: user, permissions: permissions }) %>
+
+<link rel="stylesheet" href="/css/permissions.css">
+<link rel="stylesheet" href="/css/settings.css">
+
+<div class="page-header">
+    <h1><i class="fas fa-cog"></i> Настройки бота</h1>
+    <div class="header-actions">
+        <button class="btn-secondary" onclick="SettingsModule.loadHistory()">
+            <i class="fas fa-history"></i> История
+        </button>
+        <button class="btn-primary" onclick="SettingsModule.saveSettings()">
+            <i class="fas fa-save"></i> Сохранить всё
+        </button>
+    </div>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon" style="background: rgba(255,107,0,0.15);">
+            <i class="fas fa-users" style="color: #ff6b00;"></i>
+        </div>
+        <div class="stat-info">
+            <span class="stat-value"><%= stats.totalFactions %></span>
+            <span class="stat-label">Всего фракций</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background: rgba(52,199,89,0.15);">
+            <i class="fas fa-shield-alt" style="color: #34c759;"></i>
+        </div>
+        <div class="stat-info">
+            <span class="stat-value"><%= stats.governmentFactions %></span>
+            <span class="stat-label">Гос. структур</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background: rgba(255,59,48,0.15);">
+            <i class="fas fa-skull" style="color: #ff3b30;"></i>
+        </div>
+        <div class="stat-info">
+            <span class="stat-value"><%= stats.criminalFactions %></span>
+            <span class="stat-label">Криминальных</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background: rgba(0,122,255,0.15);">
+            <i class="fas fa-search" style="color: #007aff;"></i>
+        </div>
+        <div class="stat-info">
+            <span class="stat-value"><%= stats.totalDetectives %></span>
+            <span class="stat-label">Детективных</span>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="tabs">
+        <button class="tab-btn active" onclick="SettingsModule.showTab(event, 'factions')">
+            <i class="fas fa-users"></i> Фракции
+        </button>
+        <button class="tab-btn" onclick="SettingsModule.showTab(event, 'detectives')">
+            <i class="fas fa-search"></i> Детективы
+        </button>
+        <button class="tab-btn" onclick="SettingsModule.showTab(event, 'servers')">
+            <i class="fas fa-server"></i> Серверы
+        </button>
+        <button class="tab-btn" onclick="SettingsModule.showTab(event, 'positions')">
+            <i class="fas fa-sitemap"></i> Должности
+        </button>
+        <button class="tab-btn" onclick="SettingsModule.showTab(event, 'roles')">
+            <i class="fas fa-lock"></i> Роли
+        </button>
+        <button class="tab-btn" onclick="SettingsModule.showTab(event, 'channels')">
+            <i class="fas fa-comments"></i> Каналы
+        </button>
+    </div>
+
+    <div id="tab-factions" class="tab-content active" style="padding: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 style="margin: 0;">Фракции</h3>
+            <button class="btn-primary" onclick="SettingsModule.openFactionModal()">
+                <i class="fas fa-plus"></i> Добавить фракцию
+            </button>
+        </div>
+        <div class="factions-grid" id="factionsGrid"></div>
+    </div>
+
+    <div id="tab-detectives" class="tab-content" style="padding: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 style="margin: 0;">Детективные отделы</h3>
+            <button class="btn-primary" onclick="SettingsModule.openDetectiveModal()">
+                <i class="fas fa-plus"></i> Добавить отдел
+            </button>
+        </div>
+        <div class="factions-grid" id="detectivesGrid"></div>
+    </div>
+
+    <div id="tab-servers" class="tab-content" style="padding: 1.5rem;">
+        <h3 style="margin: 0 0 1rem 0;">Серверы</h3>
+        <div class="form-grid">
+            <div class="form-group">
+                <label>CHP Server ID</label>
+                <input type="text" id="server-chp" class="search-input" placeholder="Discord Server ID">
+            </div>
+            <div class="form-group">
+                <label>MP Server ID</label>
+                <input type="text" id="server-mp" class="search-input" placeholder="Discord Server ID">
+            </div>
+            <div class="form-group">
+                <label>Test Server ID</label>
+                <input type="text" id="server-test" class="search-input" placeholder="Discord Server ID">
+            </div>
+            <div class="form-group">
+                <label>Check Server IDs (через запятую)</label>
+                <input type="text" id="server-check" class="search-input" placeholder="ID1, ID2, ID3">
+            </div>
+            <div class="form-group">
+                <label>Admin Server IDs (через запятую)</label>
+                <input type="text" id="server-admins" class="search-input" placeholder="ID1, ID2">
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-positions" class="tab-content" style="padding: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 style="margin: 0;">Должности гос. структур</h3>
+            <button class="btn-primary" onclick="SettingsModule.openPositionModal()">
+                <i class="fas fa-plus"></i> Добавить структуру
+            </button>
+        </div>
+        <div class="factions-grid" id="positionsGrid"></div>
+    </div>
+
+    <div id="tab-roles" class="tab-content" style="padding: 1.5rem;">
+        <h3 style="margin: 0 0 1rem 0;">Системные роли</h3>
+        <div class="form-grid" id="systemRolesGrid"></div>
+    </div>
+
+    <div id="tab-channels" class="tab-content" style="padding: 1.5rem;">
+        <h3 style="margin: 0 0 1rem 0;">Системные каналы</h3>
+        <div class="form-grid" id="channelsGrid"></div>
+    </div>
+</div>
+
+<div id="factionModal" class="modal-blur-overlay" style="display:none;">
+    <div class="modal-content-box" style="width: 650px; max-height: 85vh; overflow-y: auto;">
+        <div class="modal-header-flex">
+            <h3 id="factionModalTitle"><i class="fas fa-edit"></i> Фракция</h3>
+            <button onclick="SettingsModule.closeFactionModal()" class="close-modal-cross">&times;</button>
+        </div>
+        <div class="modal-body-padding" id="factionModalBody"></div>
+        <div class="modal-footer-actions">
+            <button class="btn-secondary" onclick="SettingsModule.closeFactionModal()">Отмена</button>
+            <button class="btn-primary" onclick="SettingsModule.saveFaction()">Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<div id="detectiveModal" class="modal-blur-overlay" style="display:none;">
+    <div class="modal-content-box" style="width: 500px;">
+        <div class="modal-header-flex">
+            <h3 id="detectiveModalTitle"><i class="fas fa-edit"></i> Детективный отдел</h3>
+            <button onclick="SettingsModule.closeDetectiveModal()" class="close-modal-cross">&times;</button>
+        </div>
+        <div class="modal-body-padding" id="detectiveModalBody"></div>
+        <div class="modal-footer-actions">
+            <button class="btn-secondary" onclick="SettingsModule.closeDetectiveModal()">Отмена</button>
+            <button class="btn-primary" onclick="SettingsModule.saveDetective()">Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<div id="positionModal" class="modal-blur-overlay" style="display:none;">
+    <div class="modal-content-box" style="width: 500px;">
+        <div class="modal-header-flex">
+            <h3 id="positionModalTitle"><i class="fas fa-edit"></i> Должности</h3>
+            <button onclick="SettingsModule.closePositionModal()" class="close-modal-cross">&times;</button>
+        </div>
+        <div class="modal-body-padding" id="positionModalBody"></div>
+        <div class="modal-footer-actions">
+            <button class="btn-secondary" onclick="SettingsModule.closePositionModal()">Отмена</button>
+            <button class="btn-primary" onclick="SettingsModule.savePosition()">Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<div id="historyModal" class="modal-blur-overlay" style="display:none;">
+    <div class="modal-content-box" style="width: 600px;">
+        <div class="modal-header-flex">
+            <h3><i class="fas fa-history"></i> История изменений</h3>
+            <button onclick="SettingsModule.closeHistoryModal()" class="close-modal-cross">&times;</button>
+        </div>
+        <div class="modal-body-padding">
+            <div id="historyList" class="history-list">
+                <p class="loading-text"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/js/settings.js"></script>
+
+<%- include('../layout', { part: 'footer' }) %>
