@@ -264,10 +264,6 @@ async function processPunishment(
         let storage = ''
         let footer = ''
         for (const item of report.items) {
-            if (item.totalLeak <= 0) {
-                await logger.logError(inter.client, new Error(`item.totalLeak <= 0 ${item.totalLeak}`), 'Warehouse v2')
-                continue
-            }
             if (item.vehicle && !storage.includes('машине')) {
                 storage += 'машине, '
             }
@@ -364,7 +360,7 @@ async function processPunishment(
 const LOG_CHANNEL_IDS = {
     MAFIA: "1316831636532232300",
     GANG: "1316848781529972778",
-    STATE: "1316831637379743830",
+    STATE: "1507071654134812825",
     DEFAULT: "NS"
 };
 

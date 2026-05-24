@@ -1,11 +1,10 @@
-import { Router, Request, Response } from 'express';
+import {Request, Response, Router} from 'express';
 import multer from 'multer';
 import fs from 'fs';
-import path from 'path';
-import { ensureAuthenticatedAndAuthorized } from '../middleware/auth.middleware';
-import { requirePermission } from '../middleware/permissions.middleware';
-import { parseLogFile } from '../services/upload.service';
-import { PermissionsRepository } from '../../databases';
+import {ensureAuthenticatedAndAuthorized} from '../middleware/auth.middleware';
+import {requirePermission} from '../middleware/permissions.middleware';
+import {parseLogFile} from '../services/upload.service';
+import {PermissionsRepository} from '../../databases';
 
 const router = Router();
 const upload = multer({ dest: 'uploads/' });
@@ -32,9 +31,11 @@ router.get('/',
   }
 );
 
-router.post('/upload', 
+
+router.post('/upload',
   ensureAuthenticatedAndAuthorized, 
   requirePermission('view_logs_systeminformer'),
+    // @ts-ignore
   upload.single('logFile'),
   async (req: Request, res: Response) => {
     const permissions = await getUserPermissions(req);

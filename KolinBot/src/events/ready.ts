@@ -1,9 +1,9 @@
-import { ActivityType, AuditLogEvent, Client, Events, GuildChannel, User } from "discord.js";
+import {ActivityType, AuditLogEvent, Client, Events, GuildChannel, User} from "discord.js";
 import * as logger from "../logging";
-import { emergencyFlush } from "../logging/helpers/files";
-import { punishChecker } from "../utils/punishChecker";
+import {emergencyFlush} from "../logging";
+import {punishChecker} from "../utils/punishChecker";
 
-export const name = "ready";
+export const name = "clientReady";
 export const once = true;
 
 export function execute(client: Client) {
