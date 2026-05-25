@@ -53,10 +53,9 @@ let settings: Settings | null = null;
 declare global {
   var reloadSettings: (() => void) | undefined;
 }
-
 export function loadSettings(force = false): Settings {
   const settingsPath = path.join(__dirname, 'settings.json');
-  
+
   if (!force && settings) {
     return settings;
   }

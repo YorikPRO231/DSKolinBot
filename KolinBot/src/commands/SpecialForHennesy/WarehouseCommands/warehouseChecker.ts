@@ -17,8 +17,8 @@ import {
     TextInputBuilder,
     TextInputStyle
 } from 'discord.js';
-import { AdminsRepository, WarehouseRepository } from '../../../databases/index';
-import { getFactionByKey } from "../../../config/settings-loader";
+import {AdminsRepository, WarehouseRepository} from '../../../databases';
+import {getFactionByKey} from "../../../config/settings-loader";
 import axios from "axios";
 import {analyzeLogData, formReportData, WarehouseData} from "../../../utils/warehouseUtils";
 import * as logger from "../../../logging";
