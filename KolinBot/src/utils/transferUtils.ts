@@ -17,7 +17,7 @@ import {
   TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
-import { getFactionByDiscordId, getFactionByKey, getServers, getSystemChannel, loadSettings } from "../config/settings-loader";
+import {getFactionByKey, getServers, getSystemChannel, loadSettings} from "../config/settings-loader";
 import {ComponentType} from "discord-api-types/v10";
 import {TransferData, TransfersRepository} from "../databases/repositories/transfers.repository";
 import {TRANSFER_TABLE} from "./constants/transferData";
@@ -27,7 +27,6 @@ async function safeReply(interaction: any, data: any) {
   if (interaction.replied || interaction.deferred) {
     return interaction.followUp(data);
   }
-
   return interaction.reply(data);
 }
 
@@ -427,6 +426,12 @@ export async function handleTransferButtons(inter: ButtonInteraction, member: Gu
   const data = TransfersRepository.retrieveTransferData(passport);
   if (!data) {
     return safeReply(inter, {content: 'Не удалось найти информацию о данном переводе.', flags: MessageFlags.Ephemeral})
+  }
+  if (data.user_id === inter.user.id) {
+    return safeReply(inter, {
+      content: 'Невозможно влиять на собственный перевод, ожидайте его рассмотрения Вашим руководством',
+      flags: MessageFlags.Ephemeral
+    })
   }
   if (type === 'confirm') {
     return processApproval(inter, member, data, parts[3]);

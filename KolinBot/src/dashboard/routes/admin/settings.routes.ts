@@ -1,9 +1,9 @@
-import { Router, Request, Response } from "express";
-import { ensureAuthenticatedAndAuthorized } from "../../middleware/auth.middleware";
-import { requirePermission } from "../../middleware/permissions.middleware";
+import {Request, Response, Router} from "express";
+import {ensureAuthenticatedAndAuthorized} from "../../middleware/auth.middleware";
+import {requirePermission} from "../../middleware/permissions.middleware";
 import fs from "fs";
 import path from "path";
-import { z, ZodError } from "zod";
+import {z, ZodError} from "zod";
 
 const router = Router();
 
@@ -26,9 +26,6 @@ const FactionSchema = z.object({
     transfer_log: z.string().optional(),
   }),
 });
-
-type Faction = z.infer<typeof FactionSchema>;
-
 const SettingsSchema = z.object({
   factions: z.record(z.string(), FactionSchema),
   detectives: z.record(
@@ -220,6 +217,7 @@ router.post(
   async (req: Request, res: Response) => {
     try {
       const backupFile = req.params.backupFile;
+      // @ts-ignore
       const backupPath = path.join(path.dirname(SETTINGS_PATH), backupFile);
 
       if (!fs.existsSync(backupPath)) {

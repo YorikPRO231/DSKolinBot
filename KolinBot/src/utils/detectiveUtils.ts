@@ -1,27 +1,26 @@
 import {
     ActionRowBuilder,
+    APIEmbed,
     ButtonBuilder,
     ButtonInteraction,
     ButtonStyle,
+    Client,
     Colors,
     EmbedBuilder,
     GuildMember,
     MessageFlags,
     ModalBuilder,
     ModalSubmitInteraction,
+    NewsChannel,
+    TextChannel,
     TextInputBuilder,
     TextInputStyle,
-    TextChannel,
-    NewsChannel,
-    ThreadChannel,
-    Client,
-    APIEmbed
+    ThreadChannel
 } from "discord.js";
-import { InfiltrationsRepository, PatchesRepository} from "../databases";
-import { getSystemChannel, getSystemRole, getFactionByDiscordId, loadSettings } from "../config/settings-loader";
-import { getFaction, generatePatch } from "./utilsState";
+import {InfiltrationsRepository, PatchesRepository} from "../databases";
+import {getSystemChannel, getSystemRole, loadSettings} from "../config/settings-loader";
+import {generatePatch, getFaction} from "./utilsState";
 
-type FactionType = string;
 type SendableChannel = TextChannel | NewsChannel | ThreadChannel;
 
 interface IInfiltration {
@@ -42,7 +41,7 @@ interface CustomIdData {
 }
 
 function parseCustomId(customId: string): CustomIdData {
-    const [prefix, detectivesChannel, detectiveId, stage, messageId, answerMessageId] = customId.split("_");
+    const [, detectivesChannel, detectiveId, stage, messageId, answerMessageId] = customId.split("_");
     return { 
         detectivesChannel, 
         detectiveId, 
@@ -134,7 +133,7 @@ async function handlePatchRequest(inter: ButtonInteraction, member: GuildMember)
             .setColor(Colors.DarkRed)
             .setTitle(embed.title)
             .setTimestamp()
-            .setFooter({ text: `Выдача отказана <@${inter.user.id}> ${member.displayName}` });
+            .setFooter({text: `Выдача отказана ${inter.user.id} ${member.displayName}`});
         
         await originalMessage.edit({ embeds: [edited], components: [] });
         return safeReply(inter, '❌ В выдаче нашивки отказано.');
@@ -239,7 +238,7 @@ async function handlePatchRequest(inter: ButtonInteraction, member: GuildMember)
         .setColor(Colors.Green)
         .setTitle(embed.title)
         .setTimestamp()
-        .setFooter({ text: `Произведена выдача <@${inter.user.id}> ${member.displayName}` });
+        .setFooter({text: `Произведена выдача ${inter.user.id} ${member.displayName}`});
 
     await originalMessage.edit({ embeds: [edited], components: [] });
     return safeReply(inter, '✅ Нашивка выдана игроку.');

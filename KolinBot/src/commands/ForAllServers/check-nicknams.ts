@@ -8,7 +8,7 @@ import {
     SlashCommandBuilder,
     TextChannel
 } from 'discord.js';
-import { getSystemRole } from '../../config/settings-loader';
+import {getSystemRole} from '../../config/settings-loader';
 
 export const data = new SlashCommandBuilder()
     .setName("check-nicknames")
@@ -36,8 +36,8 @@ export async function execute(inter: ChatInputCommandInteraction) {
         if (member.permissions.has(PermissionFlagsBits.Administrator)) {
             return false;
         }
-        if (member.roles.cache.some((r: any) => /администратор|admin|хелпер|helper|куратор|помощник/i.test(r.name))) return false;
-        return true;
+        return !member.roles.cache.some((r: any) => /администратор|admin|хелпер|helper|куратор|помощник/i.test(r.name));
+
     });
 
     let data: { memberId: string; row: ActionRowBuilder<ButtonBuilder>; reason: string; }[] = [];
@@ -48,7 +48,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
         if (member.roles.cache.size === 0) {
             reason = `Отсутствие ролей (Дата входа: ${member.joinedAt || 'Не найдена'}).`
         }
-        if ([member.user.displayName, member.user.username, member.user.globalName].includes(member.displayName)) {
+        if (!member.nickname) {
             reason = 'Отсутствие ника в дискорде.';
         }
         if (member.roles.cache.some(r => getSystemRole('capters').includes(r.id))) {
