@@ -93,4 +93,44 @@ export const PatchesRepository = {
 
     return digits;
   },
+
+  deletePatch(id: number, adminTag: string) {
+    const existing = db.prepare(`SELECT * FROM state_patches WHERE id = ?`).get(id) as StatePatch | undefined;
+    const now = new Date().toISOString();
+    if (!existing) {
+      return false;
+    }
+    let history: PatchHistory[] = [];
+
+    if (existing) {
+      try {
+        history = JSON.parse(existing.history) as PatchHistory[];
+      } catch (e) {
+        console.warn(`Ошибка парсинга истории для паспорта ${existing.passport}: ${existing.history}`);
+      }
+
+      history.push({
+        created_at: existing.created_at,
+        faction: existing.faction,
+        patch: existing.patch,
+        updated_at: now
+      });
+
+      if (history.length > 15) {
+        history = history.slice(-15);
+      }
+    }
+
+    db.prepare(`
+      INSERT INTO state_patches (passport, username, discord_id, faction, patch, history, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(passport) DO UPDATE SET username   = excluded.username,
+                                          discord_id = excluded.discord_id,
+                                          faction    = excluded.faction,
+                                          patch      = excluded.patch,
+                                          history    = excluded.history,
+                                          created_at = excluded.created_at
+    `).run(existing.passport, existing.username, existing.discord_id, existing.faction, `! Последняя нашивка удалена администрацией ! // by ${adminTag}`, JSON.stringify(history), now);
+    return true;
+  }
 };

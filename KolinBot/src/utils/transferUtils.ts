@@ -27,7 +27,6 @@ async function safeReply(interaction: any, data: any) {
   if (interaction.replied || interaction.deferred) {
     return interaction.followUp(data);
   }
-
   return interaction.reply(data);
 }
 
