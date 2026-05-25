@@ -1,15 +1,9 @@
-import {
-  AttachmentBuilder,
-  Client,
-  EmbedBuilder,
-  Message,
-  PartialMessage,
-} from "discord.js";
-import { shouldCreateFile } from "../config";
-import { formatDate } from "../helpers/dates";
-import { createTextAttachment, formatSize, createAttachmentBuilder } from "../helpers/formatters";
-import { sendFullLog } from "../helpers/senders";
-import { getServers, getAdminLogServerIds } from "../../config/settings-loader";
+import {AttachmentBuilder, Client, EmbedBuilder, Message, PartialMessage,} from "discord.js";
+import {shouldCreateFile} from "../config";
+import {formatDate} from "../helpers/dates";
+import {createAttachmentBuilder, createTextAttachment, formatSize} from "../helpers/formatters";
+import {sendFullLog} from "../helpers/senders";
+import {getAdminLogServerIds, getServers} from "../../config/settings-loader";
 
 export async function logMessageDelete(
   client: Client,
@@ -27,6 +21,9 @@ export async function logMessageDelete(
   if (!message.content && message.attachments.size === 0) return;
   if (!message.author) return;
   if (!message.guild) return;
+  if (message.author.id === client.user?.id) {
+    return;
+  }
 
   const content = message.content || "";
   const needsFile = shouldCreateFile(content);
@@ -146,6 +143,9 @@ export async function logMessageUpdate(
   if (oldMessage.content === newMessage.content) return;
   if (!oldMessage.author) return;
   if (!oldMessage.guild) return;
+  if (oldMessage.author.id === client.user?.id) {
+    return;
+  }
 
   const oldContent = oldMessage.content || "Пусто";
   const newContent = newMessage.content || "Пусто";

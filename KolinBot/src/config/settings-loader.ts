@@ -24,6 +24,7 @@ export interface DetectiveSettings {
   high_role_id: string;
   name_logs_id: string;
   patch_log_channel: string;
+    log_channel_id: string;
 }
 
 export interface ServerSettings {
@@ -138,6 +139,15 @@ export function getFactionByDiscordId(discordId: string): [string, FactionSettin
 export function getDetectives(): Record<string, DetectiveSettings> {
   return loadSettings().detectives;
 }
+
+export function getDetectivesById(discord_id: string): [string, DetectiveSettings] | undefined {
+    const detectives = loadSettings().detectives;
+    for (const [key, faction] of Object.entries(detectives)) {
+        if (faction.discord_id === discord_id) return [key, faction];
+    }
+    return undefined;
+}
+
 export function getStatePositions(): Record<string, StatePositions> {
   return loadSettings().state_positions;
 }

@@ -375,19 +375,22 @@
       "discord_id": "956232563733692436",
       "high_role_id": "956232563771465821",
       "name_logs_id": "1503070013723115540",
-      "patch_log_channel": "1409907963832827995"
+      "patch_log_channel": "1409907963832827995",
+      "log_channel_id": "956232563805012047"
     },
     "DB": {
       "discord_id": "956223490388807710",
       "high_role_id": "956223490439122967",
       "name_logs_id": "1503069180277293056",
-      "patch_log_channel": "1470923173716557978"
+      "patch_log_channel": "1470923173716557978",
+      "log_channel_id": "956223491164762185"
     },
     "CID": {
       "discord_id": "934137298000416798",
       "high_role_id": "934191153077702716",
       "name_logs_id": "1503068304250765484",
-      "patch_log_channel": "934197973003436074"
+      "patch_log_channel": "934197973003436074",
+      "log_channel_id": "934137298000416798"
     }
   },
   "servers": {
