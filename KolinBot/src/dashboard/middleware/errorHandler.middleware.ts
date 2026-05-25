@@ -130,7 +130,6 @@ export function errorHandler(err: any, req: Request, res: Response, next: NextFu
     return res.status(statusCode).json(errorResponse);
   }
 
-  // Получаем права пользователя для layout
   getUserPermissions(req).then(permissions => {
     res.status(statusCode).render('error', {
       user: (req as any).user || null,

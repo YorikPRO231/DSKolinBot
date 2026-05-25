@@ -6,7 +6,6 @@ import { LogParserService, ParsedLogEntry } from '../services/logParser.service'
 
 const ADMIN_LOGS_DIR = path.join(process.cwd(), 'admin-logs');
 
-
 export class AdminLogsController {
   static async getFiles(req: Request, res: Response) {
     if (!fs.existsSync(ADMIN_LOGS_DIR)) {
@@ -150,10 +149,26 @@ export class AdminLogsController {
           if (query && !LogParserService.matchesQuery(parsedEntry, query)) continue;
           
           if (dateFrom || dateTo) {
-            const entryUTCDate = parsedEntry.utcDate;
-            if (entryUTCDate) {
-              if (dateFrom && entryUTCDate < dateFrom) continue;
-              if (dateTo && entryUTCDate > dateTo) continue;
+            const entryTimestamp = parsedEntry.utcTimestamp || parsedEntry.timestamp;
+            
+            if (entryTimestamp) {
+              const entryTime = new Date(entryTimestamp).getTime();
+              
+              if (dateFrom) {
+                const fromTime = new Date(dateFrom + 'T00:00:00.000Z').getTime();
+                if (entryTime < fromTime) continue;
+              }
+              
+              if (dateTo) {
+                const toTime = new Date(dateTo + 'T23:59:59.999Z').getTime();
+                if (entryTime > toTime) continue;
+              }
+            } else {
+              const entryUTCDate = parsedEntry.utcDate;
+              if (entryUTCDate) {
+                if (dateFrom && entryUTCDate < dateFrom) continue;
+                if (dateTo && entryUTCDate > dateTo) continue;
+              }
             }
           }
           
@@ -162,11 +177,29 @@ export class AdminLogsController {
       }
 
       allEntries.sort((a, b) => {
-        const aTime = a.utcTimestamp || a.timestamp;
-        const bTime = b.utcTimestamp || b.timestamp;
-        if (!aTime) return 1;
-        if (!bTime) return -1;
-        return new Date(bTime).getTime() - new Date(aTime).getTime();
+        const getTimeFromEntry = (entry: ParsedLogEntry): number => {
+          if (entry.utcTimestamp) {
+            const time = new Date(entry.utcTimestamp).getTime();
+            if (!isNaN(time)) return time;
+          }
+          
+          if (entry.timestamp) {
+            const time = new Date(entry.timestamp).getTime();
+            if (!isNaN(time)) return time;
+          }
+          
+          if (entry.utcDate) {
+            const time = new Date(entry.utcDate).getTime();
+            if (!isNaN(time)) return time;
+          }
+          
+          return 0;
+        };
+        
+        const timeA = getTimeFromEntry(a);
+        const timeB = getTimeFromEntry(b);
+        
+        return timeB - timeA;
       });
 
       const totalFound = allEntries.length;

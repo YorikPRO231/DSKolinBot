@@ -139,6 +139,7 @@ export function getFactionByDiscordId(discordId: string): [string, FactionSettin
 export function getDetectives(): Record<string, DetectiveSettings> {
   return loadSettings().detectives;
 }
+
 export function getStatePositions(): Record<string, StatePositions> {
   return loadSettings().state_positions;
 }
@@ -153,8 +154,9 @@ export function getStateHighRoles(): string[] {
 export function getStateFractionRoles(): string[] {
   const config = loadSettings();
   return Object.values(config.factions)
-    .filter((f: any) => f.type === 'government' && f.roles.chp)
-    .map((f: any) => f.roles.chp);
+    .filter((f: FactionSettings) => f.type === 'government' && f.roles.chp)
+    .map((f: FactionSettings) => f.roles.chp)
+    .filter((id): id is string => !!id);
 }
 
 export function getAdminLogServerIds(): string[] {
