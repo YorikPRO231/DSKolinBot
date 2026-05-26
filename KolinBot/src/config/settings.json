@@ -88,7 +88,7 @@
     "LSPD": {
       "label": "LSPD",
       "type": "government",
-      "discord_id": "673455997846814739",
+      "discord_id": "1498691947345350880",
       "emoji_id": "<:LSPD:1499073872291696640>",
       "roles": {
         "faction": "673463361983217665",
@@ -417,12 +417,13 @@
       ],
       "positions": [
         "Inst.",
-        "D. Head",
-        "Head",
+        "D. Head.",
+        "Head.",
         "St.",
         "Deputy Director",
         "Director"
-      ]
+      ],
+      "leader_role_id": ""
     },
     "LSSD": {
       "branches": [
@@ -434,12 +435,13 @@
         "SA"
       ],
       "positions": [
-        "D. Head",
-        "Head",
+        "D. Head.",
+        "Head.",
         "Inst.",
         "Deputy Sheriff",
         "Sheriff"
-      ]
+      ],
+      "leader_role_id": ""
     },
     "LSPD": {
       "branches": [
@@ -454,11 +456,12 @@
       "positions": [
         "St",
         "Inst",
-        "D. Head",
-        "Head",
+        "D. Head.",
+        "Head.",
         "Deputy Chief",
         "Chief"
-      ]
+      ],
+      "leader_role_id": ""
     },
     "Government": {
       "branches": [
@@ -467,12 +470,13 @@
         "SRT"
       ],
       "positions": [
-        "D. Head",
-        "Head",
+        "D. Head.",
+        "Head.",
         "Deputy Director",
         "Director",
         "Inst."
-      ]
+      ],
+      "leader_role_id": ""
     },
     "ARMY": {
       "branches": [
@@ -486,15 +490,16 @@
       "positions": [
         "S.",
         "Inst.",
-        "H.Inst.",
-        "D.Com.",
+        "H. Inst.",
+        "D. Com.",
         "Com.",
         "Commandant",
         "Adv. Gen.",
         "Cur.",
         "L. Gen.",
         "General"
-      ]
+      ],
+      "leader_role_id": ""
     },
     "SASPA": {
       "branches": [
@@ -506,13 +511,28 @@
         "MED"
       ],
       "positions": [
-        "Inst",
-        "D. Head",
-        "Head",
-        "St",
+        "Inst.",
+        "D. Head.",
+        "Head.",
+        "St.",
         "Deputy Warden",
         "Warden"
-      ]
+      ],
+      "leader_role_id": ""
+    },
+    "EMS": {
+      "branches": [
+      ],
+      "positions": [
+      ],
+      "leader_role_id": ""
+    },
+    "WN": {
+      "branches": [
+      ],
+      "positions": [
+      ],
+      "leader_role_id": ""
     }
   },
   "system_roles": {
