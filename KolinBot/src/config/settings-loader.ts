@@ -38,6 +38,7 @@ export interface ServerSettings {
 export interface StatePositions {
   branches: string[];
   positions: string[];
+  leader_role_id: string;
 }
 
 export interface Settings {

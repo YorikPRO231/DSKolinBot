@@ -9,7 +9,7 @@ import {
   MessageFlags,
   SlashCommandBuilder,
 } from "discord.js";
-import { getStatePositions, getDetectives } from "../../config/settings-loader";
+import {getDetectives, getStatePositions} from "../../config/settings-loader";
 
 const EXCLUDED_BRANCHES_FOR_ALL_POSITIONS = ["PA", "A", "FNA", "SA"];
 
@@ -78,7 +78,7 @@ function generateCompiledPositions(
   return [...new Set(compiled)].sort();
 }
 
-function getCompiledPositions(faction: string): string[] {
+export function getCompiledPositions(faction: string): string[] {
   const positions = getStatePositions();
   const info = positions[faction];
   if (!info) return [];
