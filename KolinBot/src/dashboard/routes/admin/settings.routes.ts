@@ -35,6 +35,7 @@ const SettingsSchema = z.object({
       high_role_id: z.string(),
       name_logs_id: z.string(),
       patch_log_channel: z.string(),
+      log_channel_id: z.string()
     }),
   ),
   servers: z.object({

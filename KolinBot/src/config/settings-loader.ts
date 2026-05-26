@@ -24,7 +24,7 @@ export interface DetectiveSettings {
   high_role_id: string;
   name_logs_id: string;
   patch_log_channel: string;
-    log_channel_id: string;
+  log_channel_id: string;
 }
 
 export interface ServerSettings {
