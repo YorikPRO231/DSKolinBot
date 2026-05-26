@@ -54,23 +54,35 @@ export class LogParserService {
 
       if (trimmedLine.includes("Время события:")) {
         const timeValue = trimmedLine.replace("Время события:", "").trim();
-        const match = timeValue.match(/(\d{2})\.(\d{2})\.(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
-        if (match) {
-          const [, day, month, year, hours, minutes, seconds] = match;
-          const utcDate = new Date(Date.UTC(
-            parseInt(year),
-            parseInt(month) - 1,
-            parseInt(day),
-            parseInt(hours),
-            parseInt(minutes),
-            parseInt(seconds)
-          ));
-          entry.utcTimestamp = utcDate.toISOString();
-          entry.timestamp = utcDate.toISOString();
-          entry.utcDate = utcDate.toISOString().split('T')[0];
+        let parsedDate: Date | null = null;
+        
+        const match1 = timeValue.match(/(\d{2})\.(\d{2})\.(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
+        if (match1) {
+          const [, day, month, year, hours, minutes, seconds] = match1;
+          parsedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 
+                                parseInt(hours), parseInt(minutes), parseInt(seconds));
+        }
+        
+        if (!parsedDate) {
+          const match2 = timeValue.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+          if (match2) {
+            const [, year, month, day, hours, minutes, seconds] = match2;
+            parsedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day),
+                                  parseInt(hours), parseInt(minutes), parseInt(seconds));
+          }
+        }
+        
+        if (parsedDate && !isNaN(parsedDate.getTime())) {
+          const isoString = parsedDate.toISOString();
+          entry.timestamp = isoString;
+          entry.utcTimestamp = isoString;
+          const year = parsedDate.getFullYear();
+          const month = String(parsedDate.getMonth() + 1).padStart(2, '0');
+          const day = String(parsedDate.getDate()).padStart(2, '0');
+          entry.utcDate = `${year}-${month}-${day}`;
         } else {
-          entry.utcTimestamp = timeValue;
           entry.timestamp = timeValue;
+          entry.utcTimestamp = timeValue;
           const dateMatch = timeValue.match(/(\d{2})\.(\d{2})\.(\d{4})/);
           if (dateMatch) {
             const [, day, month, year] = dateMatch;

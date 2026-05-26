@@ -1,0 +1,561 @@
+{
+  "factions": {
+    "MM": {
+      "label": "Мексиканская мафия",
+      "type": "criminal",
+      "discord_id": "673456343696408587",
+      "emoji_id": "<:MM:1499074966442872992>",
+      "roles": {
+        "faction": "1079018657386086400",
+        "high": [],
+        "chp": "",
+        "mp": "996703938176880671"
+      },
+      "channels": {
+        "logs": "818196367779954728",
+        "patch_log": "",
+        "transfer_log": ""
+      }
+    },
+    "RM": {
+      "label": "Русская мафия",
+      "type": "criminal",
+      "discord_id": "673463621711429632",
+      "emoji_id": "<:RM:1499074949497880590>",
+      "roles": {
+        "faction": "868194396611428363",
+        "high": [],
+        "chp": "",
+        "mp": "996703811810885742"
+      },
+      "channels": {
+        "logs": "1498402278108041307",
+        "patch_log": "",
+        "transfer_log": ""
+      }
+    },
+    "LCN": {
+      "label": "Итальянская мафия",
+      "type": "criminal",
+      "discord_id": "673456231083409409",
+      "emoji_id": "<:LCN:1499074895160807524>",
+      "roles": {
+        "faction": "1061625457444933692",
+        "high": [],
+        "chp": "",
+        "mp": "996703811307585606"
+      },
+      "channels": {
+        "logs": "1498400225390366920",
+        "patch_log": "",
+        "transfer_log": ""
+      }
+    },
+    "YAK": {
+      "label": "Японская мафия",
+      "type": "criminal",
+      "discord_id": "751047567705505872",
+      "emoji_id": "<:YAK:1499074987116462180>",
+      "roles": {
+        "faction": "751047567705505873",
+        "high": [],
+        "chp": "",
+        "mp": "996703939279986698"
+      },
+      "channels": {
+        "logs": "818199029745582120",
+        "patch_log": "",
+        "transfer_log": ""
+      }
+    },
+    "AM": {
+      "label": "Армянская мафия",
+      "type": "criminal",
+      "discord_id": "673456264327594014",
+      "emoji_id": "<:AM:1499074924784910366>",
+      "roles": {
+        "faction": "1074660086854733864",
+        "high": [],
+        "chp": "",
+        "mp": "996703812997877781"
+      },
+      "channels": {
+        "logs": "1498401761315258559",
+        "patch_log": "",
+        "transfer_log": ""
+      }
+    },
+    "LSPD": {
+      "label": "LSPD",
+      "type": "government",
+      "discord_id": "673455997846814739",
+      "emoji_id": "<:LSPD:1499073872291696640>",
+      "roles": {
+        "faction": "673463361983217665",
+        "high": [
+          "829041631545655306"
+        ],
+        "chp": "673463211026284573",
+        "mp": "996703140327993404"
+      },
+      "channels": {
+        "logs": "870078508964134973",
+        "patch_log": "1470898370364313630",
+        "transfer_log": "1499476976358920222"
+      }
+    },
+    "LSSD": {
+      "label": "LSSD",
+      "type": "government",
+      "discord_id": "673456494213070868",
+      "emoji_id": "<:LSSD:1499073860497313892>",
+      "roles": {
+        "faction": "673464024473534465",
+        "high": [
+          "673464013837041664"
+        ],
+        "chp": "673463211651104778",
+        "mp": "996703143867994132"
+      },
+      "channels": {
+        "logs": "755531513197494432",
+        "patch_log": "1395107667478843536",
+        "transfer_log": "754925129590636570"
+      }
+    },
+    "FIB": {
+      "label": "FIB",
+      "type": "government",
+      "discord_id": "673455860407730186",
+      "emoji_id": "<:FIB:1499074107671838810>",
+      "roles": {
+        "faction": "673463335294861331",
+        "high": [
+          "895382852462600272"
+        ],
+        "chp": "673463209713205277",
+        "mp": "996703136360185916"
+      },
+      "channels": {
+        "logs": "870076585296941086",
+        "patch_log": "1500511818773172415",
+        "transfer_log": "1040674435348316250"
+      }
+    },
+    "GOV": {
+      "label": "Government",
+      "type": "government",
+      "discord_id": "673455835481112599",
+      "emoji_id": "<:GOV:1499073847318544394>",
+      "roles": {
+        "faction": "674572465791303699",
+        "high": [
+          "894157975286087721"
+        ],
+        "chp": "673463209050505247",
+        "mp": "996703127258537994"
+      },
+      "channels": {
+        "logs": "838728193497235466",
+        "patch_log": "1380143712503332925",
+        "transfer_log": "1023979907367313518"
+      }
+    },
+    "ARMY": {
+      "label": "ARMY",
+      "type": "government",
+      "discord_id": "673456035930832916",
+      "emoji_id": "<:ARMY:1499074135563829269>",
+      "roles": {
+        "faction": "933431913207718019",
+        "high": [
+          "933436258296938536"
+        ],
+        "chp": "673463210384556044",
+        "mp": "996703146543943692"
+      },
+      "channels": {
+        "logs": "870076692956327946",
+        "patch_log": "1395108469413122199",
+        "transfer_log": "1499478887757910298"
+      }
+    },
+    "SASPA": {
+      "label": "SASPA",
+      "type": "government",
+      "discord_id": "802190616221581332",
+      "emoji_id": "<:SASPA:1499073833959817330>",
+      "roles": {
+        "faction": "802190616221581335",
+        "high": [
+          "839242470234521692"
+        ],
+        "chp": "801479250761875487",
+        "mp": "996703148943093790"
+      },
+      "channels": {
+        "logs": "802190617132269594",
+        "patch_log": "1395106916656742480",
+        "transfer_log": "1499478625219641515"
+      }
+    },
+    "WN": {
+      "label": "WN",
+      "type": "government",
+      "discord_id": "673456072995897354",
+      "emoji_id": "<:WN:1499076514438844457>",
+      "roles": {
+        "faction": "673463412495220736",
+        "high": [],
+        "chp": "758658040781602896",
+        "mp": "996703158233473086"
+      },
+      "channels": {
+        "logs": "870079065703452672",
+        "patch_log": "",
+        "transfer_log": ""
+      }
+    },
+    "FAM": {
+      "label": "The Families",
+      "type": "criminal",
+      "discord_id": "673456449761837070",
+      "emoji_id": "<:FAM:1499075519310725170>",
+      "roles": {
+        "faction": "967388937624649728",
+        "high": [],
+        "chp": "",
+        "mp": "996703484005077043"
+      },
+      "channels": {
+        "logs": "939607882700296212",
+        "patch_log": "",
+        "transfer_log": ""
+      }
+    },
+    "MG": {
+      "label": "Marabunta Grande",
+      "type": "criminal",
+      "discord_id": "673456195264053258",
+      "emoji_id": "<:MG13:1499075435009675426>",
+      "roles": {
+        "faction": "992196988554706966",
+        "high": [],
+        "chp": "",
+        "mp": "996703668332134451"
+      },
+      "channels": {
+        "logs": "939807380202459186",
+        "patch_log": "",
+        "transfer_log": ""
+      }
+    },
+    "LSV": {
+      "label": "Los Santos Vagos",
+      "type": "criminal",
+      "discord_id": "673456382149918722",
+      "emoji_id": "<:LSV:1499075458124480664>",
+      "roles": {
+        "faction": "971132751220723723",
+        "high": [],
+        "chp": "",
+        "mp": "996703666620874772"
+      },
+      "channels": {
+        "logs": "939803050112057354",
+        "patch_log": "",
+        "transfer_log": ""
+      }
+    },
+    "ESB": {
+      "label": "East Side Ballas",
+      "type": "criminal",
+      "discord_id": "673456418107686912",
+      "emoji_id": "<:ESB:1499075481566449694>",
+      "roles": {
+        "faction": "1024016174243127358",
+        "high": [],
+        "chp": "",
+        "mp": "996703667795283998"
+      },
+      "channels": {
+        "logs": "939606621192073306",
+        "patch_log": "",
+        "transfer_log": ""
+      }
+    },
+    "BSG": {
+      "label": "Bloods Street Gang",
+      "type": "criminal",
+      "discord_id": "673456143367929878",
+      "emoji_id": "<:BSG:1499075500365320232>",
+      "roles": {
+        "faction": "914539583440556072",
+        "high": [],
+        "chp": "",
+        "mp": "996703673361125438"
+      },
+      "channels": {
+        "logs": "879355752744091738",
+        "patch_log": "",
+        "transfer_log": ""
+      }
+    },
+    "EMS": {
+      "label": "Emergency Medical Services",
+      "type": "government",
+      "discord_id": "673456105309077525",
+      "emoji_id": "<:EMS:1499073504396443728>",
+      "roles": {
+        "faction": "673463454190796810",
+        "high": [],
+        "chp": "673463212355878943",
+        "mp": "996703152369827881"
+      },
+      "channels": {
+        "logs": "818199972071735326",
+        "patch_log": "",
+        "transfer_log": ""
+      }
+    },
+    "TEST_SERVER": {
+      "label": "Test Server",
+      "type": "criminal",
+      "discord_id": "1405927487095181322",
+      "emoji_id": "TEST_SERVER",
+      "roles": {
+        "faction": "",
+        "high": [],
+        "chp": "",
+        "mp": ""
+      },
+      "channels": {
+        "logs": "",
+        "patch_log": "",
+        "transfer_log": ""
+      }
+    },
+    "CHP_SERVER": {
+      "label": "Emergency State Server",
+      "type": "government",
+      "discord_id": "673456522294198282",
+      "emoji_id": "CHP",
+      "roles": {
+        "faction": "",
+        "high": [],
+        "chp": "",
+        "mp": ""
+      },
+      "channels": {
+        "logs": "870077474665545778",
+        "patch_log": "",
+        "transfer_log": ""
+      }
+    },
+    "MP_SERVER": {
+      "label": "Event Server",
+      "type": "criminal",
+      "discord_id": "767817158867681301",
+      "emoji_id": "MP",
+      "roles": {
+        "faction": "",
+        "high": [],
+        "chp": "",
+        "mp": ""
+      },
+      "channels": {
+        "logs": "874329731292622848",
+        "patch_log": "",
+        "transfer_log": ""
+      }
+    }
+  },
+  "detectives": {
+    "DD": {
+      "discord_id": "956232563733692436",
+      "high_role_id": "956232563771465821",
+      "name_logs_id": "1503070013723115540",
+      "patch_log_channel": "1409907963832827995"
+    },
+    "DB": {
+      "discord_id": "956223490388807710",
+      "high_role_id": "956223490439122967",
+      "name_logs_id": "1503069180277293056",
+      "patch_log_channel": "1470923173716557978"
+    },
+    "CID": {
+      "discord_id": "934137298000416798",
+      "high_role_id": "934191153077702716",
+      "name_logs_id": "1503068304250765484",
+      "patch_log_channel": "934197973003436074"
+    }
+  },
+  "servers": {
+    "check": [
+      "1405927487095181322"
+    ],
+    "admins": [
+      "1316831633466458192"
+    ],
+    "chp": "673456522294198282",
+    "mp": "767817158867681301",
+    "test": "1405927487095181322"
+  },
+  "state_positions": {
+    "FIB": {
+      "branches": [
+        "FNA",
+        "ASD",
+        "ATF",
+        "FPB",
+        "HRT",
+        "OPR",
+        "PRD"
+      ],
+      "positions": [
+        "Inst.",
+        "D. Head",
+        "Head",
+        "St.",
+        "Deputy Director",
+        "Director"
+      ]
+    },
+    "LSSD": {
+      "branches": [
+        "IAG",
+        "RU",
+        "SR",
+        "SPD",
+        "CRU",
+        "SA"
+      ],
+      "positions": [
+        "D. Head",
+        "Head",
+        "Inst.",
+        "Deputy Sheriff",
+        "Sheriff"
+      ]
+    },
+    "LSPD": {
+      "branches": [
+        "IAD",
+        "PAI",
+        "SWAT",
+        "CPD",
+        "PAD",
+        "PA",
+        "GATE"
+      ],
+      "positions": [
+        "St",
+        "Inst",
+        "D. Head",
+        "Head",
+        "Deputy Chief",
+        "Chief"
+      ]
+    },
+    "Government": {
+      "branches": [
+        "CSD",
+        "ATD",
+        "SRT"
+      ],
+      "positions": [
+        "D. Head",
+        "Head",
+        "Deputy Director",
+        "Director",
+        "Inst."
+      ]
+    },
+    "ARMY": {
+      "branches": [
+        "MP",
+        "SSD",
+        "DF",
+        "MA",
+        "A",
+        "USAF"
+      ],
+      "positions": [
+        "S.",
+        "Inst.",
+        "H.Inst.",
+        "D.Com.",
+        "Com.",
+        "Commandant",
+        "Adv. Gen.",
+        "Cur.",
+        "L. Gen.",
+        "General"
+      ]
+    },
+    "SASPA": {
+      "branches": [
+        "FAS",
+        "HRD",
+        "PCD",
+        "PA",
+        "IAG",
+        "MED"
+      ],
+      "positions": [
+        "Inst",
+        "D. Head",
+        "Head",
+        "St",
+        "Deputy Warden",
+        "Warden"
+      ]
+    }
+  },
+  "system_roles": {
+    "gov_access_patch_request": [
+      "871764495884763177",
+      "674318969116819487",
+      "835224536794267690"
+    ],
+    "detective_patch_access": [
+      "674313754472742912",
+      "676700617716269076",
+      "673463287215816704"
+    ],
+    "gov_delete_patch": [
+      "673463285173190656"
+    ],
+    "detectives_high": [
+      "934191153077702716",
+      "956223490439122967",
+      "956232563771465821"
+    ],
+    "capters": [
+      "1061625450717257728",
+      "751047567705505878",
+      "1074648817560981575",
+      "1079018759366381568",
+      "873270313905979462",
+      "914547951563591720",
+      "971118463114424390",
+      "673463953917214740",
+      "673463528283439134",
+      "1009455578713686056"
+    ],
+    "gov_nickname_requests": [
+      "673463287215816704",
+      "674313754472742912",
+      "676700617716269076"
+    ]
+  },
+  "system_channels": {
+    "gov_patch_log": "1380141440944046140",
+    "transfer_log": "1499391643076530278",
+    "punishment_admins": "1316831634376364056",
+    "gov_delete_patch": "1104850449527472209",
+    "chp_invite": "673463233729921035",
+    "gov_nickname_requests": "1503078502801477752",
+    "admin_nickname_logs": "1503330726643236874"
+  }
+}

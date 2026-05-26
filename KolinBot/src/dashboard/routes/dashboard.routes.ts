@@ -13,7 +13,7 @@ async function getUserPermissions(req: any): Promise<string[]> {
   return PermissionsRepository.getUserPermissions(userId);
 }
 
-router.get('/', ensureAuthenticatedAndAuthorized, async (req, res) => {
+router.get('/', ensureAuthenticatedAndAuthorized, requirePermission('view_dashboard'), async (req, res) => {
   try {
     const stats = StatsRepository.getStats();
     const bindings = bindingsManager.getAllBindings();

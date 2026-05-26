@@ -66,12 +66,26 @@ const AdminLogsModule = (function () {
   }
 
   function formatDisplayTime(timestamp) {
-    return Utils.formatDate(timestamp);
+    if (!timestamp) return "—";
+    try {
+      const match = timestamp.match(
+        /(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/,
+      );
+      if (match) {
+        const [, year, month, day, hours, minutes, seconds] = match;
+        return `${day}.${month}.${year} ${hours}:${minutes}:${seconds}`;
+      }
+      return timestamp;
+    } catch (e) {
+      return timestamp;
+    }
   }
 
   function truncateText(text, maxLength) {
     if (!text) return "";
-    return text.length <= maxLength ? text : text.substring(0, maxLength) + "...";
+    return text.length <= maxLength
+      ? text
+      : text.substring(0, maxLength) + "...";
   }
 
   async function fetchChannelName(channelId) {
@@ -193,7 +207,9 @@ const AdminLogsModule = (function () {
   }
 
   async function openLogModalWithEntry(entry) {
-    openLogModal('<div style="text-align: center; padding: 40px;">Загрузка деталей...</div>');
+    openLogModal(
+      '<div style="text-align: center; padding: 40px;">Загрузка деталей...</div>',
+    );
     try {
       const enrichedEntry = await enrichEntryWithNames(entry);
       const content = generateModalContentSync(enrichedEntry);
@@ -203,7 +219,8 @@ const AdminLogsModule = (function () {
       console.error(error);
       const container = document.getElementById("logDetailContent");
       if (container) {
-        container.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--log-error);">Ошибка загрузки деталей</div>';
+        container.innerHTML =
+          '<div style="text-align: center; padding: 40px; color: var(--log-error);">Ошибка загрузки деталей</div>';
       }
     }
   }
@@ -307,7 +324,8 @@ const AdminLogsModule = (function () {
       const queryTime = Math.round(endTime - startTime);
 
       if (!data.entries || data.entries.length === 0) {
-        body.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 50px; color: var(--log-text-dim);">Ничего не найдено</td></tr>';
+        body.innerHTML =
+          '<tr><td colspan="4" style="text-align: center; padding: 50px; color: var(--log-text-dim);">Ничего не найдено</td></tr>';
         document.getElementById("pagination").style.display = "none";
         document.getElementById("searchStats").style.display = "none";
         isLoading = false;
@@ -323,7 +341,10 @@ const AdminLogsModule = (function () {
           const eventClass = getEventClass(entry.event);
           const displayTime = formatDisplayTime(entry.timestamp);
           const displayId = entry.userId || "Система";
-          const displayDesc = truncateText(entry.description || entry.event || "Нет описания", 120);
+          const displayDesc = truncateText(
+            entry.description || entry.event || "Нет описания",
+            120,
+          );
 
           return `
             <tr class="row-clickable" data-log-index="${index}" tabindex="0">
@@ -348,16 +369,19 @@ const AdminLogsModule = (function () {
       if (paginationDiv) {
         if (totalPages > 1) {
           paginationDiv.style.display = "flex";
-          document.getElementById("pageInfo").innerHTML = `Страница ${currentPage} из ${totalPages} <span style="color: var(--log-text-dim);">(всего ${totalEntries} записей)</span>`;
+          document.getElementById("pageInfo").innerHTML =
+            `Страница ${currentPage} из ${totalPages} <span style="color: var(--log-text-dim);">(всего ${totalEntries} записей)</span>`;
           document.getElementById("prevPageBtn").disabled = currentPage === 1;
-          document.getElementById("nextPageBtn").disabled = currentPage >= totalPages;
+          document.getElementById("nextPageBtn").disabled =
+            currentPage >= totalPages;
         } else {
           paginationDiv.style.display = "none";
         }
       }
     } catch (e) {
       console.error(e);
-      body.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 50px; color: #ff5f5f;">Ошибка при выполнении поиска</td></tr>';
+      body.innerHTML =
+        '<tr><td colspan="4" style="text-align: center; padding: 50px; color: #ff5f5f;">Ошибка при выполнении поиска</td></tr>';
       document.getElementById("searchStats").style.display = "none";
       document.getElementById("pagination").style.display = "none";
     } finally {
@@ -376,7 +400,8 @@ const AdminLogsModule = (function () {
 
     const container = document.getElementById("categorySelectContainer");
     if (container) {
-      container.querySelector(".custom-select-text").textContent = "Все категории";
+      container.querySelector(".custom-select-text").textContent =
+        "Все категории";
       container.querySelectorAll(".custom-option").forEach((opt, idx) => {
         opt.classList.toggle("selected", idx === 0);
       });
