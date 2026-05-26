@@ -11,6 +11,8 @@ import {PatchesRepository, StatePatch} from "../../databases";
 import {getSystemChannel, getSystemRole} from '../../config/settings-loader';
 import {ComponentType} from "discord-api-types/v10";
 
+export const factions = ['GOV'];
+
 export const data = new SlashCommandBuilder()
     .setName("удалить-нашивку")
     .setDescription('Удаляет нашивку пользователя с уведомлением в личные сообщения')

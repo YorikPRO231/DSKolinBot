@@ -171,3 +171,59 @@ export function getStateFractionRoles(): string[] {
 export function getAdminLogServerIds(): string[] {
   return loadSettings().servers.admins;
 }
+
+export type FactionKey = keyof Settings['factions'] | 'CHP' | 'MP' | 'admins' | 'check' | 'all' | 'detectives' | 'state' | 'criminal';
+
+export function getDiscordIdsByFactionKey(keys: FactionKey[]): string[] {
+  const config = loadSettings()
+  const ids: Set<string> = new Set()
+
+  for (const key of keys) {
+    if (key === 'all') {
+      getAllServerIds().forEach(id => ids.add(id));
+      break;
+    }
+    
+    if (key === 'state') {
+      getStateServerIds().forEach(id => ids.add(id));
+      continue;
+    }
+    
+    if (key === 'criminal') {
+      getCrimeServerIds().forEach(id => ids.add(id));
+      continue;
+    }
+    
+    if (key === 'detectives') {
+      Object.values(config.detectives).forEach(d => ids.add(d.discord_id));
+      continue;
+    }
+    
+    if (key === 'admins') {
+      config.servers.admins.forEach(id => ids.add(id));
+      continue;
+    }
+    
+    if (key === 'check') {
+      config.servers.check.forEach(id => ids.add(id));
+      continue;
+    }
+    
+    if (key === 'CHP') {
+      ids.add(config.servers.chp);
+      continue;
+    }
+    
+    if (key === 'MP') {
+      ids.add(config.servers.mp);
+      continue;
+    }
+    
+    const faction = config.factions[key];
+    if (faction?.discord_id) {
+      ids.add(faction.discord_id);
+    }
+  }
+
+  return Array.from(ids)
+}

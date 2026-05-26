@@ -78,6 +78,9 @@ function generateCompiledPositions(
   return [...new Set(compiled)].sort();
 }
 
+export const factions = ['LSPD', 'LSSD', 'FIB', 'ARMY', 'SASPA', 'GOV'];
+
+
 export function getCompiledPositions(faction: string): string[] {
   const positions = getStatePositions();
   const info = positions[faction];

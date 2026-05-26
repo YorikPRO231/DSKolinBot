@@ -2,6 +2,9 @@ import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBui
 import { PatchesRepository } from '../../databases/index';
 import type { StatePatch } from '../../databases';
 
+export const factions = ['LSPD', 'LSSD', 'FIB', 'ARMY', 'SASPA', 'GOV'];
+
+
 export const data = new SlashCommandBuilder()
     .setName("моя-нашивка")
     .setDescription('Просмотр всех ваших нашивок');

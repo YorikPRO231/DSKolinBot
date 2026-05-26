@@ -9,6 +9,7 @@ import {
   MessageFlags
 } from "discord.js";
 
+export const factions = ['check']
 export const data = new SlashCommandBuilder()
   .setName("запрос-мп")
   .setDescription("Запрос на выдачу для мероприятия");

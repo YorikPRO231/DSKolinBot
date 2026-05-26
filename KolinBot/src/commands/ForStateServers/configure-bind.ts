@@ -1,4 +1,3 @@
-// src/commands/ForAllServers/configureBind.ts
 import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,

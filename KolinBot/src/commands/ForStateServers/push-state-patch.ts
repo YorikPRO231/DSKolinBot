@@ -3,6 +3,9 @@ import { PatchesRepository } from "../../databases/index";
 import {generatePatch, getFaction} from "../../utils/utilsState";
 import { getStateHighRoles, getSystemChannel, getSystemRole, getDetectives } from "../../config/settings-loader";
 
+export const factions = ['LSPD', 'LSSD', 'FIB', 'ARMY', 'SASPA', 'GOV'];
+
+
 export const data = new SlashCommandBuilder()
   .setName("новая-нашивка")
   .setDescription("Выдать новую нашивку игроку")

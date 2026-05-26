@@ -3,6 +3,8 @@ import { PatchesRepository } from "../../databases/index";
 import type {StatePatch, PatchHistory} from "../../databases";
 import { getSystemRole, getDetectives } from '../../config/settings-loader';
 
+export const factions = ['GOV'];
+
 export const data = new SlashCommandBuilder()
     .setName("поиск-нашивки")
     .setDescription("Поиск информации о нашивке по паспорту или содержимому")

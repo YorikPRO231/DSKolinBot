@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 import {getAllFiles} from './utils/fileUtils';
-import {loadSettings, getStateServerIds, getCrimeServerIds, getAllServerIds} from './config/settings-loader';
+import {loadSettings, getStateServerIds, getCrimeServerIds, getAllServerIds, getDiscordIdsByFactionKey} from './config/settings-loader';
 import {createDashboardApp} from './dashboard/app';
 import {setDiscordClient as setAuthDiscordClient} from './dashboard/middleware/auth.middleware';
 import {setDiscordClient as setServiceDiscordClient} from './dashboard/services/discord.service';
@@ -39,21 +39,18 @@ const client = new Client({
 
 client.commands = new Collection();
 
-function shouldLoadCommandForServer(commandPath: string, serverId?: string): boolean {
+function shouldLoadCommandForServer(commandPath: string, serverId: string, commandData?: any): boolean {
     if (!serverId) return false;
-    
-    const config = loadSettings();
-    
-    const normalizedPath = commandPath.replace(/\\/g, '/');
-    const CHP = [config.servers.chp];
-    const detectivesId = Object.values(config.detectives).map(info => info.discord_id);
 
+    const config = loadSettings();
+    const normalizedPath = commandPath.replace(/\\/g, '/');
+    
     const folderToEnvMap: Record<string, string[] | undefined> = {
         'SpecialForHennesy': config.servers.check,
         'AdminsCommands': config.servers.admins,
-        'ForServer': CHP,
+        'ForServer': [config.servers.chp],
         'ForStateServers': [...getStateServerIds(), ...Object.values(config.detectives).map(i => i.discord_id)],
-        'DetectiveCommands': detectivesId,
+        'DetectiveCommands': Object.values(config.detectives).map(info => info.discord_id),
         'CrimeCommands': [...getCrimeServerIds()]
     };
 
@@ -68,7 +65,7 @@ function shouldLoadCommandForServer(commandPath: string, serverId?: string): boo
         }
     }
 
-    return false; 
+    return false;
 }
 
 async function loadCommands() {
@@ -87,6 +84,8 @@ async function loadCommands() {
         try {
             const command = await import(filePath);
             
+            const commandFactions = command.factions;
+            
             if (command.data && command.execute) {
                 const commandName = command.data.name;
                 if (client.commands.has(commandName)) {
@@ -96,12 +95,14 @@ async function loadCommands() {
                 
                 client.commands.set(commandName, {
                     ...command,
-                    filePath: filePath  
+                    filePath: filePath,
+                    factions: commandFactions
                 });
                 
                 commands.push({
                     ...command.data.toJSON(),
-                    _filePath: filePath  
+                    _filePath: filePath,
+                    _factions: commandFactions 
                 });
                 
             } else if (Array.isArray(command.data)) {
@@ -110,12 +111,14 @@ async function loadCommands() {
                         client.commands.set(cmd.name, {
                             ...command,
                             data: cmd,
-                            filePath: filePath  
+                            filePath: filePath,
+                            factions: commandFactions
                         });
                         
                         commands.push({
                             ...cmd.toJSON(),
-                            _filePath: filePath
+                            _filePath: filePath,
+                            _factions: commandFactions
                         });
                     }
                 }
@@ -153,11 +156,19 @@ async function registerGuildCommands(commands: any[]) {
             const guildCommands = commands
                 .filter(cmd => {
                     const filePath = (cmd as any)._filePath;
+                    const cmdFactions = (cmd as any)._factions;
+                    
                     if (!filePath) return false;
+                    
+                    if (cmdFactions && Array.isArray(cmdFactions) && cmdFactions.length > 0) {
+                        const allowedIds = getDiscordIdsByFactionKey(cmdFactions);
+                        return allowedIds.includes(guildId);
+                    }
+                    
                     return shouldLoadCommandForServer(filePath, guildId);
                 })
                 .map(cmd => {
-                    const { _filePath, ...cleanCmd } = cmd;
+                    const { _filePath, _factions, ...cleanCmd } = cmd;
                     return cleanCmd;
                 });
             
@@ -175,7 +186,7 @@ async function registerGuildCommands(commands: any[]) {
             
         } catch (error) {
             const ser = (error + '');
-            if (ser.includes('You are not authorized to perform this action on this application') || ser.includes('Missing access')) {
+            if (ser.includes('You are not authorized') || ser.includes('Missing access')) {
                 console.error(`Нет доступа к ${guildId} ${ser}`);
             } else {
                 console.error(`❌ Ошибка регистрации на сервере ${guildId}:`, error);

@@ -1,6 +1,7 @@
 import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder} from 'discord.js';
 import { PatchesRepository } from '../../databases/index';
 
+export const factions = ['GOV'];
 
 export const data = new SlashCommandBuilder()
     .setName("поиск-discordid")

@@ -6,9 +6,28 @@ import {
     GuildMember,
     MessageFlags,
     SlashCommandBuilder,
+    TextChannel,
 } from "discord.js";
-import {getFactionByDiscordId, getStatePositions, StatePositions} from "../../config/settings-loader";
-import {getCompiledPositions} from "./patch-request";
+import {getStatePositions} from "../../config/settings-loader";
+
+
+const SPECIAL_BRANCH_LEADERSHIP: Record<string, Record<string, string>> = {
+    'fib': {
+        'fna': 'ASD'
+    },
+    'lssd': {
+        'sa': 'RU'
+    },
+    'lspd': {
+        'pa': 'PAI'
+    },
+    'saspa': {
+        'pa': 'HRD'
+    },
+    'army': {
+        'a': 'MA'
+    }
+};
 
 function getFactionFromName(guildName?: string): string | null {
     if (!guildName) return null;
@@ -25,112 +44,292 @@ function getFactionFromName(guildName?: string): string | null {
     return null;
 }
 
+function getBranchesForFaction(faction: string): string[] {
+    const statePositions = getStatePositions();
+    const factionData = statePositions[faction];
+    
+    if (!factionData) return [];
+    
+    return factionData.branches;
+}
+
+function hasChiefRole(gm: GuildMember, branch: string): boolean {
+    const branchLower = branch.toLowerCase();
+    
+    for (const role of gm.roles.cache.values()) {
+        const name = role.name.toLowerCase();
+        if (!name.includes(branchLower)) continue;
+        if (name.includes('куратор')) continue;
+        if (name.includes('командир') && !name.includes('зам.')) continue;
+        if (name.includes('начальник') || name.includes('head') || name.includes('командир')) return true;
+    }
+    
+    return false;
+}
+
+function hasDeputyRole(gm: GuildMember, branch: string): boolean {
+    const branchLower = branch.toLowerCase();
+    
+    for (const role of gm.roles.cache.values()) {
+        const name = role.name.toLowerCase();
+        if (!name.includes(branchLower)) continue;
+        if (name.includes('начальник') || name.includes('head') || name.includes('куратор') || name.includes('командир')) continue;
+        if (name.includes('зам.') || name.includes('deputy') || name.includes('заместитель') || name.includes('d.head') || name.includes('d. head') || name.includes('dc-') || name.includes('c-')) return true;
+    }
+    
+    return false;
+}
+
+function findCuratorRoles(gm: GuildMember, branch: string): string[] {
+    const roles = gm.guild.roles.cache;
+    const branchLower = branch.toLowerCase();
+    const result: string[] = [];
+    
+    for (const [id, role] of roles) {
+        const name = role.name.toLowerCase();
+        if (!name.includes(branchLower)) continue;
+        if (!name.includes('куратор')) continue;
+        result.push(id);
+    }
+    
+    return result;
+}
+
+function findChiefRoles(gm: GuildMember, branch: string): string[] {
+    const roles = gm.guild.roles.cache;
+    const branchLower = branch.toLowerCase();
+    const result: string[] = [];
+    
+    for (const [id, role] of roles) {
+        const name = role.name.toLowerCase();
+        if (!name.includes(branchLower)) continue;
+        if (name.includes('куратор')) continue;
+        if (name.includes('командир') && !name.includes('зам.')) continue;
+        if (!name.includes('начальник') && !name.includes('head') && !name.includes('командир')) continue;
+        result.push(id);
+    }
+    
+    return result;
+}
+
+function findAllLeadershipRoles(gm: GuildMember, branch: string): string[] {
+    const roles = gm.guild.roles.cache;
+    const branchLower = branch.toLowerCase();
+    const result: string[] = [];
+    
+    for (const [id, role] of roles) {
+        const name = role.name.toLowerCase();
+        if (!name.includes(branchLower)) continue;
+        if (name.includes('куратор')) continue;
+        if (
+            name.includes('начальник') || 
+            name.includes('head') || 
+            name.includes('командир') ||
+            name.includes('зам.') || 
+            name.includes('deputy') || 
+            name.includes('заместитель') || 
+            name.includes('d.head') || 
+            name.includes('d. head') ||
+            name.includes('dc-') ||
+            name.includes('c-')
+        ) {
+            result.push(id);
+        }
+    }
+    
+    return result;
+}
+
+function findSpecialLeadershipRoles(gm: GuildMember, specialDepartment: string): string[] {
+    const roles = gm.guild.roles.cache;
+    const deptLower = specialDepartment.toLowerCase();
+    const result: string[] = [];
+    
+    for (const [id, role] of roles) {
+        const name = role.name.toLowerCase();
+        if (!name.includes(deptLower)) continue;
+        result.push(id);
+    }
+    
+    return result;
+}
 
 export const data = new SlashCommandBuilder()
     .setName("увольнение")
-    .setDescription(
-        "Оформить заявление на увольнение",
-    )
-    .addIntegerOption((opt) =>
-        opt
-            .setName("паспорт")
-            .setDescription("Номер паспорта игрока (от 1 до 999999)")
-            .setRequired(true),
-    )
-    .addStringOption((opt) =>
-        opt
-            .setName("отдел")
-            .setDescription("Ваш отдел или должность (Пример: FPB, D. Head FPB)")
+    .setDescription("Оформить заявление на увольнение")
+    .addIntegerOption(opt =>
+        opt.setName("паспорт")
+            .setDescription("Номер паспорта")
             .setRequired(true)
-            .setAutocomplete(true),
     )
-    .addStringOption((opt) =>
-        opt
-            .setName("ник")
-            .setDescription('Ваш ник в формате "Имя Фамилия"')
-            .setRequired(true),
+    .addStringOption(opt =>
+        opt.setName("причина")
+            .setDescription("Причина увольнения")
+            .setRequired(true)
     )
-    .addStringOption(opt => opt.setName('причина').setDescription('Причина увольнения').setRequired(true))
-    .addAttachmentOption(opt => opt.setName('инвентарь').setDescription('Скриншот инвентаря с HUD\'ом'));
-
-export async function autocomplete(interaction: AutocompleteInteraction) {
-    const focusedValue = interaction.options.getFocused();
-    const faction = getFactionFromName(interaction.guild?.name);
-
-    if (!faction) {
-        await interaction.respond([]);
-        return;
-    }
-
-    const choices = getCompiledPositions(faction);
-    const filtered = choices.filter((choice) =>
-        choice.toLowerCase().includes(focusedValue.toLowerCase()),
+    .addStringOption(opt =>
+        opt.setName("отдел")
+            .setDescription("Ваш отдел")
+            .setRequired(true)
+            .setAutocomplete(true)
+    )
+    .addAttachmentOption(opt =>
+        opt.setName("инвентарь")
+            .setDescription("Скриншот инвентаря")
+            .setRequired(true)
+    )
+    .addAttachmentOption(opt =>
+        opt.setName("документы")
+            .setDescription("Скриншот ваших документов")
+            .setRequired(true)
     );
 
-    await interaction.respond(
-        filtered.slice(0, 25).map((choice) => ({name: choice, value: choice})),
-    );
-}
-
-function findRole(gm: GuildMember, fp: string, branch: string) {
-    return gm.guild.roles.cache.filter(role =>
-        role.name.toLowerCase().includes(fp.toLowerCase()) && role.name.toLowerCase().includes(branch.toLowerCase()))
-        .map(r => r.id);
-}
-
-function findBranchName(position: string, data: StatePositions) {
-    for (const branch of data.branches) {
-        if (position.toLowerCase().includes(branch.toLowerCase())) {
-            return branch;
-        }
-    }
-}
-
-function findRoles(gm: GuildMember, position: string, data: StatePositions) {
-    const branch = findBranchName(position, data);
-    if (position.startsWith('Deputy') || position.startsWith('L. Gen')) {
-        return [data.leader_role_id];
-    }
-    if (!branch) {
-        return [] as string[];
-    }
-    if (position.startsWith('Head')) {
-        return findRole(gm, `Куратор`, branch)
-    }
-    if (position.startsWith('D. Head')) {
-        return [...findRole(gm, `Начальник`, branch), ...findRole(gm, `Куратор`, branch)]
-    }
-    return [...findRole(gm, `Зам. Начальника`, branch), ...findRole(gm, `Начальник`, branch)]
+export async function autocomplete(inter: AutocompleteInteraction) {
+    const focusedValue = inter.options.getFocused();
+    const guildName = inter.guild?.name;
+    
+    if (!guildName) return inter.respond([]);
+    
+    const faction = getFactionFromName(guildName);
+    if (!faction) return inter.respond([]);
+    
+    const branches = getBranchesForFaction(faction);
+    
+    const filtered = branches
+        .filter(branch => branch.toLowerCase().includes(focusedValue.toLowerCase()))
+        .slice(0, 25)
+        .map(branch => ({ name: branch, value: branch }));
+    
+    await inter.respond(filtered);
 }
 
 export async function execute(inter: ChatInputCommandInteraction) {
-    const gm = inter.guild?.members.cache.get(inter.user.id);
-    if (!gm || !inter.guild) {
+    if (!inter.guild) {
         return inter.reply({
-            content: 'Не удалось определить пользователя сервера. Попробуйте позже.',
+            content: 'Команда доступна только на сервере.',
             flags: MessageFlags.Ephemeral
-        })
+        });
     }
-    const attachment = inter.options.getAttachment('инвентарь', true);
-    if (!attachment.contentType?.startsWith('image/')) {
-        return inter.reply({content: 'Требуется фотография инвентаря.', flags: MessageFlags.Ephemeral})
+
+    const gm = inter.guild.members.cache.get(inter.user.id);
+    if (!gm) {
+        return inter.reply({
+            content: 'Не удалось найти участника.',
+            flags: MessageFlags.Ephemeral
+        });
     }
-    await inter.deferReply();
-    const nickname = inter.options.getString('ник', true);
-    const pos = inter.options.getString('отдел', true);
+
+    const displayName = gm.displayName;
     const passport = inter.options.getInteger('паспорт', true);
-    const factionData = getFactionByDiscordId(inter.guild.id)!;
-    const positionData = getStatePositions()[factionData[0]];
-    const rolesPing = [...new Set(findRoles(gm, pos, positionData).map(r => `<@&${r}>`))].join(' ');
     const reason = inter.options.getString('причина', true);
+    const attachment = inter.options.getAttachment('инвентарь', true);
+    const attachment2 = inter.options.getAttachment('документы', true);
+    const branchInput = inter.options.getString('отдел', true);
+
+    if (!attachment.contentType?.startsWith('image/')) {
+        return inter.reply({
+            content: 'Первое вложение должно быть изображением.',
+            flags: MessageFlags.Ephemeral
+        });
+    }
+
+    if (attachment2 && !attachment2.contentType?.startsWith('image/')) {
+        return inter.reply({
+            content: 'Второе вложение должно быть изображением.',
+            flags: MessageFlags.Ephemeral
+        });
+    }
+
+    const faction = getFactionFromName(inter.guild.name);
+
+    if (!faction) {
+        return inter.reply({
+            content: 'Не удалось определить фракцию из названия сервера.',
+            flags: MessageFlags.Ephemeral
+        });
+    }
+
+    const branches = getBranchesForFaction(faction);
+    const foundBranch = branches.find(b => b.toLowerCase() === branchInput.toLowerCase());
+    
+    if (!foundBranch) {
+        return inter.reply({
+            content: `Отдел "${branchInput}" не найден. Доступные отделы: ${branches.join(', ')}`,
+            flags: MessageFlags.Ephemeral
+        });
+    }
+    
+    const branch = foundBranch;
+
+    await inter.deferReply({ flags: MessageFlags.Ephemeral });
+
+    let leadershipRoles: string[] = [];
+    
+    const factionLower = faction.toLowerCase();
+    const branchLower = branch.toLowerCase();
+    const specialDept = SPECIAL_BRANCH_LEADERSHIP[factionLower]?.[branchLower];
+    
+    if (specialDept) {
+        leadershipRoles = findSpecialLeadershipRoles(gm, specialDept);
+    } else {
+        const isChief = hasChiefRole(gm, branch);
+        const isDeputy = hasDeputyRole(gm, branch);
+        
+        if (isChief) {
+            leadershipRoles = findCuratorRoles(gm, branch);
+        } else if (isDeputy) {
+            leadershipRoles = findChiefRoles(gm, branch);
+        } else {
+            leadershipRoles = findAllLeadershipRoles(gm, branch);
+        }
+    }
+    
+    const uniqueRoles = [...new Set(leadershipRoles)];
+    const roleMentions = uniqueRoles.length > 0 
+        ? uniqueRoles.map(id => `<@&${id}>`).join(' ') 
+        : '';
+
     const embed = new EmbedBuilder()
-        .setTitle('Заявление на увольнение')
-        .setColor(Colors.Gold)
-        .setDescription(`${nickname} [${passport}] подает заявление на увольнение.`)
+        .setColor(Colors.DarkRed)
         .setAuthor({
-            name: `${inter.guild?.name || 'GTA 5 RP State'}`.trim(),
-            iconURL: inter.guild?.iconURL() || undefined
+            name: inter.user.displayName || inter.user.username,
+            iconURL: inter.user.displayAvatarURL()
         })
-        .setImage(attachment.url).addFields({name: 'Причина увольнения', value: reason});
-    return inter.editReply({content: rolesPing, embeds: [embed]});
+        .setTitle('Заявление на увольнение')
+        .setDescription(
+            `**${displayName}** подал заявление на увольнение из фракции **${faction}**.\n\n` +
+            `>>> **Паспорт:** ${passport}\n` +
+            `**Причина:** ${reason}`
+        )
+        .setImage(attachment.url)
+        .setFooter({
+            text: inter.guild.name,
+            iconURL: inter.guild.iconURL() || undefined
+        })
+        .setTimestamp();
+
+    const channel = inter.channel as TextChannel;
+    
+    const embeds: EmbedBuilder[] = [embed];
+    
+    if (attachment2) {
+        const embed2 = new EmbedBuilder()
+            .setImage(attachment2.url);
+        embeds.push(embed2);
+    }
+    
+    if (roleMentions) {
+        await channel.send({
+            content: roleMentions,
+            embeds: embeds
+        });
+    } else {
+        await channel.send({
+            embeds: embeds
+        });
+    }
+
+    await inter.editReply({
+        content: 'Заявление на увольнение успешно отправлено.'
+    });
 }
