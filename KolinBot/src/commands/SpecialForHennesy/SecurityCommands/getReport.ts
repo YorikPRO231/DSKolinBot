@@ -22,7 +22,7 @@ export const data = new SlashCommandBuilder()
             .setRequired(false));
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-    const securityLevel = AdminsRepository.getSecurityAccess(interaction.user.id);
+    const securityLevel = await AdminsRepository.getSecurityAccess(interaction.user.id);
     if (securityLevel !== 'yes') {
         return interaction.reply({ 
             content: 'У вас нет доступа к этой команде!', 
@@ -35,7 +35,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const limit = 5;
     
     try {
-        const { reports, total } = InspectionsRepository.getInspectionReportsByPassportPaginated(passport, limit, (page - 1) * limit);
+        const { reports, total } = await InspectionsRepository.getInspectionReportsByPassportPaginated(passport, limit, (page - 1) * limit);
         
         if (reports.length === 0) {
             return interaction.reply({
@@ -110,7 +110,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                 newPage = page + 1;
             }
             
-            const { reports: newReports } = InspectionsRepository.getInspectionReportsByPassportPaginated(passport, limit, (newPage - 1) * limit);
+            const { reports: newReports } = await InspectionsRepository.getInspectionReportsByPassportPaginated(passport, limit, (newPage - 1) * limit);
             
             const newEmbed = new EmbedBuilder()
                 .setColor(0x0099FF)

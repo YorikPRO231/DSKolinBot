@@ -15,7 +15,7 @@ async function getUserPermissions(req: any): Promise<string[]> {
 
 router.get('/', ensureAuthenticatedAndAuthorized, requirePermission('view_dashboard'), async (req, res) => {
   try {
-    const stats = StatsRepository.getStats();
+    const stats = await StatsRepository.getStats();
     const bindings = bindingsManager.getAllBindings();
     const permissions = await getUserPermissions(req);
     

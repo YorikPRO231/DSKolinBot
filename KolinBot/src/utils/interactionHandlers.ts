@@ -1,7 +1,7 @@
 import {GuildMember, MessageFlags, StringSelectMenuInteraction} from "discord.js";
 import {handleDenyModal, handleTransferButtons,} from "./transferUtils";
 import {handleButton, handleModal} from "./detectiveUtils";
-import {handleAdminRegistration, handleNickKick, handleTwinkKick} from "./adminUtils";
+import {handleNickKick, handleTwinkKick} from "./adminUtils";
 
 export async function handleSlashCommand(interaction: any) {
   const command = interaction.client.commands.get(interaction.commandName);
@@ -34,7 +34,6 @@ export async function handleSelectMenuInteraction(interaction: StringSelectMenuI
 
 export async function handleModalInteraction(interaction: any) {
   const member = interaction.member as GuildMember;
-  if (interaction.customId === "admin_registration") return handleAdminRegistration(interaction);
   if (interaction.customId.startsWith("dnames_")) return handleModal(interaction, member);
   if (interaction.customId.startsWith('tr_deny')) return handleDenyModal(interaction, member);
 }

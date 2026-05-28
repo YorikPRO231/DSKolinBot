@@ -32,7 +32,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
 
     const discordId = inter.options.getString('discord-id', true);
     
-    const patches = PatchesRepository.getPatchByDiscord(discordId.toString());
+    const patches = await PatchesRepository.getPatchByDiscord(discordId.toString());
     
     if (patches.length === 0) {
         await inter.reply({

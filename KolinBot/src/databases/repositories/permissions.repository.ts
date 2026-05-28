@@ -1,4 +1,4 @@
-import db from '../sqlite';
+import prisma from '../prisma.service';
 
 export interface Role {
   role_id: string;
@@ -15,7 +15,7 @@ export interface Permission {
 }
 
 export const PermissionsRepository = {
-  initDefaultPermissions() {
+  async initDefaultPermissions(): Promise<void> {
     const defaultPermissions = [
       { key: 'view_dashboard', name: 'Просмотр дашборда', desc: 'Доступ к главной странице' },
       { key: 'manage_forms', name: 'Управление формами', desc: 'Создание и редактирование форм' },
@@ -27,112 +27,252 @@ export const PermissionsRepository = {
       { key: 'manage_roles', name: 'Управление ролями', desc: 'Настройка прав доступа' },
       { key: 'manage_users', name: 'Управление пользователями', desc: 'Выдача прав пользователям' },
       { key: 'view_logs_systeminformer', name: 'Выгрузка System Informer', desc: 'Выгрузка логов System Infromer' },
-      { key: "edit_settings", name: "Управление конфигом бота", desc: "Настройки конфига JSON"}
+      { key: 'edit_settings', name: 'Управление конфигом бота', desc: 'Настройки конфига JSON' },
     ];
-    
-    const stmt = db.prepare(`INSERT OR IGNORE INTO permissions (permission_key, permission_name, description) VALUES (?, ?, ?)`);
+
     for (const p of defaultPermissions) {
-      stmt.run(p.key, p.name, p.desc);
+      await prisma.permission.upsert({
+        where: { permissionKey: p.key },
+        update: {},
+        create: {
+          permissionKey: p.key,
+          permissionName: p.name,
+          description: p.desc,
+        },
+      });
     }
     console.log('Базовые разрешения инициализированы');
   },
 
-  getAllRoles(): Role[] {
-    return db.prepare(`
-      SELECT r.*, GROUP_CONCAT(rp.permission_key) as permissions
-      FROM roles r
-      LEFT JOIN role_permissions rp ON r.role_id = rp.role_id
-      GROUP BY r.role_id
-    `).all() as Role[];
+  async getAllRoles(): Promise<Role[]> {
+    const roles = await prisma.role.findMany({
+      include: {
+        permissions: {
+          include: {
+            permission: true,
+          },
+        },
+      },
+    });
+
+    return roles.map(r => ({
+      role_id: r.roleId,
+      role_name: r.roleName,
+      description: r.description,
+      created_at: r.createdAt.toISOString(),
+      permissions: r.permissions.map(rp => rp.permission.permissionKey).join(','),
+    }));
   },
 
-  getAllPermissions(): Permission[] {
-    return db.prepare(`SELECT * FROM permissions ORDER BY permission_name`).all() as Permission[];
+  async getAllPermissions(): Promise<Permission[]> {
+    const permissions = await prisma.permission.findMany({
+      orderBy: { permissionName: 'asc' },
+    });
+
+    return permissions.map(p => ({
+      permission_key: p.permissionKey,
+      permission_name: p.permissionName,
+      description: p.description,
+    }));
   },
 
-  addRole(roleId: string, roleName: string, description?: string) {
-    return db.prepare(`INSERT OR REPLACE INTO roles (role_id, role_name, description) VALUES (?, ?, ?)`)
-      .run(roleId, roleName, description || null);
+  async addRole(roleId: string, roleName: string, description?: string) {
+    return prisma.role.upsert({
+      where: { roleId },
+      update: { roleName, description: description || null },
+      create: { roleId, roleName, description: description || null },
+    });
   },
 
-  removeRole(roleId: string) {
-    return db.prepare(`DELETE FROM roles WHERE role_id = ?`).run(roleId);
+  async removeRole(roleId: string) {
+    return prisma.role.delete({
+      where: { roleId },
+    });
   },
 
-  grantPermissionToRole(roleId: string, permissionKey: string, grantedBy: string) {
-    return db.prepare(`INSERT OR REPLACE INTO role_permissions (role_id, permission_key, granted_by) VALUES (?, ?, ?)`)
-      .run(roleId, permissionKey, grantedBy);
+  async grantPermissionToRole(roleId: string, permissionKey: string, grantedBy: string) {
+    return prisma.rolePermission.upsert({
+      where: {
+        roleId_permissionKey: {
+          roleId,
+          permissionKey,
+        },
+      },
+      update: { grantedBy },
+      create: { roleId, permissionKey, grantedBy },
+    });
   },
 
-  revokePermissionFromRole(roleId: string, permissionKey: string) {
-    return db.prepare(`DELETE FROM role_permissions WHERE role_id = ? AND permission_key = ?`)
-      .run(roleId, permissionKey);
+  async revokePermissionFromRole(roleId: string, permissionKey: string) {
+    return prisma.rolePermission.delete({
+      where: {
+        roleId_permissionKey: {
+          roleId,
+          permissionKey,
+        },
+      },
+    });
   },
 
-  addUserToRole(userId: string, roleId: string, assignedBy?: string) {
-    return db.prepare(`INSERT OR IGNORE INTO user_roles (user_id, role_id, assigned_by) VALUES (?, ?, ?)`)
-      .run(userId, roleId, assignedBy || null);
+  async addUserToRole(userId: string, roleId: string, assignedBy?: string) {
+    return prisma.userRole.upsert({
+      where: {
+        userId_roleId: {
+          userId,
+          roleId,
+        },
+      },
+      update: { assignedBy: assignedBy || null },
+      create: { userId, roleId, assignedBy: assignedBy || null },
+    });
   },
 
-  removeUserFromRole(userId: string, roleId: string) {
-    return db.prepare(`DELETE FROM user_roles WHERE user_id = ? AND role_id = ?`).run(userId, roleId);
+  async removeUserFromRole(userId: string, roleId: string) {
+    return prisma.userRole.delete({
+      where: {
+        userId_roleId: {
+          userId,
+          roleId,
+        },
+      },
+    });
   },
 
-  checkUserRole(userId: string, roleId: string): boolean {
-    return !!db.prepare(`SELECT 1 FROM user_roles WHERE user_id = ? AND role_id = ?`).get(userId, roleId);
+  async checkUserRole(userId: string, roleId: string): Promise<boolean> {
+    const userRole = await prisma.userRole.findUnique({
+      where: {
+        userId_roleId: {
+          userId,
+          roleId,
+        },
+      },
+    });
+    return !!userRole;
   },
 
-  getUserRoles(userId: string): string[] {
-    const roles = db.prepare(`SELECT role_id FROM user_roles WHERE user_id = ?`).all(userId) as { role_id: string }[];
-    return roles.map(r => r.role_id);
+  async getUserRoles(userId: string): Promise<string[]> {
+    const userRoles = await prisma.userRole.findMany({
+      where: { userId },
+      select: { roleId: true },
+    });
+    return userRoles.map(ur => ur.roleId);
   },
 
-  getUserPermissions(userId: string): string[] {
-    const cached = db.prepare(`SELECT permissions, updated_at FROM user_permissions_cache WHERE user_id = ?`)
-      .get(userId) as { permissions: string; updated_at: string } | undefined;
-    
-    if (cached && (Date.now() - new Date(cached.updated_at).getTime()) < 300000) {
+  async getUserPermissions(userId: string): Promise<string[]> {
+    // Check cache
+    const cached = await prisma.userPermissionCache.findUnique({
+      where: { userId },
+    });
+
+    if (cached && (Date.now() - new Date(cached.updatedAt).getTime()) < 300000) {
       return JSON.parse(cached.permissions);
     }
-    
-    const rolePerms = db.prepare(`
-      SELECT DISTINCT rp.permission_key
-      FROM role_permissions rp
-      WHERE rp.role_id IN (SELECT role_id FROM user_roles WHERE user_id = ?)
-    `).all(userId) as { permission_key: string }[];
-    
-    const userPerms = db.prepare(`
-      SELECT permission_key, is_granted
-      FROM user_permissions 
-      WHERE user_id = ? AND (expires_at IS NULL OR expires_at > datetime('now'))
-    `).all(userId) as { permission_key: string; is_granted: number }[];
-    
-    const permissions = new Set(rolePerms.map(rp => rp.permission_key));
-    
-    for (const up of userPerms) {
-      up.is_granted ? permissions.add(up.permission_key) : permissions.delete(up.permission_key);
+
+    // Get role permissions
+    const userRoles = await prisma.userRole.findMany({
+      where: { userId },
+      include: {
+        role: {
+          include: {
+            permissions: {
+              include: {
+                permission: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const rolePermissions = new Set<string>();
+    for (const ur of userRoles) {
+      for (const rp of ur.role.permissions) {
+        rolePermissions.add(rp.permission.permissionKey);
+      }
     }
-    
+
+    // Get user-specific permissions
+    const userPerms = await prisma.userPermission.findMany({
+      where: {
+        userId,
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+      },
+    });
+
+    const permissions = new Set(rolePermissions);
+    for (const up of userPerms) {
+      if (up.isGranted) {
+        permissions.add(up.permissionKey);
+      } else {
+        permissions.delete(up.permissionKey);
+      }
+    }
+
     const result = Array.from(permissions);
-    
-    db.prepare(`INSERT OR REPLACE INTO user_permissions_cache (user_id, permissions, updated_at) VALUES (?, ?, datetime('now'))`)
-      .run(userId, JSON.stringify(result));
-    
+
+    // Update cache
+    await prisma.userPermissionCache.upsert({
+      where: { userId },
+      update: {
+        permissions: JSON.stringify(result),
+        updatedAt: new Date(),
+      },
+      create: {
+        userId,
+        permissions: JSON.stringify(result),
+      },
+    });
+
     return result;
   },
 
-  clearUserPermissionCache(userId: string) {
-    db.prepare(`DELETE FROM user_permissions_cache WHERE user_id = ?`).run(userId);
+  async clearUserPermissionCache(userId: string) {
+    await prisma.userPermissionCache.delete({
+      where: { userId },
+    }).catch(() => {});
   },
 
-  grantUserPermission(userId: string, permissionKey: string, grantedBy: string, expiresAt?: Date, reason?: string) {
-    return db.prepare(`
-      INSERT OR REPLACE INTO user_permissions (user_id, permission_key, is_granted, granted_by, expires_at, reason)
-      VALUES (?, ?, 1, ?, ?, ?)
-    `).run(userId, permissionKey, grantedBy, expiresAt?.toISOString() || null, reason || null);
+  async grantUserPermission(
+    userId: string,
+    permissionKey: string,
+    grantedBy: string,
+    expiresAt?: Date,
+    reason?: string
+  ) {
+    await this.clearUserPermissionCache(userId);
+    return prisma.userPermission.upsert({
+      where: {
+        userId_permissionKey: {
+          userId,
+          permissionKey,
+        },
+      },
+      update: {
+        isGranted: true,
+        grantedBy,
+        expiresAt: expiresAt || null,
+        reason: reason || null,
+      },
+      create: {
+        userId,
+        permissionKey,
+        isGranted: true,
+        grantedBy,
+        expiresAt: expiresAt || null,
+        reason: reason || null,
+      },
+    });
   },
 
-  revokeUserPermission(userId: string, permissionKey: string) {
-    return db.prepare(`DELETE FROM user_permissions WHERE user_id = ? AND permission_key = ?`).run(userId, permissionKey);
+  async revokeUserPermission(userId: string, permissionKey: string) {
+    await this.clearUserPermissionCache(userId);
+    return prisma.userPermission.delete({
+      where: {
+        userId_permissionKey: {
+          userId,
+          permissionKey,
+        },
+      },
+    });
   },
 };

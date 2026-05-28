@@ -12,7 +12,7 @@ export const data = new SlashCommandBuilder()
 export async function execute(inter: ChatInputCommandInteraction) {
     await inter.deferReply({flags: MessageFlags.Ephemeral});
     
-    const sp = PatchesRepository.getSelfPatches(inter.user.id);
+    const sp = await PatchesRepository.getSelfPatches(inter.user.id);
     
     if (!sp || sp.length === 0) {
         return inter.editReply({content: 'У вас нет ни одной нашивки.'});

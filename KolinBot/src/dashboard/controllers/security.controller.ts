@@ -9,7 +9,7 @@ export const SecurityController = {
       const search =
         typeof req.query.suspect === "string" ? req.query.suspect : undefined;
 
-      let alerts = SecurityRepository.getSecurityAlerts(type);
+      let alerts = await SecurityRepository.getSecurityAlerts(type);
 
       if (search) {
         alerts = alerts.filter((alert) => alert.passport.includes(search));
@@ -33,7 +33,7 @@ export const SecurityController = {
           .json({ success: false, error: "Invalid ID format" });
       }
 
-      const alert = SecurityRepository.getAlertById(id);
+      const alert = await SecurityRepository.getAlertById(id);
 
       if (!alert) {
         return res
@@ -53,7 +53,7 @@ export const SecurityController = {
       const { suspect, action, data, type } = req.body;
       const adminId = (req.user as any)?.id || "system";
 
-      SecurityRepository.addSecurityRequest(type, adminId, action, suspect);
+      await SecurityRepository.addSecurityRequest(type, adminId, action, suspect);
 
       res.json({ success: true });
     } catch (error) {
@@ -73,7 +73,7 @@ export const SecurityController = {
           .json({ success: false, error: "Invalid ID format" });
       }
 
-      const result = SecurityRepository.closeAlert(id);
+      const result = await SecurityRepository.closeAlert(id);
 
       if (result.changes > 0) {
         res.json({ success: true });
@@ -93,7 +93,7 @@ export const SecurityController = {
       const validLimit =
         isNaN(limit) || limit <= 0 ? 100 : Math.min(limit, 500);
 
-      const logs = SecurityRepository.getSecurityLogs(validLimit);
+      const logs = await SecurityRepository.getSecurityLogs(validLimit);
       res.json({ success: true, logs });
     } catch (error) {
       console.error("Error getting logs:", error);
@@ -112,7 +112,7 @@ export const SecurityController = {
           .json({ success: false, error: "Missing required fields" });
       }
 
-      SecurityRepository.addSecurityRequest(
+      await SecurityRepository.addSecurityRequest(
         type,
         authorId,
         reason || "Не указана",

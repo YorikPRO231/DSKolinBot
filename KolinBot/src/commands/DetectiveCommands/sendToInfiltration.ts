@@ -142,7 +142,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
         reportEmbed.addFields({name: 'Ник для внедрения', value: infiltrationNickname});
     }
 
-    InfiltrationsRepository.pushInfiltration(
+    await InfiltrationsRepository.pushInfiltration(
         rank,
         faction, 
         guildName.replace(' | Blackberry', ''),

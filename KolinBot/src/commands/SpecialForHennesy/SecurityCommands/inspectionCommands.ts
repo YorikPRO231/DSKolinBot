@@ -29,7 +29,7 @@ export const data = new SlashCommandBuilder()
             .setRequired(false));
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-    const securityLevel = AdminsRepository.getSecurityAccess(interaction.user.id);
+    const securityLevel = await AdminsRepository.getSecurityAccess(interaction.user.id);
     if (securityLevel !== 'yes') {
         return interaction.reply({ 
             content: '❌ У вас нет доступа к этой команде!', 
@@ -47,15 +47,15 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const fullResult = comment ? `${result}\nКомментарий: ${comment}` : result;
     
     try {
-        const openAlerts = SecurityRepository.getSecurityAlertsBySuspect(passport);
+        const openAlerts = await SecurityRepository.getSecurityAlertsBySuspect(passport);
         
         let closedCount = 0;
         if (openAlerts.length > 0) {
-            closedCount = SecurityRepository.closeAlertsBySuspectIfExists(passport);
+            closedCount = await SecurityRepository.closeAlertsBySuspectIfExists(passport);
         }
         
-        const reportId = InspectionsRepository.saveInspectionReport(passport, fullResult, adminId, adminName, discordId);
-        const { total } = InspectionsRepository.getInspectionReportsByPassportPaginated(passport, 1, 0);
+        const reportId = await InspectionsRepository.saveInspectionReport(passport, fullResult, adminId, adminName, discordId);
+        const { total } = await InspectionsRepository.getInspectionReportsByPassportPaginated(passport, 1, 0);
         
         const embed = new EmbedBuilder()
             .setColor(Colors.Green)

@@ -77,12 +77,3 @@ export async function handleNickKick(inter: ButtonInteraction, member: GuildMemb
         return inter.editReply("Ошибка при кике.");
     }
 }
-
-export async function handleAdminRegistration(interaction: any) {
-  const surname = interaction.fields.getTextInputValue("surname_input");
-  AdminsRepository.setAdminSurname(interaction.user.id, surname);
-  await interaction.reply({
-    content: `Зарегистрирован как **${surname}**. Введите команду снова.`,
-    flags: MessageFlags.Ephemeral,
-  });
-}

@@ -15,6 +15,6 @@
       "./node_modules/@types"
     ]
   },
-  "include": ["KolinBot/src/**/*.ts"],
+  "include": ["KolinBot/src/**/*.ts", "KolinBot/init-permissions.ts"],
   "exclude": ["node_modules", "dist"]
 }

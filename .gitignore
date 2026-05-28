@@ -43,3 +43,5 @@ src/data.sqlite-wal
 
 data/
 /.idea/
+
+/KolinBot/src/generated/prisma

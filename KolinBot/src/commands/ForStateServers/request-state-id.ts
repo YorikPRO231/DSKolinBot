@@ -1,6 +1,6 @@
-import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder} from 'discord.js';
+import { ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder } from 'discord.js';
 import { PatchesRepository } from "../../databases/index";
-import type {StatePatch, PatchHistory} from "../../databases";
+import type { StatePatch, PatchHistory } from "../../databases";
 import { getSystemRole, getDetectives } from '../../config/settings-loader';
 
 export const factions = ['GOV'];
@@ -28,8 +28,9 @@ export async function execute(inter: ChatInputCommandInteraction) {
     const hasRole = gm?.roles?.cache?.some((r: any) => govAccessRoles.includes(r.id));
     if (!hasRole) {
         return inter.reply({
-            content:'Данную команду можно использовать только в дискорде правительства с соответствующим доступом.', flags: MessageFlags.Ephemeral
-        })
+            content: 'Данную команду можно использовать только в дискорде правительства с соответствующим доступом.',
+            flags: MessageFlags.Ephemeral
+        });
     }
 
     if (passport === null && patch === null) {
@@ -56,7 +57,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
         .setTimestamp();
 
     if (passport !== null) {
-        const ps = PatchesRepository.retrievePlayerPatch(passport);
+        const ps = await PatchesRepository.retrievePlayerPatch(passport);
         if (!ps) {
             embed.setDescription('По указанному паспорту ничего не найдено.');
         } else {
@@ -74,13 +75,14 @@ export async function execute(inter: ChatInputCommandInteraction) {
     }
 
     if (patch !== null) {
-        const matches = PatchesRepository.findPlayerPatch(patch);
+        const matches = await PatchesRepository.findPlayerPatch(patch);
         if (!matches || matches.length === 0) {
             embed.setDescription('По указанной нашивке ничего не найдено.');
         } else {
             const hasAccess = hasDetectiveAccess(gm);
             const filteredMatches = hasAccess ? matches : matches.filter(m => !isDetectivePatch(m.faction));
-            showDetectives = matches.some(m => isDetectivePatch(m.faction)) && filteredMatches.length > 0
+            showDetectives = matches.some(m => isDetectivePatch(m.faction)) && filteredMatches.length > 0;
+            
             if (filteredMatches.length === 0) {
                 embed.setDescription('❌ **Доступ запрещен:** Найдены только детективные нашивки, к которым у вас нет доступа.');
             } else if (filteredMatches.length === 1) {
@@ -102,27 +104,34 @@ export async function execute(inter: ChatInputCommandInteraction) {
             }
         }
     }
+
     if (showDetectives) {
         let success = true;
-        await inter.user.send({embeds: [embed]}).catch(error => {
-            console.warn(`Не удалось отправить ЛС пользователю ${inter.user.tag}:`, error,)
-            success = false
+        await inter.user.send({ embeds: [embed] }).catch(error => {
+            console.warn(`Не удалось отправить ЛС пользователю ${inter.user.tag}:`, error);
+            success = false;
         });
 
-        const dEmbed = new EmbedBuilder().setAuthor({
-            name: authorName,
-            iconURL: inter.guild?.iconURL() || undefined
-        })
+        const dEmbed = new EmbedBuilder()
+            .setAuthor({
+                name: authorName,
+                iconURL: inter.guild?.iconURL() || undefined
+            })
             .setTitle('Поиск нашивок')
             .setColor(0xf10000)
             .setFooter({
                 text: inter.user.tag,
                 iconURL: inter.user.displayAvatarURL()
             })
-            .setTimestamp().setDescription(success ? 'Отчет по поиску был отправлен в личные сообщения т.к содержал информацию о детективных нашивках.' : 'Не удалось отправить отчет в личные сообщения.');
-        return inter.editReply({embeds:[dEmbed]})
+            .setTimestamp()
+            .setDescription(success 
+                ? 'Отчет по поиску был отправлен в личные сообщения, так как содержал информацию о детективных нашивках.' 
+                : 'Не удалось отправить отчет в личные сообщения.');
+        
+        return inter.editReply({ embeds: [dEmbed] });
     }
-    return inter.editReply({embeds: [embed]});
+    
+    return inter.editReply({ embeds: [embed] });
 }
 
 function isDetectivePatch(faction: string): boolean {
@@ -176,7 +185,6 @@ function formatDate(dateString: string): string {
     try {
         const date = new Date(dateString);
         if (isNaN(date.getTime())) return dateString;
-
         return `<t:${Math.floor(date.getTime() / 1000)}:f>`;
     } catch {
         return dateString;

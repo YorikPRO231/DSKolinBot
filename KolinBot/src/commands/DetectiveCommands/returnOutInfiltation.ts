@@ -2,7 +2,6 @@ import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBui
 import { InfiltrationsRepository } from "../../databases/index";
 import { getDetectives, getSystemChannel } from '../../config/settings-loader';
 
-
 type SendableChannel = TextChannel | NewsChannel | ThreadChannel;
 type FactionType = keyof ReturnType<typeof getDetectives>;
 
@@ -35,7 +34,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
     const targetMember = await inter.guild?.members.fetch(targetUser.id).catch(() => null);
     const adminMember = await inter.guild?.members.fetch(inter.user.id).catch(() => null);
     
-    const infiltration = InfiltrationsRepository.retrieveInfiltration(targetUser.id);
+    const infiltration = await InfiltrationsRepository.retrieveInfiltration(targetUser.id);
     if (!infiltration) {
         return inter.reply({
             content: 'Не удалось найти информацию о внедрении данного игрока.', 

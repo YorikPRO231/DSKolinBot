@@ -19,7 +19,7 @@ export const data = new SlashCommandBuilder()
         .setRequired(true));
 
 export async function execute(inter: ChatInputCommandInteraction) {
-    const securityLevel = AdminsRepository.getSecurityAccess(inter.user.id);
+    const securityLevel = await AdminsRepository.getSecurityAccess(inter.user.id);
     if (securityLevel !== 'yes') {
         return inter.reply({ 
             content: '❌ У вас нет доступа к этой команде!', 
@@ -38,7 +38,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
     }
 
     try {
-        SecurityRepository.addSecurityRequest(type, inter.user.id, reason, playerId)
+        await SecurityRepository.addSecurityRequest(type, inter.user.id, reason, playerId)
 
         const embed = new EmbedBuilder()
             .setColor(0x2ECC71)

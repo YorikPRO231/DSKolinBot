@@ -12,7 +12,7 @@ export function requirePermission(permissionKey: string) {
       return res.redirect('/login');
     }
     
-    const permissions = PermissionsRepository.getUserPermissions(userId);
+    const permissions = await PermissionsRepository.getUserPermissions(userId);
     
     if (!permissions.includes(permissionKey)) {
       if (req.xhr || req.path.startsWith('/api/')) {
@@ -48,7 +48,7 @@ export function requireAnyPermission(permissionKeys: string[]) {
       return res.redirect('/login');
     }
     
-    const permissions = PermissionsRepository.getUserPermissions(userId);
+    const permissions = await PermissionsRepository.getUserPermissions(userId);
     const hasPermission = permissionKeys.some(key => permissions.includes(key));
     
     if (!hasPermission) {

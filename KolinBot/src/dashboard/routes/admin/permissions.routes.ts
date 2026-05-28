@@ -2,18 +2,13 @@ import { Router } from 'express';
 import { ensureAuthenticatedAndAuthorized } from '../../middleware/auth.middleware';
 import { requirePermission } from '../../middleware/permissions.middleware';
 import { PermissionsRepository } from '../../../databases/index';
-import db from '../../../databases/sqlite';
+import prisma from '../../../databases/prisma.service';
 
 const router = Router();
 
 function getParam(param: string | string[] | undefined): string {
   if (!param) return '';
   return Array.isArray(param) ? param[0] : param;
-}
-
-interface UserRoleRow {
-  user_id: string;
-  roles: string;
 }
 
 interface ParsedRole {
@@ -30,8 +25,8 @@ router.get('/',
   ensureAuthenticatedAndAuthorized, 
   requirePermission('manage_roles'),
   async (req, res) => {
-    const roles = PermissionsRepository.getAllRoles();
-    const permissions = PermissionsRepository.getAllPermissions();
+    const roles = await PermissionsRepository.getAllRoles();
+    const permissions = await PermissionsRepository.getAllPermissions();
     const users: any[] = [];
     
     res.render('admin/permissions', {
@@ -51,7 +46,7 @@ router.post('/api/roles',
   async (req, res) => {
     const { roleId, roleName, description } = req.body;
     const roleIdStr = String(roleId);
-    PermissionsRepository.addRole(roleIdStr, roleName, description);
+    await PermissionsRepository.addRole(roleIdStr, roleName, description);
     res.json({ success: true });
   }
 );
@@ -61,7 +56,7 @@ router.delete('/api/roles/:roleId',
   requirePermission('manage_roles'),
   async (req, res) => {
     const roleId = getParam(req.params.roleId);
-    PermissionsRepository.removeRole(roleId);
+    await PermissionsRepository.removeRole(roleId);
     res.json({ success: true });
   }
 );
@@ -73,7 +68,7 @@ router.post('/api/roles/:roleId/permissions/:permissionKey',
     const roleId = getParam(req.params.roleId);
     const permissionKey = getParam(req.params.permissionKey);
     const grantedBy = (req.user as any)?.id || 'system';
-    PermissionsRepository.grantPermissionToRole(roleId, permissionKey, grantedBy);
+    await PermissionsRepository.grantPermissionToRole(roleId, permissionKey, grantedBy);
     res.json({ success: true });
   }
 );
@@ -84,7 +79,7 @@ router.delete('/api/roles/:roleId/permissions/:permissionKey',
   async (req, res) => {
     const roleId = getParam(req.params.roleId);
     const permissionKey = getParam(req.params.permissionKey);
-    PermissionsRepository.revokePermissionFromRole(roleId, permissionKey);
+    await PermissionsRepository.revokePermissionFromRole(roleId, permissionKey);
     res.json({ success: true });
   }
 );
@@ -99,9 +94,8 @@ router.post('/api/users/:userId/permissions/:permissionKey',
     const { expiresAt, reason } = req.body;
     
     const expiresDate = expiresAt ? new Date(expiresAt) : undefined;
-    PermissionsRepository.grantUserPermission(userId, permissionKey, grantedBy, expiresDate, reason);
-    
-    PermissionsRepository.clearUserPermissionCache(userId);
+    await PermissionsRepository.grantUserPermission(userId, permissionKey, grantedBy, expiresDate, reason);
+    await PermissionsRepository.clearUserPermissionCache(userId);
     
     res.json({ success: true });
   }
@@ -113,8 +107,8 @@ router.delete('/api/users/:userId/permissions/:permissionKey',
   async (req, res) => {
     const userId = getParam(req.params.userId);
     const permissionKey = getParam(req.params.permissionKey);
-    PermissionsRepository.revokeUserPermission(userId, permissionKey);
-    PermissionsRepository.clearUserPermissionCache(userId);
+    await PermissionsRepository.revokeUserPermission(userId, permissionKey);
+    await PermissionsRepository.clearUserPermissionCache(userId);
     res.json({ success: true });
   }
 );
@@ -123,30 +117,28 @@ router.get('/api/users',
   ensureAuthenticatedAndAuthorized, 
   requirePermission('manage_roles'),
   async (req, res) => {
-    const usersWithRoles = db.prepare(`
-      SELECT 
-        u.user_id,
-        GROUP_CONCAT(json_object('role_id', r.role_id, 'role_name', r.role_name)) as roles
-      FROM user_roles u
-      JOIN roles r ON u.role_id = r.role_id
-      GROUP BY u.user_id
-    `).all() as UserRoleRow[];
-    
-    const users: UserWithRoles[] = usersWithRoles.map((row: UserRoleRow) => {
-      let roles: ParsedRole[] = [];
-      try {
-        if (row.roles) {
-          roles = JSON.parse(`[${row.roles}]`);
-        }
-      } catch (error) {
-        console.error('Error parsing roles JSON:', error);
+    const userRoles = await prisma.userRole.findMany({
+      include: {
+        role: true
       }
-      
-      return {
-        user_id: row.user_id,
-        roles: roles
-      };
     });
+    
+    const usersMap = new Map<string, ParsedRole[]>();
+    
+    for (const ur of userRoles) {
+      if (!usersMap.has(ur.userId)) {
+        usersMap.set(ur.userId, []);
+      }
+      usersMap.get(ur.userId)!.push({
+        role_id: ur.role.roleId,
+        role_name: ur.role.roleName
+      });
+    }
+    
+    const users: UserWithRoles[] = Array.from(usersMap.entries()).map(([user_id, roles]) => ({
+      user_id,
+      roles
+    }));
     
     res.json({ success: true, users });
   }
@@ -159,8 +151,8 @@ router.post('/api/users/add',
     const { userId, roleId } = req.body;
     const assignedBy = (req.user as any)?.id || 'system';
     
-    PermissionsRepository.addUserToRole(userId, roleId, assignedBy);
-    PermissionsRepository.clearUserPermissionCache(userId);
+    await PermissionsRepository.addUserToRole(userId, roleId, assignedBy);
+    await PermissionsRepository.clearUserPermissionCache(userId);
     
     res.json({ success: true });
   }
@@ -173,8 +165,8 @@ router.delete('/api/users/:userId/roles/:roleId',
     const userId = getParam(req.params.userId);
     const roleId = getParam(req.params.roleId);
     
-    PermissionsRepository.removeUserFromRole(userId, roleId);
-    PermissionsRepository.clearUserPermissionCache(userId);
+    await PermissionsRepository.removeUserFromRole(userId, roleId);
+    await PermissionsRepository.clearUserPermissionCache(userId);
     
     res.json({ success: true });
   }

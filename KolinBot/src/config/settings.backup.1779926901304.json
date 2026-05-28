@@ -145,7 +145,7 @@
     "GOV": {
       "label": "Government",
       "type": "government",
-      "discord_id": "1467227742037741846",
+      "discord_id": "673455835481112599",
       "emoji_id": "<:GOV:1499073847318544394>",
       "roles": {
         "faction": "674572465791303699",
@@ -169,14 +169,14 @@
       "roles": {
         "faction": "933431913207718019",
         "high": [
-          "1486138193697964042"
+          "933436258296938536"
         ],
         "chp": "673463210384556044",
         "mp": "996703146543943692"
       },
       "channels": {
-        "logs": "1494095206994411731",
-        "patch_log": "1494095206994411731",
+        "logs": "870076692956327946",
+        "patch_log": "1395108469413122199",
         "transfer_log": "1499478887757910298"
       }
     },
@@ -422,7 +422,8 @@
         "St.",
         "Deputy Director",
         "Director"
-      ]
+      ],
+      "leader_role_id": ""
     },
     "LSSD": {
       "branches": [
@@ -439,7 +440,8 @@
         "Inst.",
         "Deputy Sheriff",
         "Sheriff"
-      ]
+      ],
+      "leader_role_id": ""
     },
     "LSPD": {
       "branches": [
@@ -458,7 +460,8 @@
         "Head.",
         "Deputy Chief",
         "Chief"
-      ]
+      ],
+      "leader_role_id": ""
     },
     "Government": {
       "branches": [
@@ -472,7 +475,8 @@
         "Deputy Director",
         "Director",
         "Inst."
-      ]
+      ],
+      "leader_role_id": ""
     },
     "ARMY": {
       "branches": [
@@ -494,7 +498,8 @@
         "Cur.",
         "L. Gen.",
         "General"
-      ]
+      ],
+      "leader_role_id": ""
     },
     "SASPA": {
       "branches": [
@@ -512,26 +517,37 @@
         "St.",
         "Deputy Warden",
         "Warden"
-      ]
+      ],
+      "leader_role_id": ""
     },
     "EMS": {
-      "branches": [],
-      "positions": []
+      "branches": [
+      ],
+      "positions": [
+      ],
+      "leader_role_id": ""
     },
     "WN": {
-      "branches": [],
-      "positions": []
+      "branches": [
+      ],
+      "positions": [
+      ],
+      "leader_role_id": ""
     }
   },
   "system_roles": {
     "gov_access_patch_request": [
-      "1486138193697964042"
+      "871764495884763177",
+      "674318969116819487",
+      "835224536794267690"
     ],
     "detective_patch_access": [
-      "1486138193697964042"
+      "674313754472742912",
+      "676700617716269076",
+      "673463287215816704"
     ],
     "gov_delete_patch": [
-      "1486138193697964042"
+      "673463285173190656"
     ],
     "detectives_high": [
       "934191153077702716",

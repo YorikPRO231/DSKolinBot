@@ -1,26 +1,25 @@
-import db from '../sqlite';
+import prisma from '../prisma.service';
 
 export const StatsRepository = {
-  getStats(): {
+  async getStats(): Promise<{
     warehouse_count: number;
     alerts_open: number;
     inspection_count: number;
     total_patches: number;
-  } {
-    const warehouse = db.prepare("SELECT COUNT(*) as count FROM warehouse_drain_v2").get() as { count: number };
-    const alertsOpen = db.prepare("SELECT COUNT(*) as count FROM bot_cheat_reports").get() as { count: number };
-    const inspections = db.prepare("SELECT COUNT(*) as count FROM inspection_reports").get() as { count: number };
-    const totalPatches = db.prepare("SELECT COUNT(*) as count FROM state_patches").get() as { count: number };
-    
+  }> {
+    const [warehouseCount, alertsOpen, inspectionCount, totalPatches] = await Promise.all([
+      prisma.warehouseDrainV2.count(),
+      prisma.securityAlert.count(),
+      prisma.inspectionReport.count(),
+      prisma.statePatch.count(),
+    ]);
+
     return {
-      warehouse_count: warehouse.count,
-      alerts_open: alertsOpen.count,
-      inspection_count: inspections.count,
-      total_patches: totalPatches.count
+      warehouse_count: warehouseCount,
+      alerts_open: alertsOpen,
+      inspection_count: inspectionCount,
+      total_patches: totalPatches,
     };
   },
 
-  vacuum(): void {
-    db.exec("VACUUM");
-  },
 };

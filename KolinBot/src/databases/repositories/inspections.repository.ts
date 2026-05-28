@@ -1,4 +1,4 @@
-import db from '../sqlite';
+import prisma from '../prisma.service';
 
 export interface InspectionReport {
   id: number;
@@ -11,48 +11,120 @@ export interface InspectionReport {
 }
 
 export const InspectionsRepository = {
-  saveInspectionReport(passport: string, result: string, adminId: string, adminName?: string, discordId?: string): number {
-    const info = db.prepare(`
-      INSERT INTO inspection_reports (passport, discord_id, result, admin_id, admin_name, created_at)
-      VALUES (?, ?, ?, ?, ?, datetime('now', 'localtime'))
-    `).run(passport, discordId || null, result, adminId, adminName || null);
-    return info.lastInsertRowid as number;
+  async saveInspectionReport(
+    passport: string,
+    result: string,
+    adminId: string,
+    adminName?: string,
+    discordId?: string
+  ): Promise<number> {
+    const report = await prisma.inspectionReport.create({
+      data: {
+        passport,
+        discordId: discordId || null,
+        result,
+        adminId,
+        adminName: adminName || null,
+      },
+    });
+    return report.id;
   },
 
-  getInspectionReportsByPassportPaginated(passport: string, limit: number, offset: number): { reports: InspectionReport[]; total: number } {
-    const total = db.prepare('SELECT COUNT(*) as count FROM inspection_reports WHERE passport = ?').get(passport) as { count: number };
-    const reports = db.prepare(`
-      SELECT * FROM inspection_reports
-      WHERE passport = ?
-      ORDER BY created_at DESC
-      LIMIT ? OFFSET ?
-    `).all(passport, limit, offset) as InspectionReport[];
-    return { reports, total: total.count };
+  async getInspectionReportsByPassportPaginated(
+    passport: string,
+    limit: number,
+    offset: number
+  ): Promise<{ reports: InspectionReport[]; total: number }> {
+    const [reports, total] = await Promise.all([
+      prisma.inspectionReport.findMany({
+        where: { passport },
+        orderBy: { createdAt: 'desc' },
+        skip: offset,
+        take: limit,
+      }),
+      prisma.inspectionReport.count({
+        where: { passport },
+      }),
+    ]);
+
+    return {
+      reports: reports.map(r => ({
+        id: r.id,
+        passport: r.passport,
+        discord_id: r.discordId || undefined,
+        result: r.result,
+        admin_id: r.adminId,
+        admin_name: r.adminName || undefined,
+        created_at: r.createdAt.toISOString(),
+      })),
+      total,
+    };
   },
 
-  getInspectionReportsByAdmin(adminId: string, limit: number = 50): InspectionReport[] {
-    return db.prepare(`
-      SELECT * FROM inspection_reports
-      WHERE admin_id = ?
-      ORDER BY created_at DESC
-      LIMIT ?
-    `).all(adminId, limit) as InspectionReport[];
+  async getInspectionReportsByAdmin(
+    adminId: string,
+    limit: number = 50
+  ): Promise<InspectionReport[]> {
+    const reports = await prisma.inspectionReport.findMany({
+      where: { adminId },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+
+    return reports.map(r => ({
+      id: r.id,
+      passport: r.passport,
+      discord_id: r.discordId || undefined,
+      result: r.result,
+      admin_id: r.adminId,
+      admin_name: r.adminName || undefined,
+      created_at: r.createdAt.toISOString(),
+    }));
   },
 
-  getInspectionReportsByDiscord(discordId: string, limit: number, offset: number): { reports: InspectionReport[]; total: number } {
-    const total = db.prepare('SELECT COUNT(*) as count FROM inspection_reports WHERE discord_id = ?').get(discordId) as { count: number };
-    const reports = db.prepare(`
-      SELECT * FROM inspection_reports
-      WHERE discord_id = ?
-      ORDER BY created_at DESC
-      LIMIT ? OFFSET ?
-    `).all(discordId, limit, offset) as InspectionReport[];
-    return { reports, total: total.count };
+  async getInspectionReportsByDiscord(
+    discordId: string,
+    limit: number,
+    offset: number
+  ): Promise<{ reports: InspectionReport[]; total: number }> {
+    const [reports, total] = await Promise.all([
+      prisma.inspectionReport.findMany({
+        where: { discordId },
+        orderBy: { createdAt: 'desc' },
+        skip: offset,
+        take: limit,
+      }),
+      prisma.inspectionReport.count({
+        where: { discordId },
+      }),
+    ]);
+
+    return {
+      reports: reports.map(r => ({
+        id: r.id,
+        passport: r.passport,
+        discord_id: r.discordId || undefined,
+        result: r.result,
+        admin_id: r.adminId,
+        admin_name: r.adminName || undefined,
+        created_at: r.createdAt.toISOString(),
+      })),
+      total,
+    };
   },
 
-  updateInspectionReport(id: number, discordId: string | null, result: string): { changes: number } {
-    const stmt = db.prepare(`UPDATE inspection_reports SET discord_id = ?, result = ? WHERE id = ?`);
-    const resultUpdate = stmt.run(discordId || null, result, id);
-    return { changes: resultUpdate.changes };
+  async updateInspectionReport(
+    id: number,
+    discordId: string | null,
+    result: string
+  ): Promise<{ changes: number }> {
+    const updated = await prisma.inspectionReport.update({
+      where: { id },
+      data: {
+        discordId: discordId || null,
+        result,
+      },
+    });
+    return { changes: updated ? 1 : 0 };
   },
 };

@@ -1,15 +1,15 @@
 import { loadSettings, getFactionByDiscordId } from "../config/settings-loader";
 import { PatchesRepository } from "../databases/index";
 
-export function generatePatch(
+export async function generatePatch(
   faction: string,
   position: string,
   name: string,
   surname: string,
   passport: number,
   level: string,
-): string {
-  const randomDigits = PatchesRepository.generateUniqueDigits(passport, faction);
+): Promise<string> {
+  const randomDigits = await PatchesRepository.generateUniqueDigits(passport, faction);
 
   const detectiveDepartmentToFaction: Record<string, string> = {
     CID: "FIB",

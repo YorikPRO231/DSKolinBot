@@ -31,8 +31,6 @@ export async function execute(inter: ChatInputCommandInteraction) {
     const newSurname = inter.options.getString("новая-фамилия");
     const securityValue = inter.options.getString("security");
 
-
-
     if (securityValue && inter.user.id !== process.env.OWNER_ID) {
         return await inter.reply({ 
             content: "У вас нет прав для изменения security доступа. Это доступно только владельцу бота.", 
@@ -58,8 +56,8 @@ export async function execute(inter: ChatInputCommandInteraction) {
             .setFooter({ text: `Изменил: ${inter.user.username}` });
 
         if (newSurname) {
-            const oldSurname = AdminsRepository.getAdminSurname(targetUser.id);
-            AdminsRepository.setAdminSurname(targetUser.id, newSurname);
+            const oldSurname = await AdminsRepository.getAdminSurname(targetUser.id);
+            await AdminsRepository.setAdminSurname(targetUser.id, newSurname);
             
             embed.addFields({ 
                 name: "Фамилия", 
@@ -69,7 +67,7 @@ export async function execute(inter: ChatInputCommandInteraction) {
         }
 
         if (securityValue) {
-            AdminsRepository.setAdminSecurity(targetUser.id, securityValue);
+            await AdminsRepository.setAdminSecurity(targetUser.id, securityValue);
             
             const securityStatus = securityValue === "yes" ? "Выдан" : "Забран";
             

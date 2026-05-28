@@ -1,4 +1,4 @@
-import db from "../sqlite";
+import prisma from '../prisma.service';
 
 export interface SecurityAlert {
   id: number;
@@ -21,109 +21,148 @@ export interface SecurityLog {
 }
 
 export const SecurityRepository = {
-  exportSecurityAlertsMany: db.transaction(
-    (
-      adminId: string,
-      alerts: {
-        suspect: string;
-        action: string;
-        data: string;
-        originalDate?: string;
-      }[],
-    ) => {
-      // TODO: export security alerts
-    },
-  ),
+  async exportSecurityAlertsMany(
+    adminId: string,
+    alerts: {
+      suspect: string;
+      action: string;
+      data: string;
+      originalDate?: string;
+    }[]
+  ): Promise<void> {
+    // TODO: export security alerts
+    console.log('exportSecurityAlertsMany called', { adminId, alerts });
+  },
 
-  getSecurityAlerts(type?: string): SecurityAlert[] {
-    if (type) {
-      return db
-        .prepare(
-          `SELECT * FROM bot_cheat_reports WHERE type = ? ORDER BY created_at DESC`,
-        )
-        .all(type) as SecurityAlert[];
+  async getSecurityAlerts(type?: string): Promise<SecurityAlert[]> {
+    const where = type ? { type } : {};
+    const alerts = await prisma.securityAlert.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return alerts.map(a => ({
+      id: a.id,
+      passport: a.passport,
+      type: a.type,
+      count: a.count,
+      author_id: a.authorId,
+      reason: a.reason,
+      created_at: a.createdAt.toISOString(),
+      updated_at: a.updatedAt.toISOString(),
+    }));
+  },
+
+  async getSecurityAlertsBySuspect(suspect: string, type?: string): Promise<SecurityAlert[]> {
+    const where: any = { passport: suspect };
+    if (type) where.type = type;
+
+    const alerts = await prisma.securityAlert.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return alerts.map(a => ({
+      id: a.id,
+      passport: a.passport,
+      type: a.type,
+      count: a.count,
+      author_id: a.authorId,
+      reason: a.reason,
+      created_at: a.createdAt.toISOString(),
+      updated_at: a.updatedAt.toISOString(),
+    }));
+  },
+
+  async getAlertById(id: number): Promise<SecurityAlert | null> {
+    const alert = await prisma.securityAlert.findUnique({
+      where: { id },
+    });
+
+    if (!alert) return null;
+
+    return {
+      id: alert.id,
+      passport: alert.passport,
+      type: alert.type,
+      count: alert.count,
+      author_id: alert.authorId,
+      reason: alert.reason,
+      created_at: alert.createdAt.toISOString(),
+      updated_at: alert.updatedAt.toISOString(),
+    };
+  },
+
+  async closeAlertsBySuspectIfExists(suspect: string): Promise<number> {
+    const deleted = await prisma.securityAlert.deleteMany({
+      where: { passport: suspect },
+    });
+    return deleted.count;
+  },
+
+  async closeAlert(id: number): Promise<{ changes: number }> {
+    try {
+      await prisma.securityAlert.delete({
+        where: { id },
+      });
+      return { changes: 1 };
+    } catch {
+      return { changes: 0 };
     }
-    return db
-      .prepare(`SELECT * FROM bot_cheat_reports ORDER BY created_at DESC`)
-      .all() as SecurityAlert[];
   },
 
-  getSecurityAlertsBySuspect(suspect: string, type?: string): SecurityAlert[] {
-    if (type) {
-      return db
-        .prepare(
-          `SELECT * FROM bot_cheat_reports WHERE passport = ? AND type = ? ORDER BY created_at DESC`,
-        )
-        .all(suspect, type) as SecurityAlert[];
-    }
-    return db
-      .prepare(
-        `SELECT * FROM bot_cheat_reports WHERE passport = ? ORDER BY created_at DESC`,
-      )
-      .all(suspect) as SecurityAlert[];
+  async getSecurityLogs(limit: number = 100): Promise<SecurityLog[]> {
+    const logs = await prisma.securityLog.findMany({
+      orderBy: { checkedAt: 'desc' },
+      take: limit,
+    });
+
+    return logs.map(l => ({
+      id: l.id,
+      username: l.username,
+      suspected_action: l.suspectedAction,
+      checked_at: l.checkedAt.toISOString(),
+      admin_id: l.adminId,
+      check_results: l.checkResults,
+    }));
   },
 
-  getAlertById(id: number): SecurityAlert | null {
-    const alert = db
-      .prepare(`SELECT * FROM bot_cheat_reports WHERE id = ?`)
-      .get(id) as SecurityAlert | undefined;
-    return alert || null;
-  },
-
-  closeAlertsBySuspectIfExists(suspect: string): number {
-    const result = db
-      .prepare(`DELETE FROM bot_cheat_reports WHERE passport = ?`)
-      .run(suspect);
-    return result.changes;
-  },
-
-  closeAlert(id: number): { changes: number } {
-    const result = db
-      .prepare(`DELETE FROM bot_cheat_reports WHERE id = ?`)
-      .run(id);
-    return { changes: result.changes };
-  },
-
-  getSecurityLogs(limit: number = 100): SecurityLog[] {
-    return db
-      .prepare(`SELECT * FROM security_logs ORDER BY checked_at DESC LIMIT ?`)
-      .all(limit) as SecurityLog[];
-  },
-
-  addSecurityRequest(
+  async addSecurityRequest(
     type: string,
     authorId: string,
     reason: string,
-    passport: string,
-  ): void {
-    const existing = db
-      .prepare(`SELECT * FROM bot_cheat_reports WHERE passport = ?`)
-      .get(passport) as SecurityAlert | undefined;
+    passport: string
+  ): Promise<void> {
+    const existing = await prisma.securityAlert.findFirst({
+      where: { passport },
+    });
 
     if (existing) {
       let newType = existing.type;
       if (existing.type !== type) {
-        newType = "Cheats";
+        newType = 'Cheats';
       }
 
-      db.prepare(
-        `
-        UPDATE bot_cheat_reports 
-        SET count = count + 1, 
-            type = ?,
-            reason = ?, 
-            author_id = ?,
-            updated_at = datetime('now', 'localtime')
-        WHERE passport = ?
-      `,
-      ).run(newType, reason, authorId, passport);
+      await prisma.securityAlert.update({
+        where: { id: existing.id },
+        data: {
+          count: { increment: 1 },
+          type: newType,
+          reason,
+          authorId,
+          updatedAt: new Date(),
+        },
+      });
     } else {
-      db.prepare(
-        `
-        INSERT INTO bot_cheat_reports (passport, type, count, author_id, reason, created_at, updated_at)
-        VALUES (?, ?, 1, ?, ?, datetime('now', 'localtime'), datetime('now', 'localtime'))
-      `,
-      ).run(passport, type, authorId, reason);
+      await prisma.securityAlert.create({
+        data: {
+          passport,
+          type,
+          count: 1,
+          authorId,
+          reason,
+        },
+      });
     }
   },
 };

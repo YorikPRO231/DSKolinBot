@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { Client } from 'discord.js';
 import { PermissionsService } from '../services/permissions.service';
-import { PermissionsRepository } from '../../databases/index'
+import { PermissionsRepository } from '../../databases/index';
 
 let discordClient: Client | null = null;
 
@@ -25,21 +25,21 @@ async function syncDiscordRoles(userId: string): Promise<void> {
     const member = await guild.members.fetch(userId);
     const userRoles = member.roles.cache.map((role) => role.id);
     
-    const dbRoles = PermissionsRepository.getAllRoles() as DbRole[];
+    const dbRoles = await PermissionsRepository.getAllRoles() as DbRole[];
     
     for (const dbRole of dbRoles) {
       const hasRole = userRoles.includes(dbRole.role_id);
-      const userRoleCheck = PermissionsRepository.checkUserRole(userId, dbRole.role_id);
+      const userRoleCheck = await PermissionsRepository.checkUserRole(userId, dbRole.role_id);
       
       if (hasRole && !userRoleCheck) {
-        PermissionsRepository.addUserToRole(userId, dbRole.role_id);
+        await PermissionsRepository.addUserToRole(userId, dbRole.role_id);
       } else if (!hasRole && userRoleCheck) {
-        PermissionsRepository.removeUserFromRole(userId, dbRole.role_id);
+        await PermissionsRepository.removeUserFromRole(userId, dbRole.role_id);
       }
     }
     
     if (PermissionsRepository.clearUserPermissionCache) {
-      PermissionsRepository.clearUserPermissionCache(userId);
+      await PermissionsRepository.clearUserPermissionCache(userId);
     }
   } catch (error) {
     console.error('Error syncing Discord roles:', error);

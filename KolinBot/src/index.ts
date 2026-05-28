@@ -1,18 +1,19 @@
-import {Client, Collection, GatewayIntentBits, Partials, REST, Routes} from 'discord.js';
+import { Client, Collection, GatewayIntentBits, Partials, REST, Routes } from 'discord.js';
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
-import {getAllFiles} from './utils/fileUtils';
-import {loadSettings, getStateServerIds, getCrimeServerIds, getAllServerIds, getDiscordIdsByFactionKey} from './config/settings-loader';
-import {createDashboardApp} from './dashboard/app';
-import {setDiscordClient as setAuthDiscordClient} from './dashboard/middleware/auth.middleware';
-import {setDiscordClient as setServiceDiscordClient} from './dashboard/services/discord.service';
-import {PermissionsRepository} from './databases';
+import { getAllFiles } from './utils/fileUtils';
+import { loadSettings, getStateServerIds, getCrimeServerIds, getAllServerIds, getDiscordIdsByFactionKey } from './config/settings-loader';
+import { createDashboardApp } from './dashboard/app';
+import { setDiscordClient as setAuthDiscordClient } from './dashboard/middleware/auth.middleware';
+import { setDiscordClient as setServiceDiscordClient } from './dashboard/services/discord.service';
+import { PermissionsRepository } from './databases';
 import * as logger from "./logging";
 import { startLostPunishmentsChecker } from './tasks/lostPunishments';
 import { punishChecker } from './utils/punishChecker';
+import prisma from './databases/prisma.service'; 
 
-dotenv.config({path: '.env'});
+dotenv.config({ path: '.env' });
 
 declare module 'discord.js' {
   interface Client {
@@ -22,17 +23,17 @@ declare module 'discord.js' {
 
 const client = new Client({
     intents: [
-        GatewayIntentBits.Guilds,          
-        GatewayIntentBits.GuildMessages,    
-        GatewayIntentBits.MessageContent,  
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
         GatewayIntentBits.DirectMessages,
-        GatewayIntentBits.GuildMembers,   
+        GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildVoiceStates,
         GatewayIntentBits.GuildModeration,
         GatewayIntentBits.GuildPresences
     ],
     partials: [
-        Partials.Channel,                  
+        Partials.Channel,
         Partials.Message
     ]
 });
@@ -173,7 +174,7 @@ async function registerGuildCommands(commands: any[]) {
                 });
             
             if (guildCommands.length === 0) {
-                continue; 
+                continue;
             }
             
             console.log(`🔄 Регистрация ${guildCommands.length} команд для сервера ${guildId}...`);
@@ -232,14 +233,22 @@ async function loadEvents() {
 async function start() {
     console.log('🚀 Запуск бота...');
     
-    PermissionsRepository.initDefaultPermissions();
+    try {
+        await prisma.$connect();
+        console.log('✅ Подключение к PostgreSQL установлено');
+    } catch (error) {
+        console.error('❌ Не удалось подключиться к PostgreSQL:', error);
+        process.exit(1);
+    }
+    
+    await PermissionsRepository.initDefaultPermissions();
     
     const commands = await loadCommands();
     await loadEvents();
 
     const PORT = parseInt(process.env.PORT || '8080', 10);
 
-    client.once('ready', (readyClient) => {
+    client.once('ready', async (readyClient) => {  
         console.log(`✅ Бот запущен как ${readyClient.user?.tag}`);
 
         startLostPunishmentsChecker(readyClient);
@@ -258,7 +267,7 @@ async function start() {
                 }
             });
         } else {
-            console.warn('Отключение дешборда..')
+            console.warn('Отключение дешборда..');
         }
         console.log('✅ Google Forms интеграция активирована');
     });
@@ -282,28 +291,49 @@ async function start() {
     await client.login(process.env.TOKEN);
 }
 
+async function shutdown(signal: string) {
+    console.log(`\n🛑 Получен сигнал ${signal}. Завершение работы...`);
+    try {
+        await prisma.$disconnect();
+        console.log('✅ Отключено от PostgreSQL');
+        client.destroy();
+        console.log('✅ Бот остановлен');
+        process.exit(0);
+    } catch (error) {
+        console.error('❌ Ошибка при завершении:', error);
+        process.exit(1);
+    }
+}
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+
 process.on('unhandledRejection', async (error: Error) => {
-  console.error('❌ Необработанная ошибка (unhandledRejection):', error);
-  
-  try {
-    await logger.logError(client, error, 'Глобальный обработчик - unhandledRejection');
-  } catch (logError) {
-    console.error('Ошибка при логировании unhandledRejection:', logError);
-  }
+    console.error('❌ Необработанная ошибка (unhandledRejection):', error);
+    
+    try {
+        await logger.logError(client, error, 'Глобальный обработчик - unhandledRejection');
+    } catch (logError) {
+        console.error('Ошибка при логировании unhandledRejection:', logError);
+    }
 });
 
 process.on('warning', async (warning: Error) => {
-  console.warn('⚠️ Предупреждение:', warning);
-  
-  if (warning.name === 'DeprecationWarning') {
-    return;
-  }
-  
-  try {
-    await logger.logError(client, warning, 'Глобальный обработчик - process warning');
-  } catch (logError) {
-    console.error('Ошибка при логировании warning:', logError);
-  }
+    console.warn('⚠️ Предупреждение:', warning);
+    
+    if (warning.name === 'DeprecationWarning') {
+        return;
+    }
+    
+    try {
+        await logger.logError(client, warning, 'Глобальный обработчик - process warning');
+    } catch (logError) {
+        console.error('Ошибка при логировании warning:', logError);
+    }
 });
 
-start().catch(console.error);
+start().catch(async (error) => {
+    console.error('❌ Ошибка при запуске:', error);
+    await prisma.$disconnect().catch(() => {});
+    process.exit(1);
+});

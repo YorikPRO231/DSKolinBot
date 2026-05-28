@@ -80,7 +80,7 @@ export async function handleButton(inter: ButtonInteraction, member: GuildMember
 
     if (customId.startsWith("dnames")) {
         const data = parseCustomId(customId);
-        const infiltration = InfiltrationsRepository.retrieveInfiltration(data.detectiveId) as IInfiltration | undefined;
+        const infiltration = await InfiltrationsRepository.retrieveInfiltration(data.detectiveId) as IInfiltration | undefined;
 
         if (!infiltration) {
             return safeReply(inter, '❌ Данные внедрения не найдены в базе данных.');
@@ -171,7 +171,7 @@ async function handlePatchRequest(inter: ButtonInteraction, member: GuildMember)
     }
 
     const level = isDetectiveFaction ? "detective" : "casual";
-    const patch = generatePatch(
+    const patch = await generatePatch(
         faction.abbreviation,
         position,
         name,
@@ -185,7 +185,7 @@ async function handlePatchRequest(inter: ButtonInteraction, member: GuildMember)
         return safeReply(inter, '❌ **Ошибка:** Не удалось определить канал логов нашивок.');
     }
 
-    PatchesRepository.pushPlayerId(passport, `${name} ${surname}`, requesterId, faction.abbreviation, patch);
+    await PatchesRepository.pushPlayerId(passport, `${name} ${surname}`, requesterId, faction.abbreviation, patch);
 
     const embedLog = new EmbedBuilder()
         .setColor(level === "detective" ? 0xff4654 : 0x2b2d31)
@@ -321,7 +321,7 @@ export async function handleModal(inter: ModalSubmitInteraction, member: GuildMe
     const billingPassport = inter.fields.getTextInputValue('passport');
     const data = parseCustomId(inter.customId);
 
-    const infiltration = InfiltrationsRepository.retrieveInfiltration(data.detectiveId) as IInfiltration | undefined;
+    const infiltration = await InfiltrationsRepository.retrieveInfiltration(data.detectiveId) as IInfiltration | undefined;
     if (!infiltration) return safeReply(inter, '❌ Внедренец не найден в БД.');
 
     const govNicknameRequestsChannelId = getSystemChannel('gov_nickname_requests');

@@ -1,4 +1,4 @@
-import db from '../sqlite';
+import prisma from '../prisma.service';
 
 export interface Infiltration {
   id: number;
@@ -12,14 +12,53 @@ export interface Infiltration {
 }
 
 export const InfiltrationsRepository = {
-  pushInfiltration(rank: number, faction: string, detectivefaction: string, detectiveid: string, newnickname: string, oldnickname: string, passport: string) {
-    db.prepare(`
-      INSERT OR REPLACE INTO infiltrations (rank, faction, detectivefaction, detectiveid, newnickname, oldnickname, passport)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(rank, faction, detectivefaction, detectiveid, newnickname, oldnickname, passport);
+  async pushInfiltration(
+    rank: number,
+    faction: string,
+    detectivefaction: string,
+    detectiveid: string,
+    newnickname: string,
+    oldnickname: string,
+    passport: string
+  ): Promise<void> {
+    await prisma.infiltration.upsert({
+      where: { detectiveId: detectiveid },
+      update: {
+        rank,
+        faction,
+        detectiveFaction: detectivefaction,
+        newNickname: newnickname,
+        oldNickname: oldnickname,
+        passport,
+      },
+      create: {
+        rank,
+        faction,
+        detectiveFaction: detectivefaction,
+        detectiveId: detectiveid,
+        newNickname: newnickname,
+        oldNickname: oldnickname,
+        passport,
+      },
+    });
   },
 
-  retrieveInfiltration(detectiveid: string): Infiltration | undefined {
-    return db.prepare('SELECT * FROM infiltrations WHERE detectiveid = ?').get(detectiveid) as Infiltration | undefined;
+  async retrieveInfiltration(detectiveid: string): Promise<Infiltration | undefined> {
+    const infiltration = await prisma.infiltration.findUnique({
+      where: { detectiveId: detectiveid },
+    });
+    
+    if (!infiltration) return undefined;
+    
+    return {
+      id: infiltration.id,
+      rank: infiltration.rank,
+      faction: infiltration.faction,
+      detectivefaction: infiltration.detectiveFaction,
+      detectiveid: infiltration.detectiveId,
+      newnickname: infiltration.newNickname,
+      oldnickname: infiltration.oldNickname,
+      passport: infiltration.passport,
+    };
   },
 };

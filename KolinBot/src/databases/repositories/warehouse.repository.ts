@@ -1,5 +1,8 @@
-import db from '../sqlite';
-import { WarehouseData } from '../../utils/warehouseUtils';
+import prisma from '../prisma.service';
+
+export interface WarehouseData {
+  [key: string]: any;
+}
 
 export interface Warehouse {
   id: number;
@@ -7,7 +10,7 @@ export interface Warehouse {
   adm_id: string;
   punishment: string;
   items: string;
-  log_file: Buffer;
+  log_file: Uint8Array;
   duration: string;
   created_at: string;
 }
@@ -22,52 +25,126 @@ export interface WarehouseLine {
 }
 
 export const WarehouseRepository = {
-  addLog(adm_id: string, pasport: string, punishment: string, items: any, log_file: Buffer, durationText: string): void {
+  async addLog(
+    adm_id: string,
+    pasport: string,
+    punishment: string,
+    items: any,
+    log_file: Buffer,
+    durationText: string
+  ): Promise<void> {
     const serializedItems = typeof items === 'string' ? items : JSON.stringify(items);
-    db.prepare(`
-      INSERT INTO warehouse_drain (adm_id, pasport, punishment, items, log_file, duration, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
-    `).run(adm_id, pasport, punishment, serializedItems, log_file, durationText);
+    await prisma.warehouseDrain.create({
+      data: {
+        admId: adm_id,
+        pasport,
+        punishment,
+        items: serializedItems,
+        logFile: log_file, 
+        duration: durationText,
+      },
+    });
   },
 
-  getLogById(id: number): Warehouse | undefined {
-    return db.prepare(`SELECT * FROM warehouse_drain WHERE id = ?`).get(id) as Warehouse | undefined;
+  async getLogById(id: number): Promise<Warehouse | undefined> {
+    const log = await prisma.warehouseDrain.findUnique({
+      where: { id },
+    });
+    if (!log) return undefined;
+
+    return {
+      id: log.id,
+      pasport: log.pasport,
+      adm_id: log.admId,
+      punishment: log.punishment,
+      items: log.items,
+      log_file: log.logFile, 
+      duration: log.duration,
+      created_at: log.createdAt.toISOString(),
+    };
   },
 
-  getLog(pasport: string): Warehouse | undefined {
-    return db.prepare(`
-      SELECT * FROM warehouse_drain
-      WHERE pasport = ?
-      ORDER BY id DESC LIMIT 1
-    `).get(pasport) as Warehouse | undefined;
+  async getLog(pasport: string): Promise<Warehouse | undefined> {
+    const log = await prisma.warehouseDrain.findFirst({
+      where: { pasport },
+      orderBy: { id: 'desc' },
+    });
+    if (!log) return undefined;
+
+    return {
+      id: log.id,
+      pasport: log.pasport,
+      adm_id: log.admId,
+      punishment: log.punishment,
+      items: log.items,
+      log_file: log.logFile,
+      duration: log.duration,
+      created_at: log.createdAt.toISOString(),
+    };
   },
 
-  getLogsByStatic(pasport: string): Warehouse[] {
-    return db.prepare(`
-      SELECT * FROM warehouse_drain
-      WHERE pasport = ?
-      ORDER BY id DESC
-    `).all(pasport) as Warehouse[];
+  async getLogsByStatic(pasport: string): Promise<Warehouse[]> {
+    const logs = await prisma.warehouseDrain.findMany({
+      where: { pasport },
+      orderBy: { id: 'desc' },
+    });
+
+    return logs.map(log => ({
+      id: log.id,
+      pasport: log.pasport,
+      adm_id: log.admId,
+      punishment: log.punishment,
+      items: log.items,
+      log_file: log.logFile,
+      duration: log.duration,
+      created_at: log.createdAt.toISOString(),
+    }));
   },
 
-  removeLogById(id: number): { changes: number } {
-    const result = db.prepare(`DELETE FROM warehouse_drain WHERE id = ?`).run(id);
-    return { changes: result.changes };
+  async removeLogById(id: number): Promise<{ changes: number }> {
+    try {
+      await prisma.warehouseDrain.delete({
+        where: { id },
+      });
+      return { changes: 1 };
+    } catch {
+      return { changes: 0 };
+    }
   },
 
-  registerDrain(adminId: string, passport: string, punishment: string, report: WarehouseData, durationText: string) {
+  async registerDrain(
+    adminId: string,
+    passport: string,
+    punishment: string,
+    report: WarehouseData,
+    durationText: string
+  ): Promise<void> {
     const data = JSON.stringify(report);
-    db.prepare(`
-      INSERT INTO warehouse_drain_v2 (adminId, passport, punishment, report_data, duration, created_at)
-      VALUES (?, ?, ?, ?, ?, datetime('now', 'localtime'))
-    `).run(adminId, passport, punishment, data, durationText);
+    await prisma.warehouseDrainV2.create({
+      data: {
+        adminId,
+        passport,
+        punishment,
+        reportData: data,
+        duration: durationText,
+      },
+    });
   },
 
-  retrieveDrain(passport: string): WarehouseLine | undefined {
-    return db.prepare(`
-      SELECT * FROM warehouse_drain_v2
-      WHERE passport = ?
-      ORDER BY id DESC LIMIT 1
-    `).get(passport) as WarehouseLine | undefined;
+  async retrieveDrain(passport: string): Promise<WarehouseLine | undefined> {
+    const drain = await prisma.warehouseDrainV2.findFirst({
+      where: { passport },
+      orderBy: { id: 'desc' },
+    });
+    if (!drain) return undefined;
+
+    return {
+      adminId: drain.adminId,
+      passport: drain.passport,
+      punishment: drain.punishment,
+      report_data: drain.reportData,
+      duration: drain.duration,
+      created_at: drain.createdAt.toISOString(),
+    };
   },
 };

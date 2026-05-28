@@ -26,7 +26,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const targetFrac = interaction.options.getString('фракция', true);
     const member = interaction.member as GuildMember;
     const nickname = interaction.options.getString('ник', true);
-    if (TransfersRepository.retrieveTransferData(passport)) {
+    
+    const existingTransfer = await TransfersRepository.retrieveTransferData(passport);
+    if (existingTransfer) {
         return interaction.reply({
             content: 'У Вас уже имеется заявление, ожидайте его рассмотрения.\nПри задержке рассмотрения обратитесь к кураторам фракции.',
             flags: MessageFlags.Ephemeral
