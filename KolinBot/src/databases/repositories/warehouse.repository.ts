@@ -89,7 +89,16 @@ export const WarehouseRepository = {
       orderBy: { id: 'desc' },
     });
 
-    return logs.map(log => ({
+    return logs.map((log: {
+      id: any;
+      pasport: any;
+      admId: any;
+      punishment: any;
+      items: any;
+      logFile: any;
+      duration: any;
+      createdAt: { toISOString: () => any; };
+    }) => ({
       id: log.id,
       pasport: log.pasport,
       adm_id: log.admId,

@@ -17,13 +17,13 @@ import {
     TextInputBuilder,
     TextInputStyle
 } from 'discord.js';
-import { AdminsRepository, WarehouseRepository } from '../../../databases';
-import { getFactionByKey } from "../../../config/settings-loader";
+import {AdminsRepository, WarehouseRepository} from '../../../databases';
+import {getFactionByKey} from "../../../config/settings-loader";
 import axios from "axios";
-import { analyzeLogData, formReportData, WarehouseData } from "../../../utils/warehouseUtils";
+import {analyzeLogData, formReportData, WarehouseData} from "../../../utils/warehouseUtils";
 import * as logger from "../../../logging";
-import { ButtonStyle, ComponentType } from "discord-api-types/v10";
-import { PUNISHMENT_TYPES } from "../../../utils/constants/punishments";
+import {ButtonStyle, ComponentType} from "discord-api-types/v10";
+import {PUNISHMENT_TYPES} from "../../../utils/constants/punishments";
 
 const FRACTION_TYPES = {
     MM: "MM", RM: "RM", LCN: "LCN", YAK: "YAK", AM: "AM",
@@ -66,7 +66,8 @@ const PUNISHMENT_CONFIG = {
     ban: { type: PUNISHMENT_TYPES.BAN, name: "Бан", needsDuration: true, durationUnit: "дн." },
     warn: { type: PUNISHMENT_TYPES.WARN, name: "Варн", needsDuration: false },
     jail: { type: PUNISHMENT_TYPES.AJAIL, name: "Деморган", needsDuration: true, durationUnit: "мин." },
-    curator: { type: PUNISHMENT_TYPES.WARN, name: "Выговор от куратора", needsDuration: false, isCuratorReprimand: true }
+    curator: {type: PUNISHMENT_TYPES.WARN, name: "Выговор от куратора", needsDuration: false},
+    jailwarn: {type: PUNISHMENT_TYPES.JAIL_WARN, name: 'Деморган + варн', needsDuration: true, durationUnit: 'мин.'}
 };
 
 const FRACTION_GROUPS = {
@@ -210,8 +211,8 @@ async function preparePunishment(
     const selectOptions = [
         { label: 'Бан', description: 'Обычный бан аккаунта', value: 'ban' },
         { label: 'IBAN', description: 'Перманентный бан', value: 'iban' },
-        { label: 'Варн', description: 'Предупреждение', value: 'warn' },
-        { label: 'Бан + Варн', description: 'Бан и предупреждение одновременно', value: 'warnban' },
+        {label: 'Варн', description: 'Варн', value: 'warn'},
+        {label: 'Бан + Варн', description: 'Бан и варн одновременно', value: 'warnban'},
         { label: 'Деморган', description: 'Деморган', value: 'jail' },
         { label: 'Деморган + Варн', description: "Деморган и варн одновременно", value: 'jailwarn' }
     ];

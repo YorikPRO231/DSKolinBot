@@ -41,7 +41,16 @@ export const SecurityRepository = {
       orderBy: { createdAt: 'desc' },
     });
 
-    return alerts.map(a => ({
+    return alerts.map((a: {
+      id: any;
+      passport: any;
+      type: any;
+      count: any;
+      authorId: any;
+      reason: any;
+      createdAt: { toISOString: () => any; };
+      updatedAt: { toISOString: () => any; };
+    }) => ({
       id: a.id,
       passport: a.passport,
       type: a.type,
@@ -62,7 +71,16 @@ export const SecurityRepository = {
       orderBy: { createdAt: 'desc' },
     });
 
-    return alerts.map(a => ({
+    return alerts.map((a: {
+      id: any;
+      passport: any;
+      type: any;
+      count: any;
+      authorId: any;
+      reason: any;
+      createdAt: { toISOString: () => any; };
+      updatedAt: { toISOString: () => any; };
+    }) => ({
       id: a.id,
       passport: a.passport,
       type: a.type,
@@ -117,7 +135,14 @@ export const SecurityRepository = {
       take: limit,
     });
 
-    return logs.map(l => ({
+    return logs.map((l: {
+      id: any;
+      username: any;
+      suspectedAction: any;
+      checkedAt: { toISOString: () => any; };
+      adminId: any;
+      checkResults: any;
+    }) => ({
       id: l.id,
       username: l.username,
       suspected_action: l.suspectedAction,

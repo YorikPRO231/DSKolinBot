@@ -94,7 +94,7 @@ export class WarehouseData {
 }
 
 
-const factionPrefixes = ['LSPD', 'FIB', 'LSSD', 'MAY', 'PRIS', 'ARMY']
+const factionPrefixes = ['LSPD', 'FIB', 'LSSD', 'MAY', 'PRIS', 'ARMY', 'AM']
 const weaponNames = ["Бита", "Резиновая дубинка", "Пистолет", "Тяжелый пистолет", "Кольт", "Револьвер", "Старинный пистолет", "AP пистолет",
     "Pump Shotgun", "Pump Shotgun MK2", 'Pump Shothun', "Combat Shotgun", "Assault Shotgun", "Heavy Shotgun", "Tactical SMG", "Assault SMG",
     "Micro SMG", "SMG", "SMG-MK2", "Carbine Rifle", "Service Carbine", "Battle Rifle", "Military Rifle", "Compact Rifle", "Gusenberg Sweeper",
@@ -126,9 +126,13 @@ function readLogFile(logData: string) {
     const surname = userMatch[2]
     const passport = userMatch[3]
     const logs: LogLine[] = [];
-    for (const line of lines.slice(2)) {
-        const parts = line.split('","').map(s => s.replace(/"/g, ''));
-        logs.push({action: parts[2], date: parts[0], type: parts[1]})
+    try {
+        for (const line of lines.slice(2)) {
+            const parts = line.split('","').map(s => s.replace(/"/g, ''));
+            logs.push({action: parts[2], date: parts[0], type: parts[1]})
+        }
+    } catch (e) {
+        return null;
     }
     return {name: name, surname: surname, passport: passport, logLines: logs.reverse()};
 }
@@ -142,7 +146,7 @@ function errorWarehouse(reason: string) {
 export function analyzeLogData(logData: string): WarehouseData {
     const logs = readLogFile(logData);
     if (!logs) {
-        return errorWarehouse('Couldnt read logs from file');
+        return errorWarehouse('Ошибка чтения файла логов. Проверьте структуру: требуется кавычки, запятые, csv формат.');
     }
     const data: Map<string, ItemData> = new Map;
 
@@ -410,7 +414,6 @@ export function formReportData(report: WarehouseData): [string, string] {
     let family = 'В семье:\n';
     let apartment = 'В квартире:\n';
     let house = 'В доме:\n';
-    let faction = 'С фракции:\n';
     let customWarehouse = 'На своем складе:\n';
     for (let [_, group] of report.groups) {
         if (group.soldAmount > 0) {
