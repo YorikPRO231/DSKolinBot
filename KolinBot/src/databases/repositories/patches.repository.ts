@@ -25,7 +25,7 @@ export const PatchesRepository = {
     discord_id: string,
     faction: string,
     patch: string
-  ): Promise<void> {
+  ): Promise<boolean> {
     const now = new Date();
     const existing = await prisma.statePatch.findUnique({
       where: { passport },
@@ -34,6 +34,10 @@ export const PatchesRepository = {
     let history: PatchHistory[] = [];
 
     if (existing) {
+      if (existing.discord_id !== discord_id) {
+        return false;
+      }
+
       try {
         history = JSON.parse(existing.history) as PatchHistory[];
       } catch (e) {
@@ -71,6 +75,7 @@ export const PatchesRepository = {
         createdAt: now,
       },
     });
+    return true;
   },
 
   async retrievePlayerPatch(passport: number): Promise<StatePatch | undefined> {
@@ -101,7 +106,16 @@ export const PatchesRepository = {
       },
     });
 
-    return patches.map(p => ({
+    return patches.map((p: {
+      id: any;
+      passport: any;
+      username: any;
+      discordId: any;
+      faction: any;
+      patch: any;
+      createdAt: { toISOString: () => any; };
+      history: any;
+    }) => ({
       id: p.id,
       passport: p.passport,
       username: p.username,
@@ -118,7 +132,16 @@ export const PatchesRepository = {
       where: { discordId },
     });
 
-    return patches.map(p => ({
+    return patches.map((p: {
+      id: any;
+      passport: any;
+      username: any;
+      discordId: any;
+      faction: any;
+      patch: any;
+      createdAt: { toISOString: () => any; };
+      history: any;
+    }) => ({
       id: p.id,
       passport: p.passport,
       username: p.username,
@@ -135,7 +158,16 @@ export const PatchesRepository = {
       where: { discordId: discord_id },
     });
 
-    return patches.map(p => ({
+    return patches.map((p: {
+      id: any;
+      passport: any;
+      username: any;
+      discordId: any;
+      faction: any;
+      patch: any;
+      createdAt: { toISOString: () => any; };
+      history: any;
+    }) => ({
       id: p.id,
       passport: p.passport,
       username: p.username,

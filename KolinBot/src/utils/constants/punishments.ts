@@ -4,7 +4,8 @@ export const PUNISHMENT_TYPES = {
     WARN: 'warn',
     WARN_BAN: 'warn_ban',
     AJAIL: 'ajail',
-    CLEAR_ITEMS: 'clear_items'
+    CLEAR_ITEMS: 'clear_items',
+    JAIL_WARN: 'jailwarn'
 } as const;
 
 export type PunishmentType = typeof PUNISHMENT_TYPES[keyof typeof PUNISHMENT_TYPES];
@@ -18,6 +19,13 @@ interface PunishmentInfo {
 }
 
 export const PUNISHMENT_INFO: Record<PunishmentType, PunishmentInfo> = {
+    [PUNISHMENT_TYPES.JAIL_WARN]: {
+        label: "Деморган и варн",
+        shortLabel: "Деморган + варн",
+        upperLabel: "ДЕМОРГАН + ВАРН",
+        color: 0xed4245,
+        emoji: "🚫"
+    },
     [PUNISHMENT_TYPES.IBAN]: {
         label: "Вечная блокировка",
         shortLabel: "IБан",
@@ -61,7 +69,3 @@ export const PUNISHMENT_INFO: Record<PunishmentType, PunishmentInfo> = {
         emoji: " "
     }
 };
-
-export function formatPunishment(type: PunishmentType, format: 'label' | 'shortLabel' | 'upperLabel' = 'label'): string {
-    return PUNISHMENT_INFO[type]?.[format] || type;
-}

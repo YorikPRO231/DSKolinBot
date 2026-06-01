@@ -185,7 +185,10 @@ async function handlePatchRequest(inter: ButtonInteraction, member: GuildMember)
         return safeReply(inter, '❌ **Ошибка:** Не удалось определить канал логов нашивок.');
     }
 
-    await PatchesRepository.pushPlayerId(passport, `${name} ${surname}`, requesterId, faction.abbreviation, patch);
+    const res = await PatchesRepository.pushPlayerId(passport, `${name} ${surname}`, requesterId, faction.abbreviation, patch);
+    if (!res) {
+        return safeReply(inter, '❌ **Ошибка:** Не удалось выдать нашивку данному игроку!\nВ базе данных данный паспорт уже занят другим игроком. Проверьте написание.')
+    }
 
     const embedLog = new EmbedBuilder()
         .setColor(level === "detective" ? 0xff4654 : 0x2b2d31)

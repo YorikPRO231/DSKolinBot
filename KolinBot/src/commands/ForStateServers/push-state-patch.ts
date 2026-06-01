@@ -1,7 +1,7 @@
 import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder, TextChannel,} from "discord.js";
-import { PatchesRepository } from "../../databases/index";
+import {PatchesRepository} from "../../databases";
 import {generatePatch, getFaction} from "../../utils/utilsState";
-import { getStateHighRoles, getSystemChannel, getSystemRole, getDetectives } from "../../config/settings-loader";
+import {getDetectives, getStateHighRoles, getSystemChannel, getSystemRole} from "../../config/settings-loader";
 
 export const factions = ['LSPD', 'LSSD', 'FIB', 'ARMY', 'SASPA', 'GOV', 'detectives'];
 
@@ -102,7 +102,10 @@ export async function execute(inter: ChatInputCommandInteraction) {
 );
 
   try {
-    await PatchesRepository.pushPlayerId(passport, nickname, userID.id, faction.abbreviation, patch);
+    const res = await PatchesRepository.pushPlayerId(passport, nickname, userID.id, faction.abbreviation, patch);
+    if (!res) {
+      return inter.editReply({content: '❌ **Ошибка:** Не удалось выдать нашивку данному игроку!\nВ базе данных данный паспорт уже занят другим игроком. Проверьте написание.'})
+    }
 
     const embed = new EmbedBuilder()
       .setColor(level === "detective" ? 0xff4654 : 0x2b2d31)
