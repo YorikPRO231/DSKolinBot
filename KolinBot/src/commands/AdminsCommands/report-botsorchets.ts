@@ -45,7 +45,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         const requestText = `Запрос от админов: ${reason}${video ? `\nВидео: ${video}` : ''}`;
         
         try {
-            SecurityRepository.addSecurityRequest(
+            await SecurityRepository.addSecurityRequest(
                 target,
                 interaction.user.id,
                 requestText,

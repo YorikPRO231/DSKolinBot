@@ -15,33 +15,31 @@ const ACTION_MAP: Record<string, string> = {
     'Работа в порту': 'Бот: Порт',
     'Работа на стройке': 'Бот: Стройка',
     'Дайверы': 'Бот: Дайвер',
-    'Охотники': 'Бот: Охота'
+    'Охотники': 'Бот: Охота',
+    'Обход анти-АФК системы': 'Бот: Анти-АФК'
 };
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
 
 export async function execute(inter: ChatInputCommandInteraction) {
-
     const securityLevel = await AdminsRepository.getSecurityAccess(inter.user.id);
-        if (securityLevel !== 'yes') {
-            return inter.reply({ 
-                content: '❌ У вас нет доступа к этой команде!', 
-                flags: MessageFlags.Ephemeral
-            });
-        }
+    if (securityLevel !== 'yes') {
+        return inter.reply({ 
+            content: 'У вас нет доступа к этой команде!', 
+            flags: MessageFlags.Ephemeral
+        });
+    }
 
     await inter.deferReply();
-
-    
 
     const attachment = inter.options.getAttachment("лог-файл")!;
 
     if (!attachment.contentType?.includes('text/plain') && !attachment.name?.endsWith('.txt')) {
-        return inter.editReply("❌ Пожалуйста, загрузите текстовый файл (.txt)");
+        return inter.editReply("Пожалуйста, загрузите текстовый файл (.txt)");
     }
 
     if (attachment.size > MAX_FILE_SIZE) {
-        return inter.editReply("❌ Файл слишком большой. Максимальный размер: 2 МБ.");
+        return inter.editReply("Файл слишком большой. Максимальный размер: 2 МБ.");
     }
 
     try {
@@ -51,10 +49,10 @@ export async function execute(inter: ChatInputCommandInteraction) {
         const alerts = parseLogs(fileContent);
 
         if (alerts.length === 0) {
-            return inter.editReply("⚠ В файле не найдено подходящих данных для импорта.");
+            return inter.editReply("В файле не найдено подходящих данных для импорта.");
         }
 
-        SecurityRepository.exportSecurityAlertsMany(inter.user.id, alerts.map(a => ({
+        await SecurityRepository.exportSecurityAlertsMany(inter.user.id, alerts.map(a => ({
             suspect: a.suspect,
             action: a.suspected_action,
             data: a.work_data,
@@ -64,14 +62,14 @@ export async function execute(inter: ChatInputCommandInteraction) {
         const uniqueSuspects = new Set(alerts.map(a => a.suspect)).size;
 
         await inter.editReply(
-            `✅ **Импорт завершен!**\n` +
-            `* Обработано строк: **${alerts.length}**\n` +
-            `* Уникальных игроков: **${uniqueSuspects}**\n\n` +
+            `**Импорт завершен!**\n` +
+            `• Обработано строк: **${alerts.length}**\n` +
+            `• Уникальных игроков: **${uniqueSuspects}**\n\n` +
             `*Все повторные нарушения были автоматически объединены.*`
         );
     } catch (e) {
         console.error(e);
-        await inter.editReply("❌ Произошла ошибка при загрузке или обработке файла.");
+        await inter.editReply("Произошла ошибка при загрузке или обработке файла.");
     }
 }
 
@@ -80,11 +78,10 @@ function parseLogs(content: string) {
     const result: any[] = [];
 
     for (const line of lines) {
-        const segments = line.split(/\t|\s{2,}/); 
+        const segments = line.split(/\t|\s{2,}/);
         
         if (segments.length < 4) continue;
 
-        // [0] Дата/Время, [1] Действие, [2] Игрок [ID], [3] Данные по работе, [4] Статус
         const [timestamp, actionRaw, playerRaw, workDataRaw] = segments;
 
         let originalDate = null;

@@ -52,7 +52,7 @@ export async function handleNickKick(inter: ButtonInteraction, member: GuildMemb
         if (!targetMember?.kickable) return inter.editReply("Игрок не найден или его нельзя кикнуть.");
         const adminName = (inter.member as GuildMember)?.displayName || inter.user.username;
         const kickEmbed = new EmbedBuilder()
-          .setTitle(`GTA 5 RP | ${inter.guild?.name}`)
+          .setTitle(`${inter.guild?.name}`)
           .setTimestamp()
           .setColor(0xb8001c)
           .setDescription(
