@@ -5,20 +5,42 @@ import prisma from "../../databases/prisma.service";
 export const SecurityController = {
   getAlerts: async (req: Request, res: Response) => {
     try {
-      const type = typeof req.query.type === "string" ? req.query.type : undefined;
-      const search = typeof req.query.suspect === "string" ? req.query.suspect : undefined;
+      const type =
+        typeof req.query.type === "string" ? req.query.type : undefined;
+      const search =
+        typeof req.query.suspect === "string" ? req.query.suspect : undefined;
+      const sortBy =
+        typeof req.query.sortBy === "string" ? req.query.sortBy : "createdAt";
+      const sortOrder =
+        typeof req.query.sortOrder === "string" && req.query.sortOrder === "asc"
+          ? "asc"
+          : "desc";
       const page = parseInt(req.query.page as string) || 1;
       const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
       const skip = (page - 1) * limit;
 
       const where: any = {};
       if (type) where.type = type;
-      if (search) where.passport = { contains: search };
+      if (search) where.passport = { contains: search, mode: "insensitive" };
+
+      const allowedSortFields = [
+        "passport",
+        "type",
+        "count",
+        "createdAt",
+        "updatedAt",
+      ];
+      const orderBy: any = {};
+      if (allowedSortFields.includes(sortBy)) {
+        orderBy[sortBy] = sortOrder;
+      } else {
+        orderBy.createdAt = "desc";
+      }
 
       const [alerts, total] = await Promise.all([
         prisma.securityAlert.findMany({
           where,
-          orderBy: { createdAt: 'desc' },
+          orderBy,
           skip,
           take: limit,
         }),
@@ -27,7 +49,7 @@ export const SecurityController = {
 
       res.json({
         success: true,
-        alerts: alerts.map(a => ({
+        alerts: alerts.map((a) => ({
           id: a.id,
           passport: a.passport,
           type: a.type,
@@ -48,11 +70,37 @@ export const SecurityController = {
     }
   },
 
+  getAlertHistory: async (req: Request, res: Response) => {
+    try {
+      const { static: passport } = req.params;
+
+      if (!passport) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Passport is required" });
+      }
+
+      const result = await SecurityRepository.getFullHistoryBySuspect(passport);
+
+      res.json({
+        success: true,
+        ...result,
+      });
+    } catch (error) {
+      console.error("Error getting alert history:", error);
+      res
+        .status(500)
+        .json({ success: false, error: "Failed to get alert history" });
+    }
+  },
+
   getAlertById: async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id) || id <= 0) {
-        return res.status(400).json({ success: false, error: "Invalid ID format" });
+        return res
+          .status(400)
+          .json({ success: false, error: "Invalid ID format" });
       }
 
       const alert = await prisma.securityAlert.findUnique({
@@ -60,7 +108,9 @@ export const SecurityController = {
       });
 
       if (!alert) {
-        return res.status(404).json({ success: false, error: "Alert not found" });
+        return res
+          .status(404)
+          .json({ success: false, error: "Alert not found" });
       }
 
       res.json({
@@ -87,7 +137,12 @@ export const SecurityController = {
       const { suspect, action, data, type } = req.body;
       const adminId = (req.user as any)?.id || "system";
 
-      await SecurityRepository.addSecurityRequest(type, adminId, action, suspect);
+      await SecurityRepository.addSecurityRequest(
+        type,
+        adminId,
+        action,
+        suspect,
+      );
       res.json({ success: true });
     } catch (error) {
       console.error("Error adding alert:", error);
@@ -99,11 +154,13 @@ export const SecurityController = {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id) || id <= 0) {
-        return res.status(400).json({ success: false, error: "Invalid ID format" });
+        return res
+          .status(400)
+          .json({ success: false, error: "Invalid ID format" });
       }
 
-      await prisma.securityAlert.delete({ where: { id } });
-      res.json({ success: true });
+      const result = await SecurityRepository.closeAlert(id);
+      res.json({ success: result.changes > 0 });
     } catch (error) {
       console.error("Error closing alert:", error);
       res.status(500).json({ success: false, error: "Failed to close alert" });
@@ -114,13 +171,13 @@ export const SecurityController = {
     try {
       const limit = Math.min(parseInt(req.query.limit as string) || 100, 500);
       const logs = await prisma.securityLog.findMany({
-        orderBy: { checkedAt: 'desc' },
+        orderBy: { checkedAt: "desc" },
         take: limit,
       });
 
       res.json({
         success: true,
-        logs: logs.map(l => ({
+        logs: logs.map((l) => ({
           id: l.id,
           username: l.username,
           suspected_action: l.suspectedAction,
@@ -141,14 +198,23 @@ export const SecurityController = {
       const authorId = (req.user as any)?.id || "system";
 
       if (!type || !passport) {
-        return res.status(400).json({ success: false, error: "Missing required fields" });
+        return res
+          .status(400)
+          .json({ success: false, error: "Missing required fields" });
       }
 
-      await SecurityRepository.addSecurityRequest(type, authorId, reason || "Не указана", passport);
+      await SecurityRepository.addSecurityRequest(
+        type,
+        authorId,
+        reason || "Не указана",
+        passport,
+      );
       res.json({ success: true });
     } catch (error) {
       console.error("Error adding security request:", error);
-      res.status(500).json({ success: false, error: "Failed to add security request" });
+      res
+        .status(500)
+        .json({ success: false, error: "Failed to add security request" });
     }
   },
 };

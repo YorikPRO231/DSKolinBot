@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "cd KolinBot && nodemon --ignore 'data/**' --ignore '**/data/**' --exec ts-node -r dotenv/config src/index.ts",
+    "dev": "nodemon --ignore 'data/**' --ignore '**/data/**' --exec ts-node -r dotenv/config src/index.ts",
     "build": "tsc",
     "deploy-forms": "tsx src/deployFormsCommands.ts",
     "start": "node dist/index.js",

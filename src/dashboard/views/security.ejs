@@ -44,16 +44,16 @@
     <div class="card table-container">
         <table class="data-table">
             <thead>
-                <tr>
-                    <th>Статик</th>
-                    <th>Тип</th>
-                    <th>Причина</th>
-                    <th>Кто добавил</th>
-                    <th style="text-align: center;">Кол-во</th>
-                    <th>Дата</th>
-                    <th>Действия</th>
-                </tr>
-            </thead>
+    <tr>
+        <th onclick="SecurityModule.sortAlerts('passport')" style="cursor: pointer;">Статик <i class="fas fa-sort"></i></th>
+        <th onclick="SecurityModule.sortAlerts('type')" style="cursor: pointer;">Тип <i class="fas fa-sort"></i></th>
+        <th>Причина</th>
+        <th>Кто добавил</th>
+        <th onclick="SecurityModule.sortAlerts('count')" style="cursor: pointer; text-align: center;">Кол-во <i class="fas fa-sort"></i></th>
+        <th onclick="SecurityModule.sortAlerts('createdAt')" style="cursor: pointer;">Дата <i class="fas fa-sort"></i></th>
+        <th>Действия</th>
+    </tr>
+</thead>
             <tbody id="alertsList">
                 <tr>
                     <td colspan="7" class="loading">
@@ -156,6 +156,18 @@
         <p id="notificationMessage">Действие выполнено</p>
         <div class="modal-buttons" style="justify-content: center;">
             <button type="button" class="btn-primary" onclick="closeModal('notificationModal')">Закрыть</button>
+        </div>
+    </div>
+</div>
+<div id="historyModal" class="modal">
+    <div class="modal-content modal-lg">
+        <div class="modal-header">
+            <h3 id="historyTitle"><i class="fas fa-history"></i> История жалоб</h3>
+            <button class="modal-close" onclick="closeModal('historyModal')"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="historyContent" class="modal-body history-container"></div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeModal('historyModal')">Закрыть</button>
         </div>
     </div>
 </div>

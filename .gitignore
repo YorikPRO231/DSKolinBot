@@ -31,7 +31,7 @@ dist/
 # --- Конфиденциальные данные ---
 *.token
 *.config
-KolinBot/.env
+.env
 
 # --- Базы данных ---
 *.sqlite
@@ -44,4 +44,4 @@ src/data.sqlite-wal
 data/
 /.idea/
 
-/KolinBot/src/generated/prisma
+prisma/generated/

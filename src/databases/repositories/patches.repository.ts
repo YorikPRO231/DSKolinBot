@@ -34,7 +34,7 @@ export const PatchesRepository = {
     let history: PatchHistory[] = [];
 
     if (existing) {
-      if (existing.discord_id !== discord_id) {
+      if (existing.discordId !== discord_id) {
         return false;
       }
 

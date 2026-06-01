@@ -1,8 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
 import { PermissionsRepository } from '../../databases';
 
+const isDev = process.env.NODE_ENV === 'development';
+
 export function requirePermission(permissionKey: string) {
   return async (req: Request, res: Response, next: NextFunction) => {
+    if (isDev) {
+      console.log(`[DEV] Bypassing permission: ${permissionKey}`);
+      return next();
+    }
+    
     const userId = (req.user as any)?.id;
     
     if (!userId) {
@@ -39,6 +46,11 @@ export function requirePermission(permissionKey: string) {
 
 export function requireAnyPermission(permissionKeys: string[]) {
   return async (req: Request, res: Response, next: NextFunction) => {
+    if (isDev) {
+      console.log(`[DEV] Bypassing permissions: ${permissionKeys.join(', ')}`);
+      return next();
+    }
+    
     const userId = (req.user as any)?.id;
     
     if (!userId) {

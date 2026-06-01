@@ -4,7 +4,13 @@ const CHEAT_SITES = [
   { name: 'Binware', domains: ['binware.su', 'binware.club', 'binware.net'] },
   { name: 'Leet-Cheats', domains: ['leet-cheats.ru', 'leet-cheats.com', 'leetcheats.ru'] },
   { name: 'Skript', domains: ['skript.gg', 'skript.su', 'skript.net'] },
-  { name: 'Unicorn', domains: ['unicore.cloud', 'unicorncheats.ru', 'unicorncheats.com'] }
+  { name: 'Unicorn', domains: ['unicore.cloud', 'unicorncheats.ru', 'unicorncheats.com'] },
+];
+
+const MARKETPLACES = [
+  { name: 'FunPay', domains: ['funpay.ru', 'funpay.com'] },
+  { name: 'Playerok', domains: ['playerok.ru', 'playerok.com'] },
+  { name: 'GGSel', domains: ['ggsel.com', 'ggsel.ru', 'ggsel.net'] },
 ];
 
 const POPULAR_EMAILS = [
@@ -15,7 +21,7 @@ const POPULAR_EMAILS = [
   { name: 'iCloud', domains: ['icloud.com', 'me.com', 'mac.com'] },
   { name: 'ProtonMail', domains: ['protonmail.com', 'proton.me'] },
   { name: 'RAMBLER', domains: ['rambler.ru', 'ro.ru'] },
-  { name: 'UKR.NET', domains: ['ukr.net'] }
+  { name: 'UKR.NET', domains: ['ukr.net'] },
 ];
 
 const IGNORED_DOMAINS = [
@@ -49,48 +55,34 @@ export interface CheatSiteResult {
   context: string;
 }
 
+export interface MarketplaceResult {
+  name: string;
+  domain: string;
+  line: number;
+  context: string;
+}
+
 export interface ParseResult {
   filename: string;
   totalLines: number;
   processedLines: number;
   emails: EmailResult[];
   cheatSites: CheatSiteResult[];
+  marketplaces: MarketplaceResult[];
 }
 
 function isCodeLine(line: string): boolean {
   const trimmed = line.trim();
   
   const codePatterns: RegExp[] = [
-    /^[\s{]*['"]?\w+['"]?\s*:\s*[\[{]/,
-    /^[\s{]*domains\s*:/,
-    /^[\s{]*name\s*:/,
-    /^[\s{]*const\s+/,
-    /^[\s{]*let\s+/,
-    /^[\s{]*var\s+/,
-    /^[\s{]*function\s+/,
-    /^[\s{]*import\s+/,
-    /^[\s{]*export\s+/,
-    /^[\s{]*module\./,
-    /^[\s{]*require\s*\(/,
-    /^[\s{]*console\./,
-    /^[\s{]*if\s*\(/,
-    /^[\s{]*for\s*\(/,
-    /^[\s{]*while\s*\(/,
-    /^[\s{]*return\s+/,
-    /^[\s{]*\}\s*[,;]?\s*$/,
-    /^[\s{]*\]\s*[,;]?\s*$/,
-    /^[\s{]*\)\s*[,;]?\s*$/,
-    /^[\s{]*\.\w+/,
-    /^[\s{]*\/\//,
-    /^[\s{]*\/\*/,
-    /^[\s{]*\*\//,
-    /^[\s{]*</,
-    /^[\s{]*>/,
-    /^[\s{]*\{$/,
-    /^[\s{]*\}$/,
-    /^[\s{]*,\s*$/,
-    /^[\s{]*;\s*$/,
-    /^\s*\[\s*$/
+    /^[\s{]*['"]?\w+['"]?\s*:\s*[\[{]/, /^[\s{]*domains\s*:/, /^[\s{]*name\s*:/,
+    /^[\s{]*const\s+/, /^[\s{]*let\s+/, /^[\s{]*var\s+/, /^[\s{]*function\s+/,
+    /^[\s{]*import\s+/, /^[\s{]*export\s+/, /^[\s{]*module\./, /^[\s{]*require\s*\(/,
+    /^[\s{]*console\./, /^[\s{]*if\s*\(/, /^[\s{]*for\s*\(/, /^[\s{]*while\s*\(/,
+    /^[\s{]*return\s+/, /^[\s{]*\}\s*[,;]?\s*$/, /^[\s{]*\]\s*[,;]?\s*$/,
+    /^[\s{]*\)\s*[,;]?\s*$/, /^[\s{]*\.\w+/, /^[\s{]*\/\//, /^[\s{]*\/\*/,
+    /^[\s{]*\*\//, /^[\s{]*</, /^[\s{]*>/, /^[\s{]*\{$/, /^[\s{]*\}$/,
+    /^[\s{]*,\s*$/, /^[\s{]*;\s*$/, /^\s*\[\s*$/
   ];
 
   return codePatterns.some((pattern: RegExp) => pattern.test(trimmed));
@@ -137,12 +129,28 @@ function findCheatSite(text: string): { name: string; domain: string } | null {
   return null;
 }
 
+function findMarketplace(text: string): { name: string; domain: string } | null {
+  const lowerText = text.toLowerCase();
+  
+  for (const marketplace of MARKETPLACES) {
+    for (const domain of marketplace.domains) {
+      if (lowerText.includes(domain.toLowerCase())) {
+        return { name: marketplace.name, domain: domain };
+      }
+    }
+  }
+  
+  return null;
+}
+
 export function parseLogFile(fileContent: string, filename: string): ParseResult {
   const lines = fileContent.split('\n');
   const emails: EmailResult[] = [];
   const cheatSites: CheatSiteResult[] = [];
+  const marketplaces: MarketplaceResult[] = [];
   const seenEmails = new Set<string>();
   const seenCheats = new Set<string>();
+  const seenMarketplaces = new Set<string>();
   let processedLines = 0;
 
   const emailRegex = /[a-zA-Z0-9][a-zA-Z0-9._%+-]*@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
@@ -162,8 +170,9 @@ export function parseLogFile(fileContent: string, filename: string): ParseResult
     }
     
     const cheatSite = findCheatSite(line);
+    const marketplace = findMarketplace(line);
     
-    if (foundEmails.length > 0 || cheatSite) {
+    if (foundEmails.length > 0 || cheatSite || marketplace) {
       processedLines++;
       
       for (const email of foundEmails) {
@@ -191,6 +200,19 @@ export function parseLogFile(fileContent: string, filename: string): ParseResult
           });
         }
       }
+      
+      if (marketplace) {
+        const key = `${marketplace.name}:${marketplace.domain}`;
+        if (!seenMarketplaces.has(key)) {
+          seenMarketplaces.add(key);
+          marketplaces.push({
+            name: marketplace.name,
+            domain: marketplace.domain,
+            line: i + 1,
+            context: line
+          });
+        }
+      }
     }
   }
 
@@ -199,6 +221,7 @@ export function parseLogFile(fileContent: string, filename: string): ParseResult
     totalLines: lines.length,
     processedLines,
     emails,
-    cheatSites
+    cheatSites,
+    marketplaces,
   };
 }

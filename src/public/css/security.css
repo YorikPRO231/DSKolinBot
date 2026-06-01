@@ -933,3 +933,81 @@ textarea.search-input-field {
 ::-webkit-scrollbar-thumb:hover {
     background: var(--accent);
 }
+
+.history-container {
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.history-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.history-item {
+    background: var(--bg-main);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 1rem;
+    transition: all 0.2s;
+}
+
+.history-item:hover {
+    background: rgba(255, 255, 255, 0.02);
+    transform: translateX(4px);
+}
+
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.history-date {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+}
+
+.history-reason {
+    margin: 0.5rem 0;
+    padding: 0.5rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    word-break: break-word;
+}
+
+.history-author {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    margin-top: 0.5rem;
+}
+
+.history-author i, .history-updated i {
+    margin-right: 4px;
+}
+
+.modal-lg {
+    width: 700px;
+    max-width: 90%;
+}
+
+.clickable-static {
+    cursor: pointer;
+    color: var(--accent);
+    transition: 0.2s;
+}
+
+.clickable-static:hover {
+    text-decoration: underline;
+    opacity: 0.8;
+}
+
+.clickable-static i {
+    margin-right: 4px;
+    font-size: 0.7rem;
+}

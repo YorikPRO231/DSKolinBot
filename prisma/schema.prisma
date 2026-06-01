@@ -5,7 +5,6 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
 }
 
 model Admin {
@@ -14,11 +13,21 @@ model Admin {
   security  String?   @default("no")
   
   inspectionReports InspectionReport[] @relation("AdminInspections")
-  securityAlerts    SecurityAlert[]    @relation("AdminAlerts")
   warehouseDrains   WarehouseDrain[]   @relation("AdminDrains")
   warehouseDrainsV2 WarehouseDrainV2[] @relation("AdminDrainsV2")
   
   @@map("admins")
+}
+
+model SecurityLog {
+  id              Int      @id @default(autoincrement())
+  username        String
+  suspectedAction String   @map("suspected_action")
+  checkedAt       DateTime @default(now()) @map("checked_at")
+  adminId         String   @map("admin_id")
+  checkResults    String   @map("check_results")
+  
+  @@map("security_logs")
 }
 
 model InspectionReport {
@@ -152,31 +161,32 @@ model Transfer {
   @@map("transfers")
 }
 
+model SecurityAlertLog {
+  id         Int      @id @default(autoincrement())
+  alertId    Int
+  type       String
+  reason     String
+  authorId   String
+  createdAt  DateTime @default(now())
+  
+  alert      SecurityAlert @relation(fields: [alertId], references: [id], onDelete: Cascade)
+}
+
 model SecurityAlert {
   id         Int      @id @default(autoincrement())
   passport   String
-  type       String   @db.Text
-  count      Int      @default(1)
-  authorId   String   @map("author_id")
+  type       String
+  count      Int      @default(0)
+  authorId   String
   reason     String
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
   
-  author Admin @relation("AdminAlerts", fields: [authorId], references: [discordId])
-  
+  logs       SecurityAlertLog[]
+
   @@map("bot_cheat_reports")
 }
 
-model SecurityLog {
-  id              Int      @id @default(autoincrement())
-  username        String
-  suspectedAction String   @map("suspected_action")
-  checkedAt       DateTime @default(now()) @map("checked_at")
-  adminId         String   @map("admin_id")
-  checkResults    String   @map("check_results")
-  
-  @@map("security_logs")
-}
 
 model WarehouseDrain {
   id         Int      @id @default(autoincrement())

@@ -99,7 +99,7 @@ export function errorHandler(err: any, req: Request, res: Response, next: NextFu
   });
 
   let statusCode = err.statusCode || StatusCodes.INTERNAL_SERVER_ERROR;
-  
+
   if (err.name === 'ValidationError') {
     statusCode = StatusCodes.BAD_REQUEST;
   } else if (err.name === 'UnauthorizedError' || err.name === 'JsonWebTokenError') {
@@ -111,7 +111,6 @@ export function errorHandler(err: any, req: Request, res: Response, next: NextFu
   }
 
   const isApiRequest = req.path.startsWith('/api/') || req.path.startsWith('/webhook/') || req.xhr;
-  const acceptsJson = req.accepts('json');
 
   const errorResponse = {
     success: false,
@@ -126,7 +125,7 @@ export function errorHandler(err: any, req: Request, res: Response, next: NextFu
     }
   };
 
-  if (isApiRequest || acceptsJson) {
+  if (isApiRequest) {
     return res.status(statusCode).json(errorResponse);
   }
 
@@ -173,22 +172,21 @@ function getErrorDescription(statusCode: number, err: any): string {
     503: 'Сервер временно недоступен. Попробуйте позже.',
     504: 'Сервер не отвечает. Попробуйте позже.'
   };
-  
+
   if (statusCode === 404 && err?.message?.includes('EJS')) {
     return 'Запрашиваемая страница не найдена. Проверьте URL.';
   }
-  
+
   return descriptions[statusCode] || 'Пожалуйста, попробуйте позже или обратитесь к администратору.';
 }
 
 export function notFoundHandler(req: Request, res: Response, next: NextFunction) {
-  const isApiRequest = req.path.startsWith('/api/') || 
+  const isApiRequest = req.path.startsWith('/api/') ||
                        req.path.startsWith('/webhook/') ||
-                       req.xhr ||
-                       req.accepts('json') === 'json';
-  
+                       req.xhr;
+
   if (isApiRequest) {
-    res.status(StatusCodes.NOT_FOUND).json({
+    return res.status(StatusCodes.NOT_FOUND).json({
       success: false,
       error: {
         code: 'NOT_FOUND',
@@ -198,41 +196,41 @@ export function notFoundHandler(req: Request, res: Response, next: NextFunction)
         path: req.path
       }
     });
-  } else {
-    const user = (req as any).user || null;
-    const isAuthenticated = req.isAuthenticated && req.isAuthenticated();
-    
-    if (!isAuthenticated && req.path.startsWith('/dashboard/')) {
-      if (req.session) {
-        req.session.returnTo = req.originalUrl;
-      }
-      return res.redirect('/login');
-    }
-    
-    getUserPermissions(req).then(permissions => {
-      res.status(StatusCodes.NOT_FOUND).render('error', {
-        user: user,
-        title: '404 - Page Not Found',
-        currentPage: 'error',
-        permissions: permissions,
-        error: {
-          code: 404,
-          message: 'Page Not Found',
-          description: 'Запрашиваемая страница не существует или была перемещена'
-        }
-      });
-    }).catch(() => {
-      res.status(StatusCodes.NOT_FOUND).render('error', {
-        user: user,
-        title: '404 - Page Not Found',
-        currentPage: 'error',
-        permissions: [],
-        error: {
-          code: 404,
-          message: 'Page Not Found',
-          description: 'Запрашиваемая страница не существует или была перемещена'
-        }
-      });
-    });
   }
+
+  const user = (req as any).user || null;
+  const isAuthenticated = req.isAuthenticated && req.isAuthenticated();
+
+  if (!isAuthenticated && req.path.startsWith('/dashboard')) {
+    if (req.session) {
+      req.session.returnTo = req.originalUrl;
+    }
+    return res.redirect('/login');
+  }
+
+  getUserPermissions(req).then(permissions => {
+    res.status(StatusCodes.NOT_FOUND).render('error', {
+      user: user,
+      title: '404 - Page Not Found',
+      currentPage: 'error',
+      permissions: permissions,
+      error: {
+        code: 404,
+        message: 'Страница не найдена',
+        description: 'Запрашиваемая страница не существует или была перемещена'
+      }
+    });
+  }).catch(() => {
+    res.status(StatusCodes.NOT_FOUND).render('error', {
+      user: user,
+      title: '404 - Page Not Found',
+      currentPage: 'error',
+      permissions: [],
+      error: {
+        code: 404,
+        message: 'Страница не найдена',
+        description: 'Запрашиваемая страница не существует или была перемещена'
+      }
+    });
+  });
 }
