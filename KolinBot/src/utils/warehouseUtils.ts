@@ -432,9 +432,24 @@ export function formReportData(report: WarehouseData): [string, string] {
     const stats = {vehicle, lot, sold, traded, camper, family, apartment, house, customWarehouse};
     for (let statsKey in stats) {
         const x = stats[statsKey as 'vehicle' | 'lot' | 'traded' | 'camper' | 'family' | 'apartment' | 'house' | 'customWarehouse' | 'sold'];
-        if (x.trim().length > 0) {
+        if (x.trim().length > 0 && !isEmpty(x)) {
             second += x + '\n'
         }
     }
     return [data, second];
+}
+
+function isEmpty(s: string) {
+    const storageLabels = [
+        'В машинах:\n',
+        'Продажи DarkVito:\n',
+        'Выставлено DarkVito:\n',
+        'Передано кому-то:\n',
+        'В кемпере:\n',
+        'В семье:\n',
+        'В квартире:\n',
+        'В доме:\n',
+        'На своем складе:\n'
+    ];
+    return storageLabels.includes(s);
 }
