@@ -1,5 +1,5 @@
 import {Client, EmbedBuilder, Message} from "discord.js";
-import { getSystemChannel, getServers } from "../config/settings-loader";
+import {getServers, getSystemChannel} from "../config/settings-loader";
 
 const COMMAND_PATTERNS = {
     TIME_COMMANDS:  ['offprison', 'offban', 'offmute', 'offvehicle_ban', 'offweapon_ban', 'sban', 'offsban'],
@@ -60,7 +60,7 @@ function validateCommands(commands: string[]): ValidationResult[] {
         .map(cmd => cmd.replaceAll('```', ''))
         .filter(cmd => cmd.length > 0)
         .map((cmd, index) => ({
-            isValid: TIME_PATTERN.test(cmd) || SIMPLE_PATTERN.test(cmd) || URL_PATTERN.test(cmd) || ['после', 'потом', 'далее'].includes(cmd.toLowerCase()) || cmd.includes('<@&1316831633554542670>'),
+            isValid: TIME_PATTERN.test(cmd) || SIMPLE_PATTERN.test(cmd) || URL_PATTERN.test(cmd) || /потом|далее|после|затем/.test(cmd) || cmd.includes('начинает ветку') || cmd.includes('<@&1316831633554542670>'),
             index: index + 1, 
             command: cmd
         }))
