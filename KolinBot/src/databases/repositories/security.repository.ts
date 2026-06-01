@@ -22,16 +22,69 @@ export interface SecurityLog {
 
 export const SecurityRepository = {
   async exportSecurityAlertsMany(
-    adminId: string,
-    alerts: {
-      suspect: string;
-      action: string;
-      data: string;
-      originalDate?: string;
-    }[]
+      adminId: string,
+      alerts: {
+        suspect: string;
+        action: string;
+        data: string;
+        originalDate?: string;
+      }[]
   ): Promise<void> {
-    // TODO: export security alerts
-    console.log('exportSecurityAlertsMany called', { adminId, alerts });
+    console.log('exportSecurityAlertsMany called', {adminId, alertsCount: alerts.length});
+
+    let adminExists = await prisma.admin.findUnique({
+      where: {discordId: adminId},
+    });
+
+    if (!adminExists) {
+      await prisma.admin.create({
+        data: {
+          discordId: adminId,
+          surname: 'Unknown',
+          security: 'no',
+        },
+      });
+    }
+
+    let createdCount = 0;
+    let updatedCount = 0;
+
+    for (const alert of alerts) {
+      const existing = await prisma.securityAlert.findFirst({
+        where: {
+          passport: alert.suspect,
+          type: 'Bots'
+        },
+      });
+
+      const reason = `${alert.action}: ${alert.data}`;
+
+      if (existing) {
+        await prisma.securityAlert.update({
+          where: {id: existing.id},
+          data: {
+            count: {increment: 1},
+            reason,
+            authorId: adminId,
+            updatedAt: new Date(),
+          },
+        });
+        updatedCount++;
+      } else {
+        await prisma.securityAlert.create({
+          data: {
+            passport: alert.suspect,
+            type: 'Bots',
+            count: 1,
+            authorId: adminId,
+            reason,
+          },
+        });
+        createdCount++;
+      }
+    }
+
+    console.log(`Import completed: created ${createdCount}, updated ${updatedCount}`);
   },
 
   async getSecurityAlerts(type?: string): Promise<SecurityAlert[]> {
